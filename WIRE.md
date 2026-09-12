@@ -1,65 +1,73 @@
-# 🔌 WIRE.md — Arduino UNO Smart City Wiring Guide
+# 🔌 WIRE.md — 3-Board Arduino UNO Smart City Wiring Guide
 
-เอกสารคู่มือการต่อสายอุปกรณ์ทั้งหมดเข้ากับบอร์ด **Arduino UNO R3** ตามผังวงจร Smart City พร้อมระบบจ่ายไฟรวม (Power Distribution)
-
----
-
-## ⚡ 1. Power Distribution & Safety Rules (ข้อพึงระวัง)
-
-1. **Common Ground (GND ร่วม):** สาย GND ของแหล่งจ่ายไฟภายนอก 5V, Arduino GND, เซนเซอร์ทุกตัว และ Servo ต้องเชื่อมเข้าสู่ Ground Rail เดียวกันทั้งหมด
-2. **แรงดันไฟ 3.3V ห้ามสับสน:**
-   * ขา **3.3V ของ Arduino UNO** ต่อเข้าขา **VCC ของโมดูล RFID RC522 เท่านั้น** (ห้ามต่อ 5V เด็ดขาด ชิปจะไหม้)
-3. **การจ่ายไฟให้อุปกรณ์กำลังขับสูง (Servo & LEDs):**
-   * บอร์ด Arduino UNO ไม่สามารถจ่ายกระแสเพียงพอให้ Servo SG90 และหลอดไฟถนนพร้อมกันได้
-   * ให้ใช้ **Power Supply Module 5V ภายนอก** จ่ายไฟเข้าราง 5V (+) และ GND (-) ของ Breadboard โดยตรง
+เอกสารคู่มือการต่อสายไฟของระบบเมืองอัจฉริยะแบบแยก 3 บอร์ดอิสระ (3 Arduino UNO R3) กำหนดพินและระบบไฟตรงตามโค้ดอย่างสมบูรณ์
 
 ---
 
-## 📌 2. Pinout & Wiring Connections
+## ⚡ 1. Critical Power & Ground Rules (กฎความปลอดภัยของระบบไฟ)
 
-### 💳 1. RFID RC522 (SPI Bus)
-* **VCC** -> 3.3V บน Arduino UNO *(ห้ามต่อ 5V)*
-* **RST** -> Pin **D9**
-* **GND** -> GND Rail
-* **MISO** -> Pin **D12**
-* **MOSI** -> Pin **D11**
-* **SCK** -> Pin **D13**
+1. **Common Ground (GND ร่วม):** สาย **GND ของบอร์ดที่ 1, บอร์ดที่ 2, บอร์ดที่ 3 และแหล่งจ่ายไฟภายนอก 5V** ต้องเชื่อมต่อถึงกันทั้งหมดบน Ground Rail เพื่อให้อ้างอิงระดับแรงดันเดียวกัน
+2. **แรงดันไฟ 3.3V สำหรับ RFID:** โมดูล RC522 ต้องรับไฟจากพิน **3.3V ของบอร์ดที่ 1 เท่านั้น** (ห้ามต่อ 5V เด็ดขาด ชิปจะเสียหายทันที)
+3. **การจ่ายไฟให้อุปกรณ์กระแสสูง:** เซอร์โว SG90 และชุดไฟถนน LED ต้องดึงไฟเลี้ยงจาก **Power Supply 5V ภายนอก** ห้ามดึงตรงจากขา 5V ของบอร์ด Arduino เพื่อป้องกันบอร์ดรีเซ็ตตัวเอง
+
+---
+
+## 📍 Board 1: Gate & Display Controller (ด่านทางเข้าและจอแสดงผล)
+
+### 1. RFID RC522 (ฮาร์ดแวร์ SPI)
+* **3.3V**  -> Pin **3.3V** (บน Arduino Board 1 เท่านั้น)
+* **RST**   -> Pin **D9**
+* **GND**   -> Common GND Rail
+* **MISO**  -> Pin **D12**
+* **MOSI**  -> Pin **D11**
+* **SCK**   -> Pin **D13**
 * **SDA (SS)** -> Pin **D10**
 
-### 🚗 2. Ultrasonic Sensor (HC-SR04 - Smart Parking)
-* **VCC** -> 5V Rail
-* **GND** -> GND Rail
-* **Trig** -> Pin **D7**
-* **Echo** -> Pin **D8**
+### 2. Servo SG90 (ไม้กั้นทางเข้า)
+* **Signal (สายสีส้ม)**  -> Pin **D6**
+* **VCC (สายสีแดง)**     -> External 5V Rail
+* **GND (สายสีน้ำตาล)** -> Common GND Rail
 
-### 🚧 3. Servo SG90 (Barrier Gate)
-* **VCC (สายสีแดง)** -> 5V Rail (แหล่งจ่ายไฟภายนอก)
-* **GND (สายสีน้ำตาล/ดำ)** -> GND Rail
-* **Signal (สายสีส้ม)** -> Pin **D6**
-
-### 📟 4. จอ LCD 16x2 I2C
-* **GND** -> GND Rail
-* **VCC** -> 5V Rail
+### 3. จอ LCD 16x2 I2C
+* **VCC** -> External 5V Rail
+* **GND** -> Common GND Rail
 * **SDA** -> Pin **A4**
 * **SCL** -> Pin **A5**
 
-### 💡 5. ระบบไฟถนน (LDR + Transistor 2N2222)
-* **LDR Divider:**
-  * ขาหนึ่งของ LDR ต่อ 5V Rail
-  * อีกขาของ LDR ต่อเข้า Pin **A0** และต่อตัวต้านทาน 10kΩ ลง GND Rail
-* **วงจรขับ LED ไฟถนน (2N2222):**
-  * Pin **A1** -> ต่อผ่าน R 1kΩ -> ขา Base (B) ของ Transistor 2N2222
-  * ขา Emitter (E) ของ Transistor -> GND Rail
-  * ขา Collector (C) ของ Transistor -> ขั้วลบ (Cathode) ของ LED สีขาว 3-6 ดวง
-  * ขั้วบวก (Anode) ของ LED -> ต่อผ่าน R 220Ω -> 5V Rail
+---
 
-### 🚦 6. ระบบไฟจราจร 2 ทิศทาง (LEDs ผ่านตัวต้านทาน 220Ω ทุกดวง)
-* **ฝั่ง North-South (N-S):**
-  * LED สีแดง -> Pin **D2**
-  * LED สีเหลือง -> Pin **D3**
-  * LED สีเขียว -> Pin **D4**
-* **ฝั่ง East-West (E-W):**
-  * LED สีแดง -> Pin **A2**
-  * LED สีเหลือง -> Pin **A3**
-  * LED สีเขียว -> Pin **D5**
-  * *(ขั้วลบของหลอด LED ทุกตัวต่อลง GND Rail)*
+## 📍 Board 2: Intersection Traffic Controller (ไฟจราจรสี่แยก)
+
+หลอดไฟ LED ทุกหลอดต้องต่ออนุกรมกับตัวต้านทาน 220Ω ก่อนต่อลงบอร์ด เพื่อจำกัดกระแส
+
+### 1. ฝั่ง North-South (N-S)
+* **LED สีแดง**    -> Pin **D2** (ผ่าน R 220Ω)
+* **LED สีเหลือง** -> Pin **D3** (ผ่าน R 220Ω)
+* **LED สีเขียว**  -> Pin **D4** (ผ่าน R 220Ω)
+* **ขั้วลบ (Cathode)** -> Common GND Rail
+
+### 2. ฝั่ง East-West (E-W)
+* **LED สีแดง**    -> Pin **D5** (ผ่าน R 220Ω)
+* **LED สีเหลือง** -> Pin **D6** (ผ่าน R 220Ω)
+* **LED สีเขียว**  -> Pin **D7** (ผ่าน R 220Ω)
+* **ขั้วลบ (Cathode)** -> Common GND Rail
+
+---
+
+## 📍 Board 3: Parking & Street Light Controller (ที่จอดรถและไฟถนน)
+
+### 1. Ultrasonic Sensor (HC-SR04 - ตรวจจับช่องจอด)
+* **VCC**  -> External 5V Rail
+* **GND**  -> Common GND Rail
+* **Trig** -> Pin **D7**
+* **Echo** -> Pin **D8**
+
+### 2. วงจรแบ่งแรงดัน LDR (Light Dependent Resistor)
+* ขาที่ 1 ของ LDR -> External 5V Rail
+* ขาที่ 2 ของ LDR -> Pin **A0** และต่อตัวต้านทาน 10kΩ ลง Common GND Rail
+
+### 3. วงจรขับหลอดไฟถนน (Transistor NPN 2N2222)
+* Pin **D2** -> ผ่านตัวต้านทาน 1kΩ -> ขา **Base (B)** ของ Transistor 2N2222
+* ขา **Emitter (E)** ของ 2N2222 -> Common GND Rail
+* ขา **Collector (C)** ของ 2N2222 -> ขั้วลบ (Cathode) ของหลอด LED ขาว (3-6 ดวง ขนานกัน)
+* ขั้วบวก (Anode) ของ LED ขาวแต่ละดวง -> ผ่านตัวต้านทาน 220Ω -> External 5V Rail
