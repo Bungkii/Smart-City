@@ -1,10 +1,6 @@
-// PIN DEFINITIONS
-// North-South (N-S)
-#define TL_NS_RED     2
-#define TL_NS_YELLOW  3
-#define TL_NS_GREEN   4
-
-// East-West (E-W)
+#define TL_NS_RED     8
+#define TL_NS_YELLOW  9
+#define TL_NS_GREEN   10
 #define TL_EW_RED     5
 #define TL_EW_YELLOW  6
 #define TL_EW_GREEN   7
