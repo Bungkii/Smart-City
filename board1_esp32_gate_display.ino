@@ -14,7 +14,7 @@
 // 1. CONFIGURATION
 // ==========================================
 const char* ntpServer     = "time1.nimt.or.th";
-const long  gmtOffset_sec = 7 * 3600;  // เขตเวลาไทย GMT+7
+const long  gmtOffset_sec = 7 * 3600;  // GMT+7
 const int   daylightOffset_sec = 0;
 
 const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvbjXmdD76vRydjr7f1pQEttifQQ3ItVb42b96XoBfOG7DmGBBVlDN5DQGQ/exec";
@@ -24,10 +24,15 @@ const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvb
 // ==========================================
 #define SS_PIN       5
 #define RST_PIN      4
-#define SERVO_PIN    13
-#define BUZZER_PIN   25
+#define SPI_SCK      18
+#define SPI_MISO     19
+#define SPI_MOSI     21   // MOSI ขา 21
+
 #define I2C_SDA      23
 #define I2C_SCL      22
+
+#define SERVO_PIN    13
+#define BUZZER_PIN   25
 #define RESET_PIN    0
 
 #define BUZZER_ON    LOW
@@ -35,13 +40,11 @@ const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvb
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 Servo gateServo;
-// หากยังขึ้นจอขาว ให้ลองเปลี่ยน 0x27 เป็น 0x3F
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 unsigned long gateOpenTime = 0;
 bool isGateOpen = false;
 
-// ตัวแปรสำหรับจัดการหน้าจอและเลื่อนตัวอักษร
 unsigned long lastClockUpdate = 0;
 unsigned long lastScrollTime = 0;
 int scrollPos = 0;
@@ -51,13 +54,14 @@ String schoolText = "Assumption College Thonburi    ";
 // 3. HELPER FUNCTIONS
 // ==========================================
 
+// คืนค่าเวลาในรูปแบบ "HH:MM:SS"
 String getLocalTimeString() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
-    return "--:--";
+    return "--:--:--";
   }
-  char timeStr[6];
-  strftime(timeStr, sizeof(timeStr), "%H:%M", &timeinfo);
+  char timeStr[9];
+  strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
   return String(timeStr);
 }
 
@@ -84,7 +88,7 @@ String verifyCard(String cardUID, String &roleOut) {
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
 
   int httpCode = http.GET();
-  String resultStatus = "error";
+  String resultStatus = "not_found";
 
   if (httpCode == HTTP_CODE_OK || httpCode == 302) {
     String payload = http.getString();
@@ -99,19 +103,18 @@ String verifyCard(String cardUID, String &roleOut) {
   return resultStatus;
 }
 
-// อัปเดตบรรทัดบน: "Welcome    HH:MM"
+// อัปเดตบรรทัดบน: "Welcome HH:MM:SS" (ความกว้างรวม 16 ตัวอักษรพอดี)
 void updateTopLineWelcome() {
   String currentTime = getLocalTimeString();
   lcd.setCursor(0, 0);
-  // ความกว้าง 16 ตัวอักษร: "Welcome    " + "HH:MM"
-  String topLine = "Welcome   " + currentTime;
+  String topLine = "Welcome " + currentTime;
   while (topLine.length() < 16) topLine += " ";
   lcd.print(topLine);
 }
 
 // เลื่อนข้อความโรงเรียนที่บรรทัดล่าง
 void scrollSchoolText() {
-  if (millis() - lastScrollTime >= 350) { // ความเร็วในการเลื่อน
+  if (millis() - lastScrollTime >= 350) {
     lastScrollTime = millis();
     lcd.setCursor(0, 1);
     
@@ -139,13 +142,12 @@ void setup() {
   digitalWrite(BUZZER_PIN, BUZZER_OFF);
   pinMode(RESET_PIN, INPUT_PULLUP);
 
-  // เริ่มต้นจอ LCD
   Wire.begin(I2C_SDA, I2C_SCL);
   lcd.init();
   lcd.clear();
   lcd.backlight();
 
-  SPI.begin(18, 19, 23, SS_PIN);
+  SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI, SS_PIN);
   rfid.PCD_Init();
 
   ESP32PWM::allocateTimer(0);
@@ -195,14 +197,12 @@ void setup() {
 void loop() {
   unsigned long currentMillis = millis();
 
-  // จัดการหน้าจอสถานะปกติ (เมื่อไม่มีการเปิดไม้กั้น)
+  // แสดงผลหน้าจอขณะไม่ได้เปิดไม้กั้น
   if (!isGateOpen) {
-    // อัปเดตเวลานาทีละครั้ง หรือทุก 1 วินาที
     if (currentMillis - lastClockUpdate >= 1000) {
       lastClockUpdate = currentMillis;
       updateTopLineWelcome();
     }
-    // เลื่อนข้อความ Assumption College Thonburi
     scrollSchoolText();
   }
 
@@ -215,55 +215,56 @@ void loop() {
     }
     cardUID.toUpperCase();
 
-    // แสดงสถานะกำลังเช็ก
     lcd.setCursor(0, 1);
     lcd.print("CHECKING ID...  ");
 
     String role = "";
     String authStatus = verifyCard(cardUID, role);
 
-    if (authStatus == "allow") {
+    if (authStatus == "banned") {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("CARD BANNED!");
+      lcd.setCursor(0, 1);
+      lcd.print(role.length() > 0 ? role : cardUID);
+      triggerBannedAlarm();
+      delay(2500);
+      lcd.clear();
+      updateTopLineWelcome();
+    } 
+    else {
       updateTopLineWelcome();
 
-      // บรรทัดล่าง: แสดง UID บัตร และ Role
-      String line2 = cardUID + " " + role;
-      while (line2.length() < 16) line2 += " ";
-      if (line2.length() > 16) line2 = line2.substring(0, 16);
+      // จัดการ Role: ถ้าไม่มีค่า/เป็นค่าว่าง ให้ตั้งเป็น TempUser
+      if (role.length() == 0 || role == "Guest" || authStatus != "allow") {
+        role = "TempUser";
+      }
+
+      // บรรทัดล่าง: [UID] [Role] รวมไม่เกิน 16 ตัวอักษร
+      String displayLine = cardUID + " " + role;
+      while (displayLine.length() < 16) displayLine += " ";
+      if (displayLine.length() > 16) displayLine = displayLine.substring(0, 16);
 
       lcd.setCursor(0, 1);
-      lcd.print(line2);
+      lcd.print(displayLine);
 
       // ยกไม้กั้นขึ้น
       gateServo.write(90);
       isGateOpen = true;
       gateOpenTime = millis();
-    } 
-    else if (authStatus == "banned") {
-      lcd.setCursor(0, 1);
-      lcd.print("BANNED: " + (cardUID.length() > 8 ? cardUID.substring(0, 8) : cardUID));
-      triggerBannedAlarm();
-      delay(2000);
-      lcd.clear();
-      updateTopLineWelcome();
-    } 
-    else {
-      lcd.setCursor(0, 1);
-      lcd.print("DENIED: " + (cardUID.length() > 8 ? cardUID.substring(0, 8) : cardUID));
-      delay(2000);
-      lcd.clear();
-      updateTopLineWelcome();
     }
 
     rfid.PICC_HaltA();
+    rfid.PCD_StopCrypto1();
   }
 
-  // ปิดไม้กั้นลงหลังครบ 3 วินาที แล้วกลับสู่หน้าจอปกติ
+  // ปิดไม้กั้นลงหลังครบ 3 วินาที
   if (isGateOpen && (currentMillis - gateOpenTime >= 3000)) {
     gateServo.write(0);
     isGateOpen = false;
 
     lcd.clear();
     updateTopLineWelcome();
-    scrollPos = 0; // รีเซ็ตตำแหน่งเลื่อนข้อความ
+    scrollPos = 0;
   }
 }
