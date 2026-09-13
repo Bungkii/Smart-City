@@ -26,14 +26,14 @@ const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvb
 #define RST_PIN      4
 #define SPI_SCK      18
 #define SPI_MISO     19
-#define SPI_MOSI     21   // MOSI ขา 21
+#define SPI_MOSI     21
 
 #define I2C_SDA      23
 #define I2C_SCL      22
 
 #define SERVO_PIN    13
 #define BUZZER_PIN   25
-#define RESET_PIN    0
+#define RESET_PIN    0   // ปุ่ม BOOT บนบอร์ด
 
 #define BUZZER_ON    LOW
 #define BUZZER_OFF   HIGH
@@ -54,7 +54,6 @@ String schoolText = "Assumption College Thonburi    ";
 // 3. HELPER FUNCTIONS
 // ==========================================
 
-// คืนค่าเวลาในรูปแบบ "HH:MM:SS"
 String getLocalTimeString() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
@@ -65,17 +64,17 @@ String getLocalTimeString() {
   return String(timeStr);
 }
 
-void triggerBannedAlarm() {
-  for (int i = 0; i < 3; i++) {
+void beepBuzzer(int count) {
+  for (int i = 0; i < count; i++) {
     digitalWrite(BUZZER_PIN, BUZZER_ON);
-    delay(120);
-    digitalWrite(BUZZER_PIN, BUZZER_OFF);
     delay(100);
+    digitalWrite(BUZZER_PIN, BUZZER_OFF);
+    if (i < count - 1) delay(100);
   }
   digitalWrite(BUZZER_PIN, BUZZER_OFF);
 }
 
-String verifyCard(String cardUID, String &roleOut) {
+String verifyCard(String cardUID, String &roleOut, String &actionOut) {
   if (WiFi.status() != WL_CONNECTED) return "wifi_lost";
 
   WiFiClientSecure client;
@@ -97,13 +96,13 @@ String verifyCard(String cardUID, String &roleOut) {
     if (!error) {
       resultStatus = doc["status"].as<String>();
       roleOut      = doc["role"].as<String>();
+      actionOut    = doc["action"].as<String>();
     }
   }
   http.end();
   return resultStatus;
 }
 
-// อัปเดตบรรทัดบน: "Welcome HH:MM:SS" (ความกว้างรวม 16 ตัวอักษรพอดี)
 void updateTopLineWelcome() {
   String currentTime = getLocalTimeString();
   lcd.setCursor(0, 0);
@@ -112,7 +111,6 @@ void updateTopLineWelcome() {
   lcd.print(topLine);
 }
 
-// เลื่อนข้อความโรงเรียนที่บรรทัดล่าง
 void scrollSchoolText() {
   if (millis() - lastScrollTime >= 350) {
     lastScrollTime = millis();
@@ -157,12 +155,14 @@ void setup() {
 
   WiFiManager wm;
 
+  // กดปุ่ม BOOT ค้างตอนเปิดเครื่องเพื่อสั่ง Reset ทันที
   if (digitalRead(RESET_PIN) == LOW) {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("RESETTING WIFI..");
     wm.resetSettings();
-    delay(2000);
+    beepBuzzer(2);
+    delay(1500);
   }
 
   lcd.clear();
@@ -187,6 +187,9 @@ void setup() {
     retry++;
   }
 
+  // ระบบเตรียมพร้อมสมบูรณ์ -> Beep 1 ครั้งแจ้งเตือน
+  beepBuzzer(1);
+
   lcd.clear();
   updateTopLineWelcome();
 }
@@ -197,6 +200,31 @@ void setup() {
 void loop() {
   unsigned long currentMillis = millis();
 
+  // ตรวจจับการกดปุ่ม BOOT (GPIO 0) ค้าง 2 วินาที เพื่อล้าง Wi-Fi ขณะทำงาน
+  if (digitalRead(RESET_PIN) == LOW) {
+    delay(100);
+    if (digitalRead(RESET_PIN) == LOW) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("HOLD TO RESET...");
+      unsigned long btnPressTime = millis();
+      while (digitalRead(RESET_PIN) == LOW) {
+        if (millis() - btnPressTime >= 2000) {
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("RESETTING WIFI..");
+          WiFiManager wm;
+          wm.resetSettings();
+          beepBuzzer(2);
+          delay(1000);
+          ESP.restart();
+        }
+      }
+      lcd.clear();
+      updateTopLineWelcome();
+    }
+  }
+
   // แสดงผลหน้าจอขณะไม่ได้เปิดไม้กั้น
   if (!isGateOpen) {
     if (currentMillis - lastClockUpdate >= 1000) {
@@ -206,7 +234,7 @@ void loop() {
     scrollSchoolText();
   }
 
-  // ตรวจจับการแตะบัตร RFID
+  // ตรวจจับการแตะบัตร
   if (!isGateOpen && rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
     String cardUID = "";
     for (byte i = 0; i < rfid.uid.size; i++) {
@@ -219,7 +247,8 @@ void loop() {
     lcd.print("CHECKING ID...  ");
 
     String role = "";
-    String authStatus = verifyCard(cardUID, role);
+    String action = "entry";
+    String authStatus = verifyCard(cardUID, role, action);
 
     if (authStatus == "banned") {
       lcd.clear();
@@ -227,20 +256,27 @@ void loop() {
       lcd.print("CARD BANNED!");
       lcd.setCursor(0, 1);
       lcd.print(role.length() > 0 ? role : cardUID);
-      triggerBannedAlarm();
-      delay(2500);
+      beepBuzzer(3);
+      delay(3000);
       lcd.clear();
       updateTopLineWelcome();
     } 
     else {
-      updateTopLineWelcome();
-
-      // จัดการ Role: ถ้าไม่มีค่า/เป็นค่าว่าง ให้ตั้งเป็น TempUser
-      if (role.length() == 0 || role == "Guest" || authStatus != "allow") {
+      if (authStatus == "allow") {
+        beepBuzzer(1);
+      } else {
+        beepBuzzer(2);
         role = "TempUser";
       }
 
-      // บรรทัดล่าง: [UID] [Role] รวมไม่เกิน 16 ตัวอักษร
+      lcd.clear();
+      if (action == "exit") {
+        lcd.setCursor(0, 0);
+        lcd.print("THANK YOU       ");
+      } else {
+        updateTopLineWelcome();
+      }
+
       String displayLine = cardUID + " " + role;
       while (displayLine.length() < 16) displayLine += " ";
       if (displayLine.length() > 16) displayLine = displayLine.substring(0, 16);
@@ -248,7 +284,6 @@ void loop() {
       lcd.setCursor(0, 1);
       lcd.print(displayLine);
 
-      // ยกไม้กั้นขึ้น
       gateServo.write(90);
       isGateOpen = true;
       gateOpenTime = millis();
@@ -258,7 +293,7 @@ void loop() {
     rfid.PCD_StopCrypto1();
   }
 
-  // ปิดไม้กั้นลงหลังครบ 3 วินาที
+  // ปิดไม้กั้นหลังครบ 3 วินาที
   if (isGateOpen && (currentMillis - gateOpenTime >= 3000)) {
     gateServo.write(0);
     isGateOpen = false;
