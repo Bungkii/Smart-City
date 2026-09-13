@@ -17,23 +17,27 @@ const char* ntpServer     = "time1.nimt.or.th";
 const long  gmtOffset_sec = 7 * 3600;  // GMT+7
 const int   daylightOffset_sec = 0;
 
+// URL Google Apps Script Web App (ลงท้ายด้วย /exec)
 const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvbjXmdD76vRydjr7f1pQEttifQQ3ItVb42b96XoBfOG7DmGBBVlDN5DQGQ/exec";
 
 // ==========================================
 // 2. PIN DEFINITIONS
 // ==========================================
+// RFID SPI Pins (MOSI ขา 21 ตามฮาร์ดแวร์จริง)
 #define SS_PIN       5
 #define RST_PIN      4
 #define SPI_SCK      18
 #define SPI_MISO     19
 #define SPI_MOSI     21
 
+// LCD 16x2 I2C Pins
 #define I2C_SDA      23
 #define I2C_SCL      22
 
-#define SERVO_PIN    13
-#define BUZZER_PIN   25
-#define RESET_PIN    0   // ปุ่ม BOOT บนบอร์ด
+// Actuators & Controls
+#define SERVO_PIN    14   // Servo ไม้กั้น (GPIO 14)
+#define BUZZER_PIN   25   // Buzzer Active LOW (GPIO 25)
+#define RESET_PIN    0    // ปุ่ม BOOT (GPIO 0) สำหรับล้าง Wi-Fi
 
 #define BUZZER_ON    LOW
 #define BUZZER_OFF   HIGH
@@ -54,6 +58,7 @@ String schoolText = "Assumption College Thonburi    ";
 // 3. HELPER FUNCTIONS
 // ==========================================
 
+// คืนค่าเวลาในรูปแบบ "HH:MM:SS"
 String getLocalTimeString() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
@@ -64,6 +69,7 @@ String getLocalTimeString() {
   return String(timeStr);
 }
 
+// ควบคุมเสียง Buzzer ตามจำนวนครั้งที่กำหนด
 void beepBuzzer(int count) {
   for (int i = 0; i < count; i++) {
     digitalWrite(BUZZER_PIN, BUZZER_ON);
@@ -74,6 +80,26 @@ void beepBuzzer(int count) {
   digitalWrite(BUZZER_PIN, BUZZER_OFF);
 }
 
+// ฟังก์ชันสั่ง Servo เปิดไม้กั้น (90 องศา)
+void openGate() {
+  if (!gateServo.attached()) {
+    gateServo.attach(SERVO_PIN, 500, 2400);
+  }
+  gateServo.write(90);
+  isGateOpen = true;
+  gateOpenTime = millis();
+}
+
+// ฟังก์ชันสั่ง Servo ปิดไม้กั้น (0 องศา)
+void closeGate() {
+  if (!gateServo.attached()) {
+    gateServo.attach(SERVO_PIN, 500, 2400);
+  }
+  gateServo.write(0);
+  isGateOpen = false;
+}
+
+// ส่ง Card UID ไปตรวจสอบกับ Google Apps Script
 String verifyCard(String cardUID, String &roleOut, String &actionOut) {
   if (WiFi.status() != WL_CONNECTED) return "wifi_lost";
 
@@ -103,6 +129,7 @@ String verifyCard(String cardUID, String &roleOut, String &actionOut) {
   return resultStatus;
 }
 
+// แสดงเวลาบนบรรทัดบน: "Welcome HH:MM:SS"
 void updateTopLineWelcome() {
   String currentTime = getLocalTimeString();
   lcd.setCursor(0, 0);
@@ -111,6 +138,7 @@ void updateTopLineWelcome() {
   lcd.print(topLine);
 }
 
+// เลื่อนข้อความโรงเรียนที่บรรทัดล่าง
 void scrollSchoolText() {
   if (millis() - lastScrollTime >= 350) {
     lastScrollTime = millis();
@@ -136,26 +164,35 @@ void scrollSchoolText() {
 void setup() {
   Serial.begin(115200);
 
+  // ตั้งค่า Buzzer ปิดทันที
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, BUZZER_OFF);
   pinMode(RESET_PIN, INPUT_PULLUP);
 
+  // จอ LCD I2C
   Wire.begin(I2C_SDA, I2C_SCL);
   lcd.init();
   lcd.clear();
   lcd.backlight();
 
+  // ปลดล็อก Hardware Timers ทั้งหมดให้ ESP32Servo ก่อน attach
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+
+  gateServo.setPeriodHertz(50);
+  gateServo.attach(SERVO_PIN, 500, 2400);
+  gateServo.write(0); // เซ็ตตำแหน่งปิดไม้กั้น
+  delay(300);
+
+  // SPI Bus สำหรับ RC522
   SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI, SS_PIN);
   rfid.PCD_Init();
 
-  ESP32PWM::allocateTimer(0);
-  gateServo.setPeriodHertz(50);
-  gateServo.attach(SERVO_PIN, 500, 2400);
-  gateServo.write(0);
-
   WiFiManager wm;
 
-  // กดปุ่ม BOOT ค้างตอนเปิดเครื่องเพื่อสั่ง Reset ทันที
+  // กดปุ่ม BOOT ค้างตอนจ่ายไฟเพื่อรีเซ็ต Wi-Fi
   if (digitalRead(RESET_PIN) == LOW) {
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -175,6 +212,7 @@ void setup() {
     ESP.restart();
   }
 
+  // ซิงก์เวลากับสถาบันมาตรวิทยาแห่งชาติ
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("SYNCING TIME... ");
@@ -187,7 +225,7 @@ void setup() {
     retry++;
   }
 
-  // ระบบเตรียมพร้อมสมบูรณ์ -> Beep 1 ครั้งแจ้งเตือน
+  // ระบบพร้อมทำงาน Beep 1 ที
   beepBuzzer(1);
 
   lcd.clear();
@@ -200,7 +238,7 @@ void setup() {
 void loop() {
   unsigned long currentMillis = millis();
 
-  // ตรวจจับการกดปุ่ม BOOT (GPIO 0) ค้าง 2 วินาที เพื่อล้าง Wi-Fi ขณะทำงาน
+  // ตรวจจับการกดปุ่ม BOOT ค้าง 2 วินาทีเพื่อล้าง Wi-Fi ขณะทำงาน
   if (digitalRead(RESET_PIN) == LOW) {
     delay(100);
     if (digitalRead(RESET_PIN) == LOW) {
@@ -225,7 +263,7 @@ void loop() {
     }
   }
 
-  // แสดงผลหน้าจอขณะไม่ได้เปิดไม้กั้น
+  // หน้าจอ Standby ปกติ
   if (!isGateOpen) {
     if (currentMillis - lastClockUpdate >= 1000) {
       lastClockUpdate = currentMillis;
@@ -234,7 +272,7 @@ void loop() {
     scrollSchoolText();
   }
 
-  // ตรวจจับการแตะบัตร
+  // ตรวจจับการแตะบัตร RFID
   if (!isGateOpen && rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
     String cardUID = "";
     for (byte i = 0; i < rfid.uid.size; i++) {
@@ -251,6 +289,7 @@ void loop() {
     String authStatus = verifyCard(cardUID, role, action);
 
     if (authStatus == "banned") {
+      // 1. บัตร Banned: ปิ๊บ 3 ที ไม่เปิดไม้กั้น และแจ้งเตือน
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("CARD BANNED!");
@@ -262,14 +301,16 @@ void loop() {
       updateTopLineWelcome();
     } 
     else {
+      // 2. จัดการ Buzzer & Role
       if (authStatus == "allow") {
-        beepBuzzer(1);
+        beepBuzzer(1); // บัตรใน Database ดัง 1 ที
       } else {
-        beepBuzzer(2);
+        beepBuzzer(2); // บัตรนอก Database ดัง 2 ที
         role = "TempUser";
       }
 
       lcd.clear();
+      // บรรทัดบน: ขาออกขึ้น THANK YOU / ขาเข้าขึ้น Welcome HH:MM:SS
       if (action == "exit") {
         lcd.setCursor(0, 0);
         lcd.print("THANK YOU       ");
@@ -277,6 +318,7 @@ void loop() {
         updateTopLineWelcome();
       }
 
+      // บรรทัดล่าง: [UID] [Role]
       String displayLine = cardUID + " " + role;
       while (displayLine.length() < 16) displayLine += " ";
       if (displayLine.length() > 16) displayLine = displayLine.substring(0, 16);
@@ -284,19 +326,17 @@ void loop() {
       lcd.setCursor(0, 1);
       lcd.print(displayLine);
 
-      gateServo.write(90);
-      isGateOpen = true;
-      gateOpenTime = millis();
+      // ยกไม้กั้น Servo ขึ้น 90 องศา
+      openGate();
     }
 
     rfid.PICC_HaltA();
     rfid.PCD_StopCrypto1();
   }
 
-  // ปิดไม้กั้นหลังครบ 3 วินาที
+  // ปิดไม้กั้นอัตโนมัติเมื่อครบ 3 วินาที
   if (isGateOpen && (currentMillis - gateOpenTime >= 3000)) {
-    gateServo.write(0);
-    isGateOpen = false;
+    closeGate();
 
     lcd.clear();
     updateTopLineWelcome();
