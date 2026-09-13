@@ -18,7 +18,7 @@ const long  gmtOffset_sec = 7 * 3600;  // เขตเวลาไทย GMT+7 (
 const int   daylightOffset_sec = 0;    // ประเทศไทยไม่มี Daylight Saving
 
 // วาง Web App URL จาก Google Apps Script (ลงท้ายด้วย /exec)
-const String SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL";
+const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvbjXmdD76vRydjr7f1pQEttifQQ3ItVb42b96XoBfOG7DmGBBVlDN5DQGQ/exec";
 
 // ==========================================
 // 2. PIN DEFINITIONS
