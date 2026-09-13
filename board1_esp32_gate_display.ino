@@ -13,11 +13,11 @@
 // ==========================================
 // 1. TIME SERVER (NIMT) & SCRIPT CONFIG
 // ==========================================
-const char* ntpServer   = "time1.nimt.or.th";
-const long  gmtOffset_sec = 7 * 3600;  // เขตเวลาไทย GMT+7 (7 ชั่วโมง x 3600 วินาที)
-const int   daylightOffset_sec = 0;    // ประเทศไทยไม่มี Daylight Saving
+const char* ntpServer     = "time1.nimt.or.th";
+const long  gmtOffset_sec = 7 * 3600;  // เขตเวลาไทย GMT+7
+const int   daylightOffset_sec = 0;
 
-// วาง Web App URL จาก Google Apps Script (ลงท้ายด้วย /exec)
+// URL Google Apps Script Web App
 const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvbjXmdD76vRydjr7f1pQEttifQQ3ItVb42b96XoBfOG7DmGBBVlDN5DQGQ/exec";
 
 // ==========================================
@@ -26,9 +26,10 @@ const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvb
 #define SS_PIN       5
 #define RST_PIN      4
 #define SERVO_PIN    13
-#define BUZZER_PIN   15   // ต่อเข้า I/O ของ Buzzer
+#define BUZZER_PIN   15   // พินคุมเสียง Buzzer
 #define I2C_SDA      21
 #define I2C_SCL      22
+#define RESET_PIN    0    // ใช้ปุ่ม BOOT (GPIO 0) บนบอร์ด สำหรับล้างค่า Wi-Fi
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 Servo gateServo;
@@ -41,7 +42,6 @@ bool isGateOpen = false;
 // 3. HELPER FUNCTIONS
 // ==========================================
 
-// ฟังก์ชันดึงเวลาปัจจุบันในรูปแบบ "HH:MM"
 String getLocalTimeString() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
@@ -53,7 +53,6 @@ String getLocalTimeString() {
   return String(timeStr);
 }
 
-// ฟังก์ชันส่งเสียงเตือนกรณี Banned (ปิ๊บๆ)
 void triggerBannedAlarm() {
   for (int i = 0; i < 3; i++) {
     digitalWrite(BUZZER_PIN, HIGH);
@@ -63,7 +62,6 @@ void triggerBannedAlarm() {
   }
 }
 
-// ตรวจสอบสิทธิ์บัตรผ่าน Google Apps Script
 String verifyCard(String cardUID, String &roleOut) {
   if (WiFi.status() != WL_CONNECTED) return "wifi_lost";
 
@@ -92,6 +90,20 @@ String verifyCard(String cardUID, String &roleOut) {
   return resultStatus;
 }
 
+// ฟังก์ชัน Callback เมื่อบอร์ดเข้าสู่โหมดปล่อย Access Point
+void configModeCallback(WiFiManager *myWiFiManager) {
+  Serial.println("[WiFiManager] Entered Config Mode");
+  Serial.println(WiFi.softAPIP());
+  Serial.println(myWiFiManager->getConfigPortalSSID());
+
+  // แจ้งผู้ใช้ผ่านหน้าจอ LCD
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("WiFi: SmartCity");
+  lcd.setCursor(0, 1);
+  lcd.print("IP: 192.168.4.1 ");
+}
+
 // ==========================================
 // 4. SETUP
 // ==========================================
@@ -100,6 +112,7 @@ void setup() {
 
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
+  pinMode(RESET_PIN, INPUT_PULLUP);
 
   Wire.begin(I2C_SDA, I2C_SCL);
   lcd.init();
@@ -113,23 +126,43 @@ void setup() {
   gateServo.attach(SERVO_PIN, 500, 2400);
   gateServo.write(0);
 
-  // เริ่มต้นระบบ WiFiManager ปล่อย Hotspot หากยังไม่ได้เชื่อมต่อ
+  WiFiManager wm;
+
+  // หากกดปุ่ม BOOT (GPIO 0) บนตัวบอร์ดค้างไว้ตอนเปิดเครื่อง จะล้างค่า Wi-Fi เดิมทิ้งทันที
+  if (digitalRead(RESET_PIN) == LOW) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("RESETTING WIFI..");
+    wm.resetSettings();
+    delay(2000);
+  }
+
+  // เรียกใช้ฟังก์ชัน Callback เมื่อเข้าสู่โหมดให้ตั้งค่า
+  wm.setAPCallback(configModeCallback);
+  wm.setConfigPortalTimeout(180); // กำหนดเวลาปล่อย Wi-Fi ให้ตั้งค่า 3 นาที (180 วิ)
+
+  lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("CONNECTING WIFI ");
-  lcd.setCursor(0, 1);
-  lcd.print("OR SETUP AP...  ");
 
-  WiFiManager wm;
-  // ชื่อ Wi-Fi AP ที่บอร์ดจะปล่อยออกมาให้ตั้งค่า
-  bool res = wm.autoConnect("SmartCity-Gateway-AP");
-
-  if (!res) {
-    Serial.println("[WiFiManager] Failed to connect, restarting...");
+  // ปล่อยชื่อ Wi-Fi AP: "SmartCity-Gateway-AP"
+  if (!wm.autoConnect("SmartCity-Gateway-AP")) {
+    Serial.println("[WiFiManager] Timeout! Restarting ESP32...");
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("SETUP TIMEOUT!");
+    delay(2000);
     ESP.restart();
   }
 
-  Serial.println("[WiFi] Connected! Local IP: " + WiFi.localIP().toString());
-  
+  // เมื่อเชื่อมต่อเสร็จสิ้น
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("WIFI CONNECTED! ");
+  lcd.setCursor(0, 1);
+  lcd.print(WiFi.localIP());
+  delay(1500);
+
   // ซิงก์เวลากับสถาบันมาตรวิทยาแห่งชาติ (time1.nimt.or.th)
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -137,9 +170,11 @@ void setup() {
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
   struct tm timeinfo;
-  while (!getLocalTime(&timeinfo)) {
-    delay(200);
+  int retry = 0;
+  while (!getLocalTime(&timeinfo) && retry < 20) {
+    delay(300);
     Serial.print(".");
+    retry++;
   }
   Serial.println("\nTime Synchronized!");
 
@@ -173,7 +208,7 @@ void loop() {
 
     String role = "";
     String authStatus = verifyCard(cardUID, role);
-    String currentTime = getLocalTimeString(); // ดึงเวลา HH:MM จาก time1.nimt.or.th
+    String currentTime = getLocalTimeString(); // ดึงเวลา HH:MM จาก NTP Server
 
     if (authStatus == "allow") {
       lcd.clear();
@@ -181,7 +216,7 @@ void loop() {
       lcd.setCursor(0, 0);
       lcd.print("Welcome");
 
-      // บรรทัดที่ 2: "[Role]   HH:MM" รวมไม่เกิน 16 ตัวอักษร
+      // บรรทัดที่ 2: "[Role]   HH:MM"
       lcd.setCursor(0, 1);
       int maxRoleLen = 16 - 1 - currentTime.length();
       if (role.length() > maxRoleLen) {
@@ -194,7 +229,7 @@ void loop() {
       line2 += currentTime;
       lcd.print(line2);
 
-      // ยกไม้กั้นขึ้น
+      // เปิดไม้กั้น
       gateServo.write(90);
       isGateOpen = true;
       gateOpenTime = millis();
@@ -206,7 +241,7 @@ void loop() {
       lcd.setCursor(0, 1);
       lcd.print(role.length() > 16 ? role.substring(0, 16) : role);
       
-      triggerBannedAlarm(); // ส่งเสียง ปิ๊บๆ
+      triggerBannedAlarm(); // ส่งเสียงปิ๊บๆ 3 ครั้ง
       delay(2000);
 
       lcd.clear();
@@ -233,7 +268,7 @@ void loop() {
     rfid.PICC_HaltA();
   }
 
-  // ปิดไม้กั้นลงหลังครบ 3 วินาที
+  // ปิดไม้กั้นอัตโนมัติเมื่อครบ 3 วินาที
   if (isGateOpen && (currentMillis - gateOpenTime >= 3000)) {
     gateServo.write(0);
     isGateOpen = false;
