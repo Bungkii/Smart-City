@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Noto Sans Thai',sans-serif;
+      background:#f5f5f5;
+      padding:20px;
+    }
+    .container{
+      max-width:900px;
+      margin:0 auto;
+      background:#fff;
+      border:1px solid #ddd;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    }
+    .header{
+      background:#0066cc;
+      color:#fff;
+      padding:16px 20px;
+      font-size:18px;
+      font-weight:700;
+    }
+    .content{
+      display:flex;
+    }
+    
+    .sidebar{
+      width:200px;
+      background:#f9f9f9;
+      border-right:1px solid #ddd;
+      padding:20px;
+    }
+    .logo-section{
+      text-align:center;
+      margin-bottom:20px;
+      padding-bottom:16px;
+      border-bottom:1px solid #ddd;
+    }
+    
+    .cn-logo {
+      max-width: 100px; 
+      height: auto;
+      margin-bottom: 8px;
+    }
+    .cn-company-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #003366; 
+      margin-bottom: 12px;
+    }
+
+    .building-name{
+      font-size:14px;
+      color:#333;
+    }
+    .menu{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .menu-item{
+      padding:10px;
+      background:#fff;
+      border:1px solid #ddd;
+      font-size:13px;
+      cursor:pointer;
+      text-align:center;
+    }
+    .menu-item:hover{
+      background:#f0f0f0;
+    }
+    .menu-item.active{
+      background:#0066cc;
+      color:#fff;
+      border-color:#0066cc;
+    }
+
+    .main{
+      flex:1;
+      padding:20px;
+      display:flex;
+      gap:20px;
+    }
+    
+    /* Styles for display switching */
+    #numeric-display {
+        display: flex;
+        flex: 1;
+        gap: 20px;
+    }
+    #chart-display {
+        display: none; 
+        flex: 1;
+        padding: 40px;
+        text-align: center;
+        background: #eee;
+        border: 1px solid #ccc;
+        font-size: 16px;
+        color: #666;
+        min-height: 400px;
+        align-items: center;
+        justify-content: center;
+    }
+    /* End New styles for display switching */
+
+    .floors{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      gap:8px; /* Reduced gap due to more floors */
+    }
+    .floor-row{
+      display:flex;
+      align-items:center;
+      gap:8px; /* Reduced gap due to more floors */
+    }
+    .floor-label{
+      font-size:24px; /* Reduced size to accommodate more floors */
+      font-weight:700;
+      width:50px; /* Reduced width */
+      text-align:right;
+      color:#333;
+    }
+    .led-box{
+      flex:1;
+      background:#000;
+      border:2px solid #666;
+      padding:5px 8px; /* Reduced padding */
+      min-height:40px; /* Reduced height */
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .led-text{
+      font-family:'Courier New',monospace;
+      font-size:22px; /* Reduced size */
+      font-weight:700;
+      letter-spacing:1px; /* Reduced spacing */
+    }
+    .led-green{
+      color:#00ff00;
+    }
+    .led-red{
+      color:#ff0000;
+    }
+
+    .right-section{
+      width:300px;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+    .gauge-container{
+      background:#000;
+      border:2px solid #666;
+      padding:20px;
+      height:240px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .gauge{
+      width:200px;
+      height:200px;
+    }
+    .summary{
+      background:#f9f9f9;
+      border:1px solid #ddd;
+      padding:16px;
+    }
+    .summary-title{
+      font-size:13px;
+      color:#666;
+      margin-bottom:8px;
+    }
+    .summary-value-box{
+      background:#000;
+      border:2px solid #666;
+      padding:12px;
+      text-align:center;
+    }
+    .summary-value{
+      font-family:'Courier New',monospace;
+      font-size:32px;
+      font-weight:700;
+      color:#00ff00;
+    }
+
+    @media(max-width:800px){
+      .content{flex-direction:column}
+      .sidebar{width:100%;border-right:0;border-bottom:1px solid #ddd}
+      .main { flex-direction: column; }
+      #numeric-display { flex-direction: column; }
+      #chart-display { flex-direction: column; }
+      .right-section{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">Parking Guidance System</div>
+
+    <div class="content">
+      <div class="sidebar">
+        <div class="logo-section">
+          <img src="logo.svg" alt="CN Intercon Logo" class="cn-logo">
+          <div class="cn-company-name">CN INTERCON. CO., LTD.</div>
+          <div class="building-name">อาคารจอดรถ ศูนย์การค้าเซ็นทรัล เชียงใหม่</div>
+        </div>  
+        <div class="menu">
+          <div class="menu-item active" id="menu-numeric">Numeric display</div>
+          <div class="menu-item" id="menu-chart">Chart display</div>
+        </div>
+      </div>
+
+      <div class="main">
+        <div id="numeric-display">
+          <div class="floors" id="floors"></div>
+
+          <div class="right-section">
+            <div class="gauge-container">
+              <canvas class="gauge" id="gauge"></canvas>
+            </div>
+
+            <div class="summary">
+              <div class="summary-title">จำนวนรถที่เข้าจอดทั้งหมด</div>
+              <div class="summary-value-box">
+                <div class="summary-value" id="parked">0</div>
+              </div>
+            </div>
+
+            <div class="summary">
+              <div class="summary-title">จำนวนช่องจอดที่ว่างทั้งหมด</div>
+              <div class="summary-value-box">
+                <div class="summary-value" id="available">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="chart-display">
+            Chart Display Content goes here (e.g., historical data charts)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    // UPDATED DATA: Floors 1A to 7B
+    const data={
+      '7B':{cap:75,avail:20}, '7A':{cap:75,avail:20},
+      '6B':{cap:75,avail:20}, '6A':{cap:75,avail:20},
+      '5B':{cap:75,avail:20}, '5A':{cap:75,avail:20},
+      '4B':{cap:50,avail:20}, '4A':{cap:50,avail:20},
+      '3B':{cap:50,avail:20}, '3A':{cap:50,avail:20},
+      '2B':{cap:50,avail:20}, '2A':{cap:50,avail:20},
+      '1B':{cap:50,avail:20}, '1A':{cap:50,avail:20}
+    };
+    
+    // Ordered list of floors for display
+    const floorOrder = [
+        '7B', '7A', '6B', '6A', '5B', '5A', 
+        '4B', '4A', '3B', '3A', '2B', '2A', 
+        '1B', '1A'
+    ];
+
+    function update(){
+      const floors=document.getElementById('floors');
+      floors.innerHTML='';
+      
+      floorOrder.forEach(f=>{
+        const d=data[f];
+        d.avail = Math.min(d.cap, d.avail); 
+        
+        const full=d.avail===0;
+        const row=document.createElement('div');
+        row.className='floor-row';
+        row.innerHTML=`
+          <div class="floor-label">${f}</div>
+          <div class="led-box">
+            <div class="led-text ${full?'led-red':'led-green'}">
+              ${full?'FULL':d.avail}
+            </div>
+          </div>
+        `;
+        floors.appendChild(row);
+      });
+
+      let avail=0,cap=0;
+      Object.values(data).forEach(d=>{
+        avail+=d.avail;
+        cap+=d.cap;
+      });
+
+      const parked=cap-avail;
+      document.getElementById('parked').textContent=parked;
+      document.getElementById('available').textContent=avail;
+
+      chart.data.datasets[0].data=[parked,avail];
+      chart.update('none');
+    }
+
+    const ctx=document.getElementById('gauge').getContext('2d');
+    const chart=new Chart(ctx,{
+      type:'doughnut',
+      data:{
+        datasets:[{
+          data:[50,50],
+          backgroundColor:['#ff0000','#00ff00'],
+          borderWidth:0
+        }]
+      },
+      options:{
+        cutout:'65%',
+        rotation:270,
+        circumference:180,
+        responsive:true,
+        maintainAspectRatio:true,
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+
+    // Function to handle display switching
+    function switchDisplay(display) {
+        document.getElementById('numeric-display').style.display = 'none';
+        document.getElementById('chart-display').style.display = 'none';
+        
+        document.getElementById('menu-numeric').classList.remove('active');
+        document.getElementById('menu-chart').classList.remove('active');
+
+        if (display === 'numeric') {
+            document.getElementById('numeric-display').style.display = 'flex';
+            document.getElementById('menu-numeric').classList.add('active');
+        } else if (display === 'chart') {
+            document.getElementById('chart-display').style.display = 'flex';
+            document.getElementById('menu-chart').classList.add('active');
+        }
+    }
+
+    // Add event listeners for menu items
+    document.getElementById('menu-numeric').addEventListener('click', () => switchDisplay('numeric'));
+    document.getElementById('menu-chart').addEventListener('click', () => switchDisplay('chart'));
+
+
+    update();
+
+    // Slower Simulation: 8000ms (8 seconds) with max change of 10
+    setInterval(()=>{
+      Object.keys(data).forEach(f=>{
+        const d=data[f];
+        const change=Math.round((Math.random()-0.5)*10); 
+        d.avail=Math.max(0,Math.min(d.cap,d.avail+change));
+      });
+      update();
+    }, 8000); 
+  </script>
+</body>
+</html>
+
