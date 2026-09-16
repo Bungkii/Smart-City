@@ -1,56 +1,212 @@
-// PIN DEFINITIONS
-#define TRIG_PARK     7
-#define ECHO_PARK     8
-#define LDR_PIN       A0
-#define STREET_LIGHT  2  // ควบคุมฐานทรานซิสเตอร์ 2N2222
+#include <WiFi.h>
+#include <WiFiManager.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
-const float PARK_THRESHOLD_CM = 8.0;  // ระยะตรวจจับรถ (cm)
-const int   DARK_THRESHOLD     = 500;  // ค่ายิ่งมืดยิ่งต่ำ (0-1023)
+// ==========================================
+// 1. OLED DISPLAY CONFIGURATION
+// ==========================================
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET    -1
+#define SCREEN_ADDRESS 0x3C  // ที่อยู่ I2C 0x3C หรือ 0x3D
 
-unsigned long lastSensorRead = 0;
+#define I2C_SDA 21
+#define I2C_SCL 22
 
-float readDistance() {
-  digitalWrite(TRIG_PARK, LOW);
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// ==========================================
+// 2. PIN DEFINITIONS & CONFIGURATION
+// ==========================================
+const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvbjXmdD76vRydjr7f1pQEttifQQ3ItVb42b96XoBfOG7DmGBBVlDN5DQGQ/exec";
+
+// Ultrasonic 1: ทางเข้า (IN)
+#define TRIG_IN   5
+#define ECHO_IN   18
+
+// Ultrasonic 2: ทางออก (OUT)
+#define TRIG_OUT  19
+#define ECHO_OUT  23
+
+const float DETECT_DIST_CM = 8.0; // ระยะตรวจจับรถเข้า-ออก (cm)
+
+int totalSlots = 8;
+int availableSlots = 8;
+
+unsigned long lastSenseTime = 0;
+unsigned long lockInTime = 0;
+unsigned long lockOutTime = 0;
+const unsigned long COOLDOWN = 1500; // หน่วงเวลา 1.5 วินาทีกันตรวจจับเบิ้ล
+
+// ==========================================
+// 3. OLED DISPLAY FUNCTIONS
+// ==========================================
+void updateOLEDDisplay() {
+  display.clearDisplay();
+
+  // แถบหัวเรื่องด้านบน
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(18, 4);
+  display.print("SMART REST AREA");
+  display.drawLine(0, 15, 128, 15, SSD1306_WHITE);
+
+  // ตัวเลขจำนวนช่องว่างขนาดใหญ่
+  display.setTextSize(3);
+  display.setCursor(20, 24);
+  display.print(availableSlots);
+
+  display.setTextSize(1);
+  display.setCursor(48, 28);
+  display.print("/ ");
+  display.print(totalSlots);
+  display.setCursor(48, 40);
+  display.print("SLOTS");
+
+  // แถบสถานะด้านล่าง
+  display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
+  display.setCursor(20, 55);
+  if (availableSlots <= 0) {
+    display.print("STATUS: FULL !");
+  } else {
+    display.print("STATUS: AVAILABLE");
+  }
+
+  display.display();
+}
+
+void showOLEDMessage(String line1, String line2) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 15);
+  display.println(line1);
+  display.setCursor(0, 35);
+  display.println(line2);
+  display.display();
+}
+
+// ==========================================
+// 4. SENSOR & CLOUD FUNCTIONS
+// ==========================================
+float getDistance(int trigPin, int echoPin) {
+  digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
-  digitalWrite(TRIG_PARK, HIGH);
+  digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
-  digitalWrite(TRIG_PARK, LOW);
+  digitalWrite(trigPin, LOW);
 
-  long duration = pulseIn(ECHO_PARK, HIGH, 25000);
+  long duration = pulseIn(echoPin, HIGH, 25000);
   if (duration == 0) return 999.0;
   return (float)duration * 0.0343 / 2.0;
 }
 
+void syncCloud(String actionType) {
+  if (WiFi.status() != WL_CONNECTED) return;
+  WiFiClientSecure client;
+  client.setInsecure();
+  client.setTimeout(4000);
+
+  HTTPClient http;
+  String url = SCRIPT_URL + "?action=" + actionType + "&available=" + String(availableSlots);
+  http.begin(client, url);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  http.GET();
+  http.end();
+}
+
+void fetchInitialSetting() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  WiFiClientSecure client;
+  client.setInsecure();
+  client.setTimeout(5000);
+  HTTPClient http;
+  http.begin(client, SCRIPT_URL + "?action=get_status");
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  int code = http.GET();
+  if (code == 200 || code == 302) {
+    DynamicJsonDocument doc(512);
+    deserializeJson(doc, http.getString());
+    if (doc.containsKey("lots") && doc["lots"].containsKey("ลานจอด 1")) {
+      totalSlots = doc["lots"]["ลานจอด 1"]["cap"].as<int>();
+      availableSlots = doc["lots"]["ลานจอด 1"]["avail"].as<int>();
+    }
+  }
+  http.end();
+}
+
+// ==========================================
+// 5. SETUP & LOOP
+// ==========================================
 void setup() {
-  Serial.begin(9600);
-  pinMode(TRIG_PARK, OUTPUT);
-  pinMode(ECHO_PARK, INPUT);
-  pinMode(STREET_LIGHT, OUTPUT);
-  digitalWrite(STREET_LIGHT, LOW);
+  Serial.begin(115200);
+
+  Wire.begin(I2C_SDA, I2C_SCL);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;);
+  }
+
+  showOLEDMessage("CONNECTING WIFI...", "SmartCity-Parking");
+
+  pinMode(TRIG_IN, OUTPUT);
+  pinMode(ECHO_IN, INPUT);
+  pinMode(TRIG_OUT, OUTPUT);
+  pinMode(ECHO_OUT, INPUT);
+
+  WiFiManager wm;
+  if (!wm.autoConnect("SmartParking-AP")) {
+    ESP.restart();
+  }
+
+  showOLEDMessage("SYNCING WITH", "GOOGLE SHEETS...");
+  fetchInitialSetting();
+  updateOLEDDisplay();
 }
 
 void loop() {
-  unsigned long currentMillis = millis();
+  unsigned long now = millis();
 
-  if (currentMillis - lastSensorRead >= 500) {
-    lastSensorRead = currentMillis;
+  if (now - lastSenseTime >= 100) {
+    lastSenseTime = now;
 
-    // 1. ระบบตรวจจับที่จอดรถ
-    float distance = readDistance();
-    bool isParkOccupied = (distance <= PARK_THRESHOLD_CM && distance > 0);
+    float distIn  = getDistance(TRIG_IN, ECHO_IN);
+    float distOut = getDistance(TRIG_OUT, ECHO_OUT);
 
-    Serial.print("[Parking] Distance: ");
-    Serial.print(distance);
-    Serial.print(" cm -> ");
-    Serial.println(isParkOccupied ? "OCCUPIED" : "FREE");
+    // ------------------------------------------
+    // 1. ตรวจจับรถขาเข้า (IN) -> ลดที่ว่างลง 1
+    // ------------------------------------------
+    if (distIn > 0 && distIn <= DETECT_DIST_CM && (now - lockInTime >= COOLDOWN)) {
+      lockInTime = now;
+      if (availableSlots > 0) {
+        availableSlots--;
+      }
+      updateOLEDDisplay();
+      Serial.printf("[PARK] CAR IN! Available slots now: %d\n", availableSlots);
+      syncCloud("park_in");
+    }
 
-    // 2. ระบบไฟถนนอัตโนมัติ
-    int ldrValue = analogRead(LDR_PIN);
-    bool isDark = (ldrValue < DARK_THRESHOLD);
-    digitalWrite(STREET_LIGHT, isDark ? HIGH : LOW);
+    // ------------------------------------------
+    // 2. ตรวจจับรถขาออก (OUT) -> เพิ่มที่ว่างขึ้น 1
+    // ------------------------------------------
+    if (distOut > 0 && distOut <= DETECT_DIST_CM && (now - lockOutTime >= COOLDOWN)) {
+      lockOutTime = now;
+      
+      // เพิ่มจำนวนที่ว่าง (ไม่ให้เกินความจุสูงสุด totalSlots)
+      if (availableSlots < totalSlots) {
+        availableSlots++;
+      } else {
+        availableSlots = totalSlots;
+      }
 
-    Serial.print("[Street Light] LDR: ");
-    Serial.print(ldrValue);
-    Serial.println(isDark ? " -> LIGHT ON" : " -> LIGHT OFF");
+      updateOLEDDisplay();
+      Serial.printf("[PARK] CAR OUT! Available slots now: %d\n", availableSlots);
+      syncCloud("park_out");
+    }
   }
 }
