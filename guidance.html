@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Smart City Parking Guidance System</title>
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Bootstrap Icons -->
@@ -33,13 +34,16 @@
       padding:16px 20px;
       font-size:18px;
       font-weight:700;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
     }
     .content{
       display:flex;
     }
     
     .sidebar{
-      width:200px;
+      width:220px;
       background:#f9f9f9;
       border-right:1px solid #ddd;
       padding:20px;
@@ -51,21 +55,17 @@
       border-bottom:1px solid #ddd;
     }
     
-    .cn-logo {
-      max-width: 100px; 
-      height: auto;
-      margin-bottom: 8px;
-    }
     .cn-company-name {
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 15px;
+      font-weight: 700;
       color: #003366; 
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
 
     .building-name{
-      font-size:14px;
-      color:#333;
+      font-size:13px;
+      color:#555;
+      line-height:1.4;
     }
     .menu{
       display:flex;
@@ -96,42 +96,39 @@
       gap:20px;
     }
     
-    /* Styles for display switching */
     #numeric-display {
-        display: flex;
-        flex: 1;
-        gap: 20px;
+      display: flex;
+      flex: 1;
+      gap: 20px;
     }
     #chart-display {
-        display: none; 
-        flex: 1;
-        padding: 40px;
-        text-align: center;
-        background: #eee;
-        border: 1px solid #ccc;
-        font-size: 16px;
-        color: #666;
-        min-height: 400px;
-        align-items: center;
-        justify-content: center;
+      display: none; 
+      flex: 1;
+      padding: 20px;
+      background: #fafafa;
+      border: 1px solid #eee;
+      min-height: 380px;
+      flex-direction: column;
+      justify-content: center;
     }
-    /* End New styles for display switching */
 
     .floors{
       flex:1;
       display:flex;
       flex-direction:column;
-      gap:8px; /* Reduced gap due to more floors */
+      gap:12px;
+      justify-content:flex-start;
+      padding-top:10px;
     }
     .floor-row{
       display:flex;
       align-items:center;
-      gap:8px; /* Reduced gap due to more floors */
+      gap:10px;
     }
     .floor-label{
-      font-size:24px; /* Reduced size to accommodate more floors */
+      font-size:20px;
       font-weight:700;
-      width:50px; /* Reduced width */
+      width:95px;
       text-align:right;
       color:#333;
     }
@@ -139,27 +136,30 @@
       flex:1;
       background:#000;
       border:2px solid #666;
-      padding:5px 8px; /* Reduced padding */
-      min-height:40px; /* Reduced height */
+      padding:8px 16px;
+      min-height:50px;
       display:flex;
       align-items:center;
       justify-content:center;
+      border-radius:4px;
     }
     .led-text{
       font-family:'Courier New',monospace;
-      font-size:22px; /* Reduced size */
+      font-size:26px;
       font-weight:700;
-      letter-spacing:1px; /* Reduced spacing */
+      letter-spacing:1px;
     }
     .led-green{
       color:#00ff00;
+      text-shadow:0 0 6px rgba(0,255,0,0.7);
     }
     .led-red{
       color:#ff0000;
+      text-shadow:0 0 6px rgba(255,0,0,0.7);
     }
 
     .right-section{
-      width:300px;
+      width:290px;
       display:flex;
       flex-direction:column;
       gap:16px;
@@ -167,20 +167,22 @@
     .gauge-container{
       background:#000;
       border:2px solid #666;
-      padding:20px;
-      height:240px;
+      padding:16px;
+      height:220px;
       display:flex;
       align-items:center;
       justify-content:center;
+      border-radius:4px;
     }
     .gauge{
-      width:200px;
-      height:200px;
+      width:180px;
+      height:180px;
     }
     .summary{
       background:#f9f9f9;
       border:1px solid #ddd;
-      padding:16px;
+      padding:14px;
+      border-radius:4px;
     }
     .summary-title{
       font-size:13px;
@@ -190,14 +192,14 @@
     .summary-value-box{
       background:#000;
       border:2px solid #666;
-      padding:12px;
+      padding:10px;
       text-align:center;
+      border-radius:4px;
     }
     .summary-value{
       font-family:'Courier New',monospace;
       font-size:32px;
       font-weight:700;
-      color:#00ff00;
     }
 
     @media(max-width:800px){
@@ -212,14 +214,16 @@
 </head>
 <body>
   <div class="container">
-    <div class="header">Parking Guidance System</div>
+    <div class="header">
+      <span>Parking Guidance System</span>
+      <span class="badge bg-success fw-normal" style="font-size:12px;"><i class="bi bi-broadcast me-1"></i>ONLINE</span>
+    </div>
 
     <div class="content">
       <div class="sidebar">
         <div class="logo-section">
-          <img src="logo.svg" alt="CN Intercon Logo" class="cn-logo">
-          <div class="cn-company-name">CN INTERCON. CO., LTD.</div>
-          <div class="building-name">อาคารจอดรถ ศูนย์การค้าเซ็นทรัล เชียงใหม่</div>
+          <div class="cn-company-name">SMART CITY MODEL</div>
+          <div class="building-name">จุดพักรถอัจฉริยะ (Rest Area)</div>
         </div>  
         <div class="menu">
           <div class="menu-item active" id="menu-numeric">Numeric display</div>
@@ -228,8 +232,11 @@
       </div>
 
       <div class="main">
+        <!-- 1. NUMERIC DISPLAY -->
         <div id="numeric-display">
-          <div class="floors" id="floors"></div>
+          <div class="floors" id="floors">
+            <div class="text-muted text-center p-3">กำลังเชื่อมต่อข้อมูล...</div>
+          </div>
 
           <div class="right-section">
             <div class="gauge-container">
@@ -239,21 +246,23 @@
             <div class="summary">
               <div class="summary-title">จำนวนรถที่เข้าจอดทั้งหมด</div>
               <div class="summary-value-box">
-                <div class="summary-value" id="parked">0</div>
+                <div class="summary-value text-danger" id="parked">0</div>
               </div>
             </div>
 
             <div class="summary">
               <div class="summary-title">จำนวนช่องจอดที่ว่างทั้งหมด</div>
               <div class="summary-value-box">
-                <div class="summary-value" id="available">0</div>
+                <div class="summary-value text-success" id="available">0</div>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- 2. CHART DISPLAY -->
         <div id="chart-display">
-            Chart Display Content goes here (e.g., historical data charts)
+          <h6 class="text-secondary mb-3"><i class="bi bi-bar-chart-line-fill me-2"></i>ประวัติอัตราการใช้พื้นที่ลานจอด (Real-Time Parking Activity)</h6>
+          <canvas id="historyChart" style="max-height: 280px;"></canvas>
         </div>
       </div>
     </div>
@@ -261,114 +270,153 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script>
-    // UPDATED DATA: Floors 1A to 7B
-    const data={
-      '7B':{cap:75,avail:20}, '7A':{cap:75,avail:20},
-      '6B':{cap:75,avail:20}, '6A':{cap:75,avail:20},
-      '5B':{cap:75,avail:20}, '5A':{cap:75,avail:20},
-      '4B':{cap:50,avail:20}, '4A':{cap:50,avail:20},
-      '3B':{cap:50,avail:20}, '3A':{cap:50,avail:20},
-      '2B':{cap:50,avail:20}, '2A':{cap:50,avail:20},
-      '1B':{cap:50,avail:20}, '1A':{cap:50,avail:20}
-    };
-    
-    // Ordered list of floors for display
-    const floorOrder = [
-        '7B', '7A', '6B', '6A', '5B', '5A', 
-        '4B', '4A', '3B', '3A', '2B', '2A', 
-        '1B', '1A'
-    ];
+    // URL Google Apps Script Web App
+    const API_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvbjXmdD76vRydjr7f1pQEttifQQ3ItVb42b96XoBfOG7DmGBBVlDN5DQGQ/exec?action=get_status";
 
-    function update(){
-      const floors=document.getElementById('floors');
-      floors.innerHTML='';
-      
-      floorOrder.forEach(f=>{
-        const d=data[f];
-        d.avail = Math.min(d.cap, d.avail); 
-        
-        const full=d.avail===0;
-        const row=document.createElement('div');
-        row.className='floor-row';
-        row.innerHTML=`
-          <div class="floor-label">${f}</div>
-          <div class="led-box">
-            <div class="led-text ${full?'led-red':'led-green'}">
-              ${full?'FULL':d.avail}
-            </div>
-          </div>
-        `;
-        floors.appendChild(row);
-      });
-
-      let avail=0,cap=0;
-      Object.values(data).forEach(d=>{
-        avail+=d.avail;
-        cap+=d.cap;
-      });
-
-      const parked=cap-avail;
-      document.getElementById('parked').textContent=parked;
-      document.getElementById('available').textContent=avail;
-
-      chart.data.datasets[0].data=[parked,avail];
-      chart.update('none');
-    }
-
-    const ctx=document.getElementById('gauge').getContext('2d');
-    const chart=new Chart(ctx,{
-      type:'doughnut',
-      data:{
-        datasets:[{
-          data:[50,50],
-          backgroundColor:['#ff0000','#00ff00'],
-          borderWidth:0
+    // Gauge Chart (หน้าแรก)
+    const ctxGauge = document.getElementById('gauge').getContext('2d');
+    const gaugeChart = new Chart(ctxGauge, {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [0, 8],
+          backgroundColor: ['#ff3333', '#00ff00'],
+          borderWidth: 0
         }]
       },
-      options:{
-        cutout:'65%',
-        rotation:270,
-        circumference:180,
-        responsive:true,
-        maintainAspectRatio:true,
-        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      options: {
+        cutout: '65%',
+        rotation: 270,
+        circumference: 180,
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } }
       }
     });
 
-    // Function to handle display switching
-    function switchDisplay(display) {
-        document.getElementById('numeric-display').style.display = 'none';
-        document.getElementById('chart-display').style.display = 'none';
-        
-        document.getElementById('menu-numeric').classList.remove('active');
-        document.getElementById('menu-chart').classList.remove('active');
-
-        if (display === 'numeric') {
-            document.getElementById('numeric-display').style.display = 'flex';
-            document.getElementById('menu-numeric').classList.add('active');
-        } else if (display === 'chart') {
-            document.getElementById('chart-display').style.display = 'flex';
-            document.getElementById('menu-chart').classList.add('active');
+    // History Chart (หน้าสอง)
+    const ctxHistory = document.getElementById('historyChart').getContext('2d');
+    const historyChart = new Chart(ctxHistory, {
+      type: 'line',
+      data: {
+        labels: ['เริ่มต้น', 'ปัจจุบัน'],
+        datasets: [{
+          label: 'ช่องจอดว่าง (Available)',
+          data: [8, 8],
+          borderColor: '#0066cc',
+          backgroundColor: 'rgba(0, 102, 204, 0.1)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, suggestedMax: 8 }
         }
+      }
+    });
+
+    let historyData = [];
+
+    async function fetchParkingData() {
+      try {
+        const res = await fetch(API_URL);
+        const json = await res.json();
+
+        if (json.status === "success" && json.lots) {
+          updateDisplay(json.lots);
+        }
+      } catch (err) {
+        console.error("Fetch Error:", err);
+      }
     }
 
-    // Add event listeners for menu items
+    function updateDisplay(lotsData) {
+      const floorsContainer = document.getElementById('floors');
+      floorsContainer.innerHTML = '';
+
+      let totalAvail = 0;
+      let totalCap = 0;
+      let hasVisibleLot = false;
+
+      // วนลูปอ่านข้อมูลทีละลานจอด
+      Object.keys(lotsData).forEach(lotName => {
+        const lot = lotsData[lotName];
+        
+        // -------------------------------------------------------------
+        // ** เงื่อนไขสำคัญ: ถ้าตั้ง cap = 0 (เช่น total_slots_2 เป็น 0)
+        // ** จะข้ามและไม่สร้างแถวขึ้นมาบนหน้าจอเด็ดขาด **
+        // -------------------------------------------------------------
+        if (!lot || lot.cap <= 0) {
+          return;
+        }
+
+        hasVisibleLot = true;
+        lot.avail = Math.min(lot.cap, Math.max(0, lot.avail));
+        const isFull = (lot.avail === 0);
+
+        totalAvail += lot.avail;
+        totalCap += lot.cap;
+
+        const row = document.createElement('div');
+        row.className = 'floor-row';
+        row.innerHTML = `
+          <div class="floor-label">${lotName}</div>
+          <div class="led-box">
+            <div class="led-text ${isFull ? 'led-red' : 'led-green'}">
+              ${isFull ? 'FULL' : lot.avail}
+            </div>
+          </div>
+        `;
+        floorsContainer.appendChild(row);
+      });
+
+      if (!hasVisibleLot) {
+        floorsContainer.innerHTML = '<div class="text-muted text-center p-3">ไม่มีลานจอดที่เปิดใช้งานในขณะนี้</div>';
+      }
+
+      const totalParked = Math.max(0, totalCap - totalAvail);
+      document.getElementById('parked').textContent = totalParked;
+      document.getElementById('available').textContent = totalAvail;
+
+      gaugeChart.data.datasets[0].data = [totalParked, totalAvail];
+      gaugeChart.update('none');
+
+      // อัปเดตข้อมูลกราฟประวัติ
+      const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      if (historyChart.data.labels.length > 10) {
+        historyChart.data.labels.shift();
+        historyChart.data.datasets[0].data.shift();
+      }
+      historyChart.data.labels.push(timeStr);
+      historyChart.data.datasets[0].data.push(totalAvail);
+      historyChart.update();
+    }
+
+    // สลับหน้า Numeric / Chart
+    function switchDisplay(display) {
+      document.getElementById('numeric-display').style.display = 'none';
+      document.getElementById('chart-display').style.display = 'none';
+      
+      document.getElementById('menu-numeric').classList.remove('active');
+      document.getElementById('menu-chart').classList.remove('active');
+
+      if (display === 'numeric') {
+        document.getElementById('numeric-display').style.display = 'flex';
+        document.getElementById('menu-numeric').classList.add('active');
+      } else if (display === 'chart') {
+        document.getElementById('chart-display').style.display = 'flex';
+        document.getElementById('menu-chart').classList.add('active');
+      }
+    }
+
     document.getElementById('menu-numeric').addEventListener('click', () => switchDisplay('numeric'));
     document.getElementById('menu-chart').addEventListener('click', () => switchDisplay('chart'));
 
-
-    update();
-
-    // Slower Simulation: 8000ms (8 seconds) with max change of 10
-    setInterval(()=>{
-      Object.keys(data).forEach(f=>{
-        const d=data[f];
-        const change=Math.round((Math.random()-0.5)*10); 
-        d.avail=Math.max(0,Math.min(d.cap,d.avail+change));
-      });
-      update();
-    }, 8000); 
+    // เริ่มดึงข้อมูลทันที และวนลูปดึงข้อมูลสดทุก 3 วินาที (3000ms)
+    fetchParkingData();
+    setInterval(fetchParkingData, 3000);
   </script>
 </body>
 </html>
-
