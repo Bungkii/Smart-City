@@ -6,214 +6,414 @@
   <title>Smart City Parking Guidance System</title>
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
-      padding: 24px;
-    }
-    .container-box {
-      max-width: 950px;
-      margin: 0 auto;
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    }
-    .header {
-      background: linear-gradient(135deg, #0284c7, #0369a1);
-      color: #fff;
-      padding: 18px 24px;
-      font-size: 20px;
-      font-weight: 700;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .content-area {
-      display: flex;
-      gap: 24px;
-      padding: 24px;
-    }
-    .left-panel {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .bay-card {
-      background: #090d16;
-      border: 2px solid #334155;
-      border-radius: 8px;
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .bay-name {
-      font-size: 22px;
-      font-weight: 700;
-      color: #38bdf8;
-    }
-    .bay-status-badge {
-      font-family: 'Courier New', monospace;
-      font-size: 42px;
-      font-weight: 900;
-      padding: 8px 24px;
-      border-radius: 6px;
-      border: 2px solid #475569;
-      background: #000;
-      letter-spacing: 2px;
-    }
-    .text-green { color: #22c55e; border-color: #15803d; }
-    .text-red { color: #ef4444; border-color: #b91c1c; }
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    .right-panel {
-      width: 320px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Noto Sans Thai',sans-serif;
+      background:#f5f5f5;
+      padding:20px;
     }
-    .gauge-card {
-      background: #090d16;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+    .container{
+      max-width:900px;
+      margin:0 auto;
+      background:#fff;
+      border:1px solid #ddd;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1);
     }
-    .metric-box {
-      background: #090d16;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 16px;
-      text-align: center;
+    .header{
+      background:#0066cc;
+      color:#fff;
+      padding:16px 20px;
+      font-size:18px;
+      font-weight:700;
     }
-    .metric-title { font-size: 14px; color: #94a3b8; margin-bottom: 6px; }
-    .metric-val {
-      font-family: 'Courier New', monospace;
-      font-size: 36px;
-      font-weight: 700;
-      color: #38bdf8;
+    .content{
+      display:flex;
     }
-    @media (max-width: 768px) {
-      .content-area { flex-direction: column; }
-      .right-panel { width: 100%; }
+    
+    .sidebar{
+      width:200px;
+      background:#f9f9f9;
+      border-right:1px solid #ddd;
+      padding:20px;
+    }
+    .logo-section{
+      text-align:center;
+      margin-bottom:20px;
+      padding-bottom:16px;
+      border-bottom:1px solid #ddd;
+    }
+    
+    .cn-logo {
+      max-width: 100px; 
+      height: auto;
+      margin-bottom: 8px;
+    }
+    .cn-company-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #003366; 
+      margin-bottom: 12px;
+    }
+
+    .building-name{
+      font-size:14px;
+      color:#333;
+    }
+    .menu{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .menu-item{
+      padding:10px;
+      background:#fff;
+      border:1px solid #ddd;
+      font-size:13px;
+      cursor:pointer;
+      text-align:center;
+    }
+    .menu-item:hover{
+      background:#f0f0f0;
+    }
+    .menu-item.active{
+      background:#0066cc;
+      color:#fff;
+      border-color:#0066cc;
+    }
+
+    .main{
+      flex:1;
+      padding:20px;
+      display:flex;
+      gap:20px;
+    }
+    
+    /* Styles for display switching */
+    #numeric-display {
+        display: flex;
+        flex: 1;
+        gap: 20px;
+    }
+    #chart-display {
+        display: none; 
+        flex: 1;
+        padding: 40px;
+        text-align: center;
+        background: #eee;
+        border: 1px solid #ccc;
+        font-size: 16px;
+        color: #666;
+        min-height: 400px;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+    /* End New styles for display switching */
+
+    .floors{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      gap:8px; 
+      padding-top: 10px;
+    }
+    .floor-row{
+      display:flex;
+      align-items:center;
+      gap:8px; 
+    }
+    .floor-label{
+      font-size:20px; /* Reduced from 24px for longer names */
+      font-weight:700;
+      width:75px; /* Increased from 50px */
+      text-align:right;
+      color:#333;
+    }
+    .led-box{
+      flex:1;
+      background:#000;
+      border:2px solid #666;
+      padding:5px 8px; 
+      min-height:45px; /* Increased from 40px */
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .led-text{
+      font-family:'Courier New',monospace;
+      font-size:26px; /* Increased from 22px */
+      font-weight:700;
+      letter-spacing:1px; 
+    }
+    .led-green{
+      color:#00ff00;
+      text-shadow: 0 0 5px rgba(0,255,0,0.5);
+    }
+    .led-red{
+      color:#ff0000;
+      text-shadow: 0 0 5px rgba(255,0,0,0.5);
+    }
+
+    .right-section{
+      width:300px;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+    .gauge-container{
+      background:#000;
+      border:2px solid #666;
+      padding:20px;
+      height:240px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .gauge{
+      width:200px;
+      height:200px;
+    }
+    .summary{
+      background:#f9f9f9;
+      border:1px solid #ddd;
+      padding:16px;
+    }
+    .summary-title{
+      font-size:13px;
+      color:#666;
+      margin-bottom:8px;
+    }
+    .summary-value-box{
+      background:#000;
+      border:2px solid #666;
+      padding:12px;
+      text-align:center;
+    }
+    .summary-value{
+      font-family:'Courier New',monospace;
+      font-size:32px;
+      font-weight:700;
+      color:#00ff00;
+    }
+
+    @media(max-width:800px){
+      .content{flex-direction:column}
+      .sidebar{width:100%;border-right:0;border-bottom:1px solid #ddd}
+      .main { flex-direction: column; }
+      #numeric-display { flex-direction: column; }
+      #chart-display { flex-direction: column; }
+      .right-section{width:100%}
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <div class="header">Parking Guidance System</div>
 
-  <div class="container-box">
-    <div class="header">
-      <div><i class="bi bi-geo-alt-fill me-2"></i>Smart City: ระบบนำทางที่จอดรถอัจฉริยะ (Rest Area)</div>
-      <div id="live-indicator" class="badge bg-success"><i class="bi bi-broadcast me-1"></i>LIVE</div>
-    </div>
-
-    <div class="content-area">
-      <!-- ฝั่งซ้าย: ป้ายแสดงลานจอดจำลอง -->
-      <div class="left-panel">
-        <div class="bay-card">
-          <div>
-            <div class="bay-name">ลานจอด 1 (จุดพักรถบางปะกง)</div>
-            <div class="text-secondary small mt-1">ความจุสูงสุด: <span id="total-capacity">8</span> ช่อง</div>
-          </div>
-          <div id="bay-led" class="bay-status-badge text-green">8</div>
-        </div>
-
-        <div class="bay-card" style="opacity: 0.5;">
-          <div>
-            <div class="bay-name">ลานจอด 2 (โซนสถานีชาร์จ EV)</div>
-            <div class="text-secondary small mt-1">รองรับการต่อขยายในอนาคต</div>
-          </div>
-          <div class="bay-status-badge text-secondary">READY</div>
+    <div class="content">
+      <div class="sidebar">
+        <div class="logo-section">
+          <img src="logo.svg" alt="Logo" class="cn-logo" onerror="this.style.display='none'">
+          <div class="cn-company-name">SMART CITY MODEL</div>
+          <div class="building-name">จุดพักรถอัจฉริยะ<br>(Rest Area บางปะกง)</div>
+        </div>  
+        <div class="menu">
+          <div class="menu-item active" id="menu-numeric">Numeric display</div>
+          <div class="menu-item" id="menu-chart">Chart display</div>
         </div>
       </div>
 
-      <!-- ฝั่งขวา: สถิติและเกจ -->
-      <div class="right-panel">
-        <div class="gauge-card">
-          <canvas id="gauge" style="max-height: 180px;"></canvas>
-          <div class="small text-secondary mt-2">อัตราส่วนการเข้าจอด</div>
+      <div class="main">
+        <div id="numeric-display">
+          <div class="floors" id="floors">
+            <!-- Data will be populated here -->
+            <div class="text-center text-muted mt-5">กำลังโหลดข้อมูล...</div>
+          </div>
+
+          <div class="right-section">
+            <div class="gauge-container">
+              <canvas class="gauge" id="gauge"></canvas>
+            </div>
+
+            <div class="summary">
+              <div class="summary-title">จำนวนรถที่เข้าจอดทั้งหมด</div>
+              <div class="summary-value-box">
+                <div class="summary-value" id="parked" style="color: #ff0000;">0</div>
+              </div>
+            </div>
+
+            <div class="summary">
+              <div class="summary-title">จำนวนช่องจอดที่ว่างทั้งหมด</div>
+              <div class="summary-value-box">
+                <div class="summary-value" id="available">0</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="metric-box">
-          <div class="metric-title">ช่องจอดว่างทั้งหมด</div>
-          <div class="metric-val text-green" id="val-available">8</div>
-        </div>
-
-        <div class="metric-box">
-          <div class="metric-title">รถเข้าจอดแล้ว</div>
-          <div class="metric-val text-red" id="val-parked">0</div>
+        <div id="chart-display">
+          <h5 class="mb-4 text-secondary">ประวัติช่องจอดว่าง (Real-Time History)</h5>
+          <canvas id="historyChart" style="width:100%; max-height:250px;"></canvas>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script>
     // URL Web App จาก Google Apps Script (ลงท้ายด้วย /exec)
     const API_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvbjXmdD76vRydjr7f1pQEttifQQ3ItVb42b96XoBfOG7DmGBBVlDN5DQGQ/exec?action=get_status";
 
+    // ตั้งค่า Gauge Chart
     const ctx = document.getElementById('gauge').getContext('2d');
-    const chart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['จอดแล้ว', 'ว่าง'],
-        datasets: [{
-          data: [0, 8],
-          backgroundColor: ['#ef4444', '#22c55e'],
-          borderWidth: 0
+    const chart = new Chart(ctx,{
+      type:'doughnut',
+      data:{
+        datasets:[{
+          data:[0, 8],
+          backgroundColor:['#ff0000','#00ff00'],
+          borderWidth:0
         }]
       },
-      options: {
-        cutout: '70%',
-        rotation: 270,
-        circumference: 180,
-        plugins: { legend: { display: false } }
+      options:{
+        cutout:'65%',
+        rotation:270,
+        circumference:180,
+        responsive:true,
+        maintainAspectRatio:true,
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
       }
     });
 
-    async function fetchParkingStatus() {
+    // ตั้งค่า History Chart (แท็บ Chart display)
+    const ctxHist = document.getElementById('historyChart').getContext('2d');
+    const histChart = new Chart(ctxHist, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'จำนวนช่องว่าง (Available)',
+          data: [],
+          borderColor: '#0066cc',
+          backgroundColor: 'rgba(0, 102, 204, 0.2)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true, suggestedMax: 8 } }
+      }
+    });
+
+    // ดึงข้อมูลจาก API
+    async function fetchParkingData() {
       try {
         const res = await fetch(API_URL);
-        const data = await res.json();
-        
-        if (data.status === "success") {
-          const total = data.total;
-          const avail = data.available;
-          const occupied = data.occupied;
-
-          document.getElementById('total-capacity').textContent = total;
-          document.getElementById('val-available').textContent = avail;
-          document.getElementById('val-parked').textContent = occupied;
-
-          const led = document.getElementById('bay-led');
-          if (avail === 0) {
-            led.textContent = 'FULL';
-            led.className = 'bay-status-badge text-red';
-          } else {
-            led.textContent = avail;
-            led.className = 'bay-status-badge text-green';
-          }
-
-          chart.data.datasets[0].data = [occupied, avail];
-          chart.update();
+        const json = await res.json();
+        if (json.status === "success" && json.lots) {
+          updateUI(json.lots);
         }
       } catch (err) {
-        console.error("Fetch Error:", err);
+        console.error("Error fetching data:", err);
       }
     }
 
-    // ดึงข้อมูลครั้งแรก และวนลูปอัปเดตทุก 3 วินาที
-    fetchParkingStatus();
-    setInterval(fetchParkingStatus, 3000);
+    function updateUI(lotsData) {
+      const floorsContainer = document.getElementById('floors');
+      floorsContainer.innerHTML = '';
+
+      let totalAvail = 0;
+      let totalCap = 0;
+
+      // วนลูปอ่านข้อมูลทีละลานจอด
+      Object.keys(lotsData).forEach(lotName => {
+        const lot = lotsData[lotName];
+        
+        // -------------------------------------------------------------
+        // ** เงื่อนไขสำคัญ: ถ้าตั้ง cap = 0 ไม่ต้องแสดงลานนี้บนจอ **
+        // -------------------------------------------------------------
+        if (!lot || lot.cap <= 0) {
+          return;
+        }
+
+        lot.avail = Math.min(lot.cap, Math.max(0, lot.avail));
+        const isFull = (lot.avail === 0);
+
+        totalAvail += lot.avail;
+        totalCap += lot.cap;
+
+        const row = document.createElement('div');
+        row.className = 'floor-row';
+        row.innerHTML = `
+          <div class="floor-label">${lotName}</div>
+          <div class="led-box">
+            <div class="led-text ${isFull ? 'led-red' : 'led-green'}">
+              ${isFull ? 'FULL' : lot.avail}
+            </div>
+          </div>
+        `;
+        floorsContainer.appendChild(row);
+      });
+
+      if (floorsContainer.innerHTML === '') {
+        floorsContainer.innerHTML = '<div class="text-center text-muted mt-5">ไม่พบข้อมูลลานจอดที่เปิดใช้งาน</div>';
+      }
+
+      const totalParked = Math.max(0, totalCap - totalAvail);
+      
+      document.getElementById('parked').textContent = totalParked;
+      document.getElementById('available').textContent = totalAvail;
+
+      // อัปเดต Gauge
+      chart.data.datasets[0].data = [totalParked, totalAvail];
+      chart.update('none');
+
+      // อัปเดตกราฟประวัติ
+      const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      if (histChart.data.labels.length > 15) {
+        histChart.data.labels.shift();
+        histChart.data.datasets[0].data.shift();
+      }
+      histChart.data.labels.push(timeStr);
+      histChart.data.datasets[0].data.push(totalAvail);
+      histChart.options.scales.y.suggestedMax = totalCap > 0 ? totalCap : 8;
+      histChart.update();
+    }
+
+    // Function to handle display switching
+    function switchDisplay(display) {
+        document.getElementById('numeric-display').style.display = 'none';
+        document.getElementById('chart-display').style.display = 'none';
+        
+        document.getElementById('menu-numeric').classList.remove('active');
+        document.getElementById('menu-chart').classList.remove('active');
+
+        if (display === 'numeric') {
+            document.getElementById('numeric-display').style.display = 'flex';
+            document.getElementById('menu-numeric').classList.add('active');
+        } else if (display === 'chart') {
+            document.getElementById('chart-display').style.display = 'flex';
+            document.getElementById('menu-chart').classList.add('active');
+        }
+    }
+
+    // Add event listeners for menu items
+    document.getElementById('menu-numeric').addEventListener('click', () => switchDisplay('numeric'));
+    document.getElementById('menu-chart').addEventListener('click', () => switchDisplay('chart'));
+
+    // ดึงข้อมูลครั้งแรก และตั้งเวลารันซ้ำทุก 3 วินาที
+    fetchParkingData();
+    setInterval(fetchParkingData, 3000);
   </script>
 </body>
 </html>
