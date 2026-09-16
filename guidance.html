@@ -34,16 +34,13 @@
       padding:16px 20px;
       font-size:18px;
       font-weight:700;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
     }
     .content{
       display:flex;
     }
     
     .sidebar{
-      width:220px;
+      width:200px;
       background:#f9f9f9;
       border-right:1px solid #ddd;
       padding:20px;
@@ -55,17 +52,21 @@
       border-bottom:1px solid #ddd;
     }
     
-    .cn-company-name {
-      font-size: 15px;
-      font-weight: 700;
-      color: #003366; 
+    .cn-logo {
+      max-width: 100px; 
+      height: auto;
       margin-bottom: 8px;
+    }
+    .cn-company-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #003366; 
+      margin-bottom: 12px;
     }
 
     .building-name{
-      font-size:13px;
-      color:#555;
-      line-height:1.4;
+      font-size:14px;
+      color:#333;
     }
     .menu{
       display:flex;
@@ -96,39 +97,44 @@
       gap:20px;
     }
     
+    /* Styles for display switching */
     #numeric-display {
-      display: flex;
-      flex: 1;
-      gap: 20px;
+        display: flex;
+        flex: 1;
+        gap: 20px;
     }
     #chart-display {
-      display: none; 
-      flex: 1;
-      padding: 20px;
-      background: #fafafa;
-      border: 1px solid #eee;
-      min-height: 380px;
-      flex-direction: column;
-      justify-content: center;
+        display: none; 
+        flex: 1;
+        padding: 40px;
+        text-align: center;
+        background: #eee;
+        border: 1px solid #ccc;
+        font-size: 16px;
+        color: #666;
+        min-height: 400px;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
     }
+    /* End New styles for display switching */
 
     .floors{
       flex:1;
       display:flex;
       flex-direction:column;
-      gap:12px;
-      justify-content:flex-start;
-      padding-top:10px;
+      gap:8px; 
+      padding-top: 10px;
     }
     .floor-row{
       display:flex;
       align-items:center;
-      gap:10px;
+      gap:8px; 
     }
     .floor-label{
-      font-size:20px;
+      font-size:20px; /* Reduced from 24px for longer names */
       font-weight:700;
-      width:95px;
+      width:75px; /* Increased from 50px */
       text-align:right;
       color:#333;
     }
@@ -136,30 +142,29 @@
       flex:1;
       background:#000;
       border:2px solid #666;
-      padding:8px 16px;
-      min-height:50px;
+      padding:5px 8px; 
+      min-height:45px; /* Increased from 40px */
       display:flex;
       align-items:center;
       justify-content:center;
-      border-radius:4px;
     }
     .led-text{
       font-family:'Courier New',monospace;
-      font-size:26px;
+      font-size:26px; /* Increased from 22px */
       font-weight:700;
-      letter-spacing:1px;
+      letter-spacing:1px; 
     }
     .led-green{
       color:#00ff00;
-      text-shadow:0 0 6px rgba(0,255,0,0.7);
+      text-shadow: 0 0 5px rgba(0,255,0,0.5);
     }
     .led-red{
       color:#ff0000;
-      text-shadow:0 0 6px rgba(255,0,0,0.7);
+      text-shadow: 0 0 5px rgba(255,0,0,0.5);
     }
 
     .right-section{
-      width:290px;
+      width:300px;
       display:flex;
       flex-direction:column;
       gap:16px;
@@ -167,22 +172,20 @@
     .gauge-container{
       background:#000;
       border:2px solid #666;
-      padding:16px;
-      height:220px;
+      padding:20px;
+      height:240px;
       display:flex;
       align-items:center;
       justify-content:center;
-      border-radius:4px;
     }
     .gauge{
-      width:180px;
-      height:180px;
+      width:200px;
+      height:200px;
     }
     .summary{
       background:#f9f9f9;
       border:1px solid #ddd;
-      padding:14px;
-      border-radius:4px;
+      padding:16px;
     }
     .summary-title{
       font-size:13px;
@@ -192,14 +195,14 @@
     .summary-value-box{
       background:#000;
       border:2px solid #666;
-      padding:10px;
+      padding:12px;
       text-align:center;
-      border-radius:4px;
     }
     .summary-value{
       font-family:'Courier New',monospace;
       font-size:32px;
       font-weight:700;
+      color:#00ff00;
     }
 
     @media(max-width:800px){
@@ -214,16 +217,14 @@
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <span>Parking Guidance System</span>
-      <span class="badge bg-success fw-normal" style="font-size:12px;"><i class="bi bi-broadcast me-1"></i>ONLINE</span>
-    </div>
+    <div class="header">Parking Guidance System</div>
 
     <div class="content">
       <div class="sidebar">
         <div class="logo-section">
+          <img src="logo.svg" alt="Logo" class="cn-logo" onerror="this.style.display='none'">
           <div class="cn-company-name">SMART CITY MODEL</div>
-          <div class="building-name">จุดพักรถอัจฉริยะ (Rest Area)</div>
+          <div class="building-name">จุดพักรถอัจฉริยะ<br>(Rest Area บางปะกง)</div>
         </div>  
         <div class="menu">
           <div class="menu-item active" id="menu-numeric">Numeric display</div>
@@ -232,10 +233,10 @@
       </div>
 
       <div class="main">
-        <!-- 1. NUMERIC DISPLAY -->
         <div id="numeric-display">
           <div class="floors" id="floors">
-            <div class="text-muted text-center p-3">กำลังเชื่อมต่อข้อมูล...</div>
+            <!-- Data will be populated here -->
+            <div class="text-center text-muted mt-5">กำลังโหลดข้อมูล...</div>
           </div>
 
           <div class="right-section">
@@ -246,23 +247,22 @@
             <div class="summary">
               <div class="summary-title">จำนวนรถที่เข้าจอดทั้งหมด</div>
               <div class="summary-value-box">
-                <div class="summary-value text-danger" id="parked">0</div>
+                <div class="summary-value" id="parked" style="color: #ff0000;">0</div>
               </div>
             </div>
 
             <div class="summary">
               <div class="summary-title">จำนวนช่องจอดที่ว่างทั้งหมด</div>
               <div class="summary-value-box">
-                <div class="summary-value text-success" id="available">0</div>
+                <div class="summary-value" id="available">0</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 2. CHART DISPLAY -->
         <div id="chart-display">
-          <h6 class="text-secondary mb-3"><i class="bi bi-bar-chart-line-fill me-2"></i>ประวัติอัตราการใช้พื้นที่ลานจอด</h6>
-          <canvas id="historyChart" style="max-height: 280px;"></canvas>
+          <h5 class="mb-4 text-secondary">ประวัติช่องจอดว่าง (Real-Time History)</h5>
+          <canvas id="historyChart" style="width:100%; max-height:250px;"></canvas>
         </div>
       </div>
     </div>
@@ -270,89 +270,82 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script>
-    // URL Google Apps Script Web App
+    // URL Web App จาก Google Apps Script (ลงท้ายด้วย /exec)
     const API_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvbjXmdD76vRydjr7f1pQEttifQQ3ItVb42b96XoBfOG7DmGBBVlDN5DQGQ/exec?action=get_status";
 
-    // Gauge Chart (หน้าแรก)
-    const ctxGauge = document.getElementById('gauge').getContext('2d');
-    const gaugeChart = new Chart(ctxGauge, {
-      type: 'doughnut',
-      data: {
-        datasets: [{
-          data: [0, 8],
-          backgroundColor: ['#ff3333', '#00ff00'],
-          borderWidth: 0
+    // ตั้งค่า Gauge Chart
+    const ctx = document.getElementById('gauge').getContext('2d');
+    const chart = new Chart(ctx,{
+      type:'doughnut',
+      data:{
+        datasets:[{
+          data:[0, 8],
+          backgroundColor:['#ff0000','#00ff00'],
+          borderWidth:0
         }]
       },
-      options: {
-        cutout: '65%',
-        rotation: 270,
-        circumference: 180,
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } }
+      options:{
+        cutout:'65%',
+        rotation:270,
+        circumference:180,
+        responsive:true,
+        maintainAspectRatio:true,
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
       }
     });
 
-    // History Chart (หน้าสอง)
-    const ctxHistory = document.getElementById('historyChart').getContext('2d');
-    const historyChart = new Chart(ctxHistory, {
+    // ตั้งค่า History Chart (แท็บ Chart display)
+    const ctxHist = document.getElementById('historyChart').getContext('2d');
+    const histChart = new Chart(ctxHist, {
       type: 'line',
       data: {
-        labels: ['เริ่มต้น', 'ปัจจุบัน'],
+        labels: [],
         datasets: [{
-          label: 'ช่องจอดว่าง (Available)',
-          data: [8, 8],
+          label: 'จำนวนช่องว่าง (Available)',
+          data: [],
           borderColor: '#0066cc',
-          backgroundColor: 'rgba(0, 102, 204, 0.1)',
+          backgroundColor: 'rgba(0, 102, 204, 0.2)',
           fill: true,
           tension: 0.3
         }]
       },
       options: {
         responsive: true,
-        scales: {
-          y: { beginAtZero: true, suggestedMax: 8 }
-        }
+        scales: { y: { beginAtZero: true, suggestedMax: 8 } }
       }
     });
 
-    let historyData = [];
-
+    // ดึงข้อมูลจาก API
     async function fetchParkingData() {
       try {
         const res = await fetch(API_URL);
         const json = await res.json();
-
         if (json.status === "success" && json.lots) {
-          updateDisplay(json.lots);
+          updateUI(json.lots);
         }
       } catch (err) {
-        console.error("Fetch Error:", err);
+        console.error("Error fetching data:", err);
       }
     }
 
-    function updateDisplay(lotsData) {
+    function updateUI(lotsData) {
       const floorsContainer = document.getElementById('floors');
       floorsContainer.innerHTML = '';
 
       let totalAvail = 0;
       let totalCap = 0;
-      let hasVisibleLot = false;
 
       // วนลูปอ่านข้อมูลทีละลานจอด
       Object.keys(lotsData).forEach(lotName => {
         const lot = lotsData[lotName];
         
         // -------------------------------------------------------------
-        // ** เงื่อนไขสำคัญ: ถ้าตั้ง cap = 0 (เช่น total_slots_2 เป็น 0)
-        // ** จะข้ามและไม่สร้างแถวขึ้นมาบนหน้าจอเด็ดขาด **
+        // ** เงื่อนไขสำคัญ: ถ้าตั้ง cap = 0 ไม่ต้องแสดงลานนี้บนจอ **
         // -------------------------------------------------------------
         if (!lot || lot.cap <= 0) {
           return;
         }
 
-        hasVisibleLot = true;
         lot.avail = Math.min(lot.cap, Math.max(0, lot.avail));
         const isFull = (lot.avail === 0);
 
@@ -372,49 +365,53 @@
         floorsContainer.appendChild(row);
       });
 
-      if (!hasVisibleLot) {
-        floorsContainer.innerHTML = '<div class="text-muted text-center p-3">ไม่มีลานจอดที่เปิดใช้งานในขณะนี้</div>';
+      if (floorsContainer.innerHTML === '') {
+        floorsContainer.innerHTML = '<div class="text-center text-muted mt-5">ไม่พบข้อมูลลานจอดที่เปิดใช้งาน</div>';
       }
 
       const totalParked = Math.max(0, totalCap - totalAvail);
+      
       document.getElementById('parked').textContent = totalParked;
       document.getElementById('available').textContent = totalAvail;
 
-      gaugeChart.data.datasets[0].data = [totalParked, totalAvail];
-      gaugeChart.update('none');
+      // อัปเดต Gauge
+      chart.data.datasets[0].data = [totalParked, totalAvail];
+      chart.update('none');
 
-      // อัปเดตข้อมูลกราฟประวัติ
+      // อัปเดตกราฟประวัติ
       const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      if (historyChart.data.labels.length > 10) {
-        historyChart.data.labels.shift();
-        historyChart.data.datasets[0].data.shift();
+      if (histChart.data.labels.length > 15) {
+        histChart.data.labels.shift();
+        histChart.data.datasets[0].data.shift();
       }
-      historyChart.data.labels.push(timeStr);
-      historyChart.data.datasets[0].data.push(totalAvail);
-      historyChart.update();
+      histChart.data.labels.push(timeStr);
+      histChart.data.datasets[0].data.push(totalAvail);
+      histChart.options.scales.y.suggestedMax = totalCap > 0 ? totalCap : 8;
+      histChart.update();
     }
 
-    // สลับหน้า Numeric / Chart
+    // Function to handle display switching
     function switchDisplay(display) {
-      document.getElementById('numeric-display').style.display = 'none';
-      document.getElementById('chart-display').style.display = 'none';
-      
-      document.getElementById('menu-numeric').classList.remove('active');
-      document.getElementById('menu-chart').classList.remove('active');
+        document.getElementById('numeric-display').style.display = 'none';
+        document.getElementById('chart-display').style.display = 'none';
+        
+        document.getElementById('menu-numeric').classList.remove('active');
+        document.getElementById('menu-chart').classList.remove('active');
 
-      if (display === 'numeric') {
-        document.getElementById('numeric-display').style.display = 'flex';
-        document.getElementById('menu-numeric').classList.add('active');
-      } else if (display === 'chart') {
-        document.getElementById('chart-display').style.display = 'flex';
-        document.getElementById('menu-chart').classList.add('active');
-      }
+        if (display === 'numeric') {
+            document.getElementById('numeric-display').style.display = 'flex';
+            document.getElementById('menu-numeric').classList.add('active');
+        } else if (display === 'chart') {
+            document.getElementById('chart-display').style.display = 'flex';
+            document.getElementById('menu-chart').classList.add('active');
+        }
     }
 
+    // Add event listeners for menu items
     document.getElementById('menu-numeric').addEventListener('click', () => switchDisplay('numeric'));
     document.getElementById('menu-chart').addEventListener('click', () => switchDisplay('chart'));
 
-    // เริ่มดึงข้อมูลทันที และวนลูปดึงข้อมูลสดทุก 3 วินาที (3000ms)
+    // ดึงข้อมูลครั้งแรก และตั้งเวลารันซ้ำทุก 3 วินาที
     fetchParkingData();
     setInterval(fetchParkingData, 3000);
   </script>
