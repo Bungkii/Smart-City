@@ -24,10 +24,10 @@ const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvb
 // 2. PIN DEFINITIONS
 // ==========================================
 // RFID SPI Pins (MOSI ขา 21 ตามฮาร์ดแวร์จริง)
-#define SS_PIN       5
-#define RST_PIN      4
-#define SPI_SCK      18
-#define SPI_MISO     19
+#define SS_PIN       5    
+#define RST_PIN      4    
+#define SPI_SCK      18   
+#define SPI_MISO     19   
 #define SPI_MOSI     21
 
 // LCD 16x2 I2C Pins
@@ -35,9 +35,9 @@ const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvb
 #define I2C_SCL      22
 
 // Actuators & Controls
-#define SERVO_PIN    14   // Servo ไม้กั้น (GPIO 14)
-#define BUZZER_PIN   25   // Buzzer Active LOW (GPIO 25)
-#define RESET_PIN    0    // ปุ่ม BOOT (GPIO 0) สำหรับล้าง Wi-Fi
+#define SERVO_PIN    14   // Servo ไม้กั้น
+#define BUZZER_PIN   25   // Buzzer
+#define RESET_PIN    0    // ปุ่ม BOOT
 
 #define BUZZER_ON    LOW
 #define BUZZER_OFF   HIGH
@@ -281,36 +281,51 @@ void loop() {
     }
     cardUID.toUpperCase();
 
+    // 💡 1. ปริ้นต์ใส่ Serial เพื่อให้ชัวร์ว่าอ่านบัตรได้
+    Serial.println("\n[RFID] Card Scanned: " + cardUID);
+
+    // 💡 2. บังคับโชว์ UID ขึ้นจอ LCD ทันทีก่อนไปเช็กเน็ต
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("CARD: " + cardUID);
     lcd.setCursor(0, 1);
-    lcd.print("CHECKING ID...  ");
+    lcd.print("CONNECTING...   ");
+    delay(500); // ค้างไว้ครึ่งวินาทีให้มองทัน
 
     String role = "";
     String action = "entry";
     String authStatus = verifyCard(cardUID, role, action);
+    
+    Serial.println("[CLOUD] Status: " + authStatus + " | Role: " + role);
+
+    if (authStatus == "wifi_lost" || authStatus == "error") {
+       // ถ้าเน็ตหลุด ให้เปิดให้ผ่านเป็น Guest (Offline Mode)
+       authStatus = "not_found"; 
+       role = "Offline";
+    }
 
     if (authStatus == "banned") {
-      // 1. บัตร Banned: ปิ๊บ 3 ที ไม่เปิดไม้กั้น และแจ้งเตือน
+      // บัตร Banned: ปิ๊บ 3 ที ไม่เปิดไม้กั้น
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("CARD BANNED!");
+      lcd.print("CARD BANNED!    ");
       lcd.setCursor(0, 1);
       lcd.print(role.length() > 0 ? role : cardUID);
       beepBuzzer(3);
-      delay(3000);
+      delay(3000); 
       lcd.clear();
       updateTopLineWelcome();
     } 
     else {
-      // 2. จัดการ Buzzer & Role
+      // อนุญาตให้ผ่าน (Allow หรือ Guest)
       if (authStatus == "allow") {
-        beepBuzzer(1); // บัตรใน Database ดัง 1 ที
+        beepBuzzer(1); 
       } else {
-        beepBuzzer(2); // บัตรนอก Database ดัง 2 ที
-        role = "TempUser";
+        beepBuzzer(2); 
+        role = (role == "Offline") ? "Offline" : "Guest"; 
       }
 
       lcd.clear();
-      // บรรทัดบน: ขาออกขึ้น THANK YOU / ขาเข้าขึ้น Welcome HH:MM:SS
       if (action == "exit") {
         lcd.setCursor(0, 0);
         lcd.print("THANK YOU       ");
@@ -318,7 +333,6 @@ void loop() {
         updateTopLineWelcome();
       }
 
-      // บรรทัดล่าง: [UID] [Role]
       String displayLine = cardUID + " " + role;
       while (displayLine.length() < 16) displayLine += " ";
       if (displayLine.length() > 16) displayLine = displayLine.substring(0, 16);
@@ -334,10 +348,9 @@ void loop() {
     rfid.PCD_StopCrypto1();
   }
 
-  // ปิดไม้กั้นอัตโนมัติเมื่อครบ 3 วินาที
-  if (isGateOpen && (currentMillis - gateOpenTime >= 3000)) {
+  // ปิดไม้กั้นอัตโนมัติเมื่อครบ 10 วินาที
+  if (isGateOpen && (currentMillis - gateOpenTime >= 10000)) {
     closeGate();
-
     lcd.clear();
     updateTopLineWelcome();
     scrollPos = 0;
