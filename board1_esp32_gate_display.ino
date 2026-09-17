@@ -23,14 +23,14 @@ const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvb
 // ==========================================
 // 2. PIN DEFINITIONS
 // ==========================================
-// RFID SPI Pins (MOSI ขา 21 ตามฮาร์ดแวร์จริง)
+// RFID SPI Pins (ย้าย MOSI ไปขา 21 เพื่อหลบการชนกับ I2C)
 #define SS_PIN       5    
 #define RST_PIN      4    
 #define SPI_SCK      18   
 #define SPI_MISO     19   
 #define SPI_MOSI     21
 
-// LCD 16x2 I2C Pins
+// LCD 16x2 I2C Pins (ใช้ขาเดิม)
 #define I2C_SDA      23
 #define I2C_SCL      22
 
@@ -83,20 +83,24 @@ void beepBuzzer(int count) {
 // ฟังก์ชันสั่ง Servo เปิดไม้กั้น (90 องศา)
 void openGate() {
   if (!gateServo.attached()) {
-    gateServo.attach(SERVO_PIN, 500, 2400);
+    gateServo.attach(SERVO_PIN, 544, 2400); // ใช้ Pulse มาตรฐาน SG90
   }
   gateServo.write(90);
+  delay(15); // หน่วงเวลาสั้นๆ ให้ Servo ตอบสนอง
   isGateOpen = true;
   gateOpenTime = millis();
+  Serial.println("[SERVO] Gate OPEN (90 degrees)");
 }
 
 // ฟังก์ชันสั่ง Servo ปิดไม้กั้น (0 องศา)
 void closeGate() {
   if (!gateServo.attached()) {
-    gateServo.attach(SERVO_PIN, 500, 2400);
+    gateServo.attach(SERVO_PIN, 544, 2400); // ใช้ Pulse มาตรฐาน SG90
   }
   gateServo.write(0);
+  delay(15); // หน่วงเวลาสั้นๆ ให้ Servo ตอบสนอง
   isGateOpen = false;
+  Serial.println("[SERVO] Gate CLOSED (0 degrees)");
 }
 
 // ส่ง Card UID ไปตรวจสอบกับ Google Apps Script
@@ -163,6 +167,7 @@ void scrollSchoolText() {
 // ==========================================
 void setup() {
   Serial.begin(115200);
+  Serial.println("\n[SYSTEM] Booting...");
 
   // ตั้งค่า Buzzer ปิดทันที
   pinMode(BUZZER_PIN, OUTPUT);
@@ -174,21 +179,40 @@ void setup() {
   lcd.init();
   lcd.clear();
   lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("INIT SYSTEM...");
 
-  // ปลดล็อก Hardware Timers ทั้งหมดให้ ESP32Servo ก่อน attach
+  // ปลดล็อก Hardware Timers ทั้งหมดให้ ESP32Servo
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
   ESP32PWM::allocateTimer(2);
   ESP32PWM::allocateTimer(3);
 
   gateServo.setPeriodHertz(50);
-  gateServo.attach(SERVO_PIN, 500, 2400);
-  gateServo.write(0); // เซ็ตตำแหน่งปิดไม้กั้น
-  delay(300);
+  gateServo.attach(SERVO_PIN, 544, 2400);
+  
+  // สั่งย้ำให้เข้าตำแหน่ง 0 องศาตอนเริ่มต้น
+  gateServo.write(0); 
+  delay(200);
+  gateServo.write(0); 
+  delay(200);
 
-  // SPI Bus สำหรับ RC522
+  // SPI Bus สำหรับ RC522 (กำหนด Pin ให้ชัดเจน)
   SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI, SS_PIN);
   rfid.PCD_Init();
+
+  // เช็กเซนเซอร์ RFID ว่าทำงานปกติไหม
+  byte version = rfid.PCD_ReadRegister(rfid.VersionReg);
+  Serial.printf("[RFID] Version Register: 0x%x\n", version);
+  if (version == 0x00 || version == 0xFF) {
+    Serial.println("[ERROR] MFRC522 not found! Check wiring.");
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("RFID ERROR!");
+    while(1); // หยุดทำงานถ้าหา RFID ไม่เจอ
+  } else {
+    Serial.println("[RFID] MFRC522 Ready.");
+  }
 
   WiFiManager wm;
 
@@ -230,6 +254,7 @@ void setup() {
 
   lcd.clear();
   updateTopLineWelcome();
+  Serial.println("[SYSTEM] Ready!");
 }
 
 // ==========================================
@@ -281,16 +306,15 @@ void loop() {
     }
     cardUID.toUpperCase();
 
-    // 💡 1. ปริ้นต์ใส่ Serial เพื่อให้ชัวร์ว่าอ่านบัตรได้
     Serial.println("\n[RFID] Card Scanned: " + cardUID);
 
-    // 💡 2. บังคับโชว์ UID ขึ้นจอ LCD ทันทีก่อนไปเช็กเน็ต
+    // บังคับโชว์ UID ขึ้นจอ LCD ก่อน 0.5 วินาที
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("CARD: " + cardUID);
     lcd.setCursor(0, 1);
     lcd.print("CONNECTING...   ");
-    delay(500); // ค้างไว้ครึ่งวินาทีให้มองทัน
+    delay(500);
 
     String role = "";
     String action = "entry";
@@ -299,7 +323,7 @@ void loop() {
     Serial.println("[CLOUD] Status: " + authStatus + " | Role: " + role);
 
     if (authStatus == "wifi_lost" || authStatus == "error") {
-       // ถ้าเน็ตหลุด ให้เปิดให้ผ่านเป็น Guest (Offline Mode)
+       // ถ้าเน็ตหลุด ให้เปิดให้ผ่านเป็น Guest ทันที
        authStatus = "not_found"; 
        role = "Offline";
     }
@@ -317,7 +341,7 @@ void loop() {
       updateTopLineWelcome();
     } 
     else {
-      // อนุญาตให้ผ่าน (Allow หรือ Guest)
+      // อนุญาตให้ผ่าน
       if (authStatus == "allow") {
         beepBuzzer(1); 
       } else {
@@ -333,6 +357,7 @@ void loop() {
         updateTopLineWelcome();
       }
 
+      // จัดรูปแบบข้อความบรรทัดที่ 2: [UID] [Role]
       String displayLine = cardUID + " " + role;
       while (displayLine.length() < 16) displayLine += " ";
       if (displayLine.length() > 16) displayLine = displayLine.substring(0, 16);
@@ -340,7 +365,7 @@ void loop() {
       lcd.setCursor(0, 1);
       lcd.print(displayLine);
 
-      // ยกไม้กั้น Servo ขึ้น 90 องศา
+      // ยกไม้กั้น
       openGate();
     }
 
@@ -348,8 +373,8 @@ void loop() {
     rfid.PCD_StopCrypto1();
   }
 
-  // ปิดไม้กั้นอัตโนมัติเมื่อครบ 10 วินาที
-  if (isGateOpen && (currentMillis - gateOpenTime >= 10000)) {
+  // 💡 ดึงเวลา millis() ณ วินาทีนั้นมาคำนวณป้องกัน Underflow และตั้งเวลาปิด 3 วินาที (3000 ms)
+  if (isGateOpen && (millis() - gateOpenTime >= 3000)) {
     closeGate();
     lcd.clear();
     updateTopLineWelcome();
