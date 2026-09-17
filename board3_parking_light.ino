@@ -13,7 +13,7 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET    -1
-#define SCREEN_ADDRESS 0x3C  // ที่อยู่ I2C 0x3C หรือ 0x3D
+#define SCREEN_ADDRESS 0x3C
 
 #define I2C_SDA 21
 #define I2C_SCL 22
@@ -33,15 +33,18 @@ const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvb
 #define TRIG_OUT  19
 #define ECHO_OUT  23
 
-const float DETECT_DIST_CM = 5.0; // ปรับระยะตรวจจับเหลือ 5.0 ซม. (cm)
+const float DETECT_DIST_CM = 5.0; // ระยะตรวจจับ 5 cm
 
-int totalSlots = 5;     // ปรับจำนวนช่องจอดเริ่มต้นเป็น 5 ช่อง (ปรับดึงจาก Cloud ได้)
+int totalSlots = 5;
 int availableSlots = 5;
 
 unsigned long lastSenseTime = 0;
 unsigned long lockInTime = 0;
 unsigned long lockOutTime = 0;
-const unsigned long COOLDOWN = 1500; // หน่วงเวลา 1.5 วินาทีกันตรวจจับเบิ้ล
+
+// *** ปรับลด DELAY ค่าความไวต่างๆ ***
+const unsigned long SENSOR_INTERVAL = 30; // อ่านค่าเซนเซอร์ทุกๆ 30ms (เดิม 100ms)
+const unsigned long COOLDOWN        = 600; // หน่วงเวลากันนับซ้ำเหลือ 0.6 วินาที (เดิม 1.5s)
 
 // ==========================================
 // 3. OLED DISPLAY FUNCTIONS
@@ -49,14 +52,12 @@ const unsigned long COOLDOWN = 1500; // หน่วงเวลา 1.5 วิ�
 void updateOLEDDisplay() {
   display.clearDisplay();
 
-  // แถบหัวเรื่องด้านบน
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(18, 4);
   display.print("SMART REST AREA");
   display.drawLine(0, 15, 128, 15, SSD1306_WHITE);
 
-  // ตัวเลขจำนวนช่องว่างขนาดใหญ่
   display.setTextSize(3);
   display.setCursor(20, 24);
   display.print(availableSlots);
@@ -68,7 +69,6 @@ void updateOLEDDisplay() {
   display.setCursor(48, 40);
   display.print("SLOTS");
 
-  // แถบสถานะด้านล่าง
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setCursor(20, 55);
   if (availableSlots <= 0) {
@@ -101,7 +101,8 @@ float getDistance(int trigPin, int echoPin) {
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  long duration = pulseIn(echoPin, HIGH, 25000);
+  // ปรับ Timeout เหลือ 6000us (~1 เมตร) เพื่อไม่ให้ลูปค้างเวลารอสัญญาณ
+  long duration = pulseIn(echoPin, HIGH, 6000);
   if (duration == 0) return 999.0;
   return (float)duration * 0.0343 / 2.0;
 }
@@ -110,7 +111,7 @@ void syncCloud(String actionType) {
   if (WiFi.status() != WL_CONNECTED) return;
   WiFiClientSecure client;
   client.setInsecure();
-  client.setTimeout(4000);
+  client.setTimeout(2000); // ลด Timeout ในการส่งขึ้น Cloud เหลือ 2 วินาที
 
   HTTPClient http;
   String url = SCRIPT_URL + "?action=" + actionType + "&available=" + String(availableSlots);
@@ -124,7 +125,7 @@ void fetchInitialSetting() {
   if (WiFi.status() != WL_CONNECTED) return;
   WiFiClientSecure client;
   client.setInsecure();
-  client.setTimeout(5000);
+  client.setTimeout(3000);
   HTTPClient http;
   http.begin(client, SCRIPT_URL + "?action=get_status");
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
@@ -172,40 +173,33 @@ void setup() {
 void loop() {
   unsigned long now = millis();
 
-  if (now - lastSenseTime >= 100) {
+  if (now - lastSenseTime >= SENSOR_INTERVAL) {
     lastSenseTime = now;
 
     float distIn  = getDistance(TRIG_IN, ECHO_IN);
     float distOut = getDistance(TRIG_OUT, ECHO_OUT);
 
-    // ------------------------------------------
-    // 1. ตรวจจับรถขาเข้า (IN) -> ลดที่ว่างลง 1
-    // ------------------------------------------
+    // 1. ตรวจจับรถขาเข้า (IN)
     if (distIn > 0 && distIn <= DETECT_DIST_CM && (now - lockInTime >= COOLDOWN)) {
       lockInTime = now;
       if (availableSlots > 0) {
         availableSlots--;
       }
       updateOLEDDisplay();
-      Serial.printf("[PARK] CAR IN! Available slots now: %d\n", availableSlots);
+      Serial.printf("[PARK] CAR IN! Available slots: %d\n", availableSlots);
       syncCloud("park_in");
     }
 
-    // ------------------------------------------
-    // 2. ตรวจจับรถขาออก (OUT) -> เพิ่มที่ว่างขึ้น 1
-    // ------------------------------------------
+    // 2. ตรวจจับรถขาออก (OUT)
     if (distOut > 0 && distOut <= DETECT_DIST_CM && (now - lockOutTime >= COOLDOWN)) {
       lockOutTime = now;
-      
-      // เพิ่มจำนวนที่ว่าง (ไม่ให้เกินความจุสูงสุด totalSlots)
       if (availableSlots < totalSlots) {
         availableSlots++;
       } else {
         availableSlots = totalSlots;
       }
-
       updateOLEDDisplay();
-      Serial.printf("[PARK] CAR OUT! Available slots now: %d\n", availableSlots);
+      Serial.printf("[PARK] CAR OUT! Available slots: %d\n", availableSlots);
       syncCloud("park_out");
     }
   }
