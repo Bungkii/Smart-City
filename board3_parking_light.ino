@@ -33,10 +33,10 @@ const String SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkGglMWJAnvb
 #define TRIG_OUT  19
 #define ECHO_OUT  23
 
-const float DETECT_DIST_CM = 8.0; // ระยะตรวจจับรถเข้า-ออก (cm)
+const float DETECT_DIST_CM = 5.0; // ปรับระยะตรวจจับเหลือ 5.0 ซม. (cm)
 
-int totalSlots = 8;
-int availableSlots = 8;
+int totalSlots = 5;     // ปรับจำนวนช่องจอดเริ่มต้นเป็น 5 ช่อง (ปรับดึงจาก Cloud ได้)
+int availableSlots = 5;
 
 unsigned long lastSenseTime = 0;
 unsigned long lockInTime = 0;
