@@ -1,21 +1,26 @@
 -- ==============================================================================
 -- Assumption College Thonburi (ACT) — Smart City Database Schema for Supabase
+-- ระบบฐานข้อมูลรวม Smart City สำหรับทั้ง 5 บอร์ด และ Next.js Dashboard
 -- ==============================================================================
 
 -- 1. Enable UUID Extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Settings Table (โหมดการทำงาน demo / live)
+-- 2. Settings Table (โหมดการทำงาน demo / live และการตั้งค่า Wi-Fi กลาง)
 CREATE TABLE IF NOT EXISTS public.settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Insert Default Mode
-INSERT INTO public.settings (key, value)
-VALUES ('mode', 'demo')
-ON CONFLICT (key) DO NOTHING;
+-- Insert Default Settings
+INSERT INTO public.settings (key, value) VALUES 
+('mode', 'live'),
+('wifi_ssid', 'ACT-SmartCity-2.4G'),
+('wifi_pass', 'ACT12345678')
+ON CONFLICT (key) DO UPDATE SET 
+    value = EXCLUDED.value,
+    updated_at = NOW();
 
 -- 3. Telemetry Events Table (เก็บประวัติข้อมูลเซนเซอร์จากบอร์ดทั้ง 5 ระบบ)
 CREATE TABLE IF NOT EXISTS public.events (
@@ -103,7 +108,16 @@ INSERT INTO public.todos (name) VALUES
 ('Verify Supabase Real-time Stream')
 ON CONFLICT DO NOTHING;
 
--- 8. Row Level Security (RLS) Policies
+-- 8. Seed Initial Live Events for All 5 Systems
+INSERT INTO public.events (source, system, device_id, name, location, recorded_at, health, note, data_json, position_json) VALUES
+('live', 'traffic', 'TR-1', 'สี่แยกกลางอัสสัมชัญ (Central 4-Way Junction)', 'สี่แยกสายหลัก อาคารเรียน A', NOW(), 'normal', 'ระบบไฟจราจร 4 ทิศทางพร้อมทำงาน', '{"signal": "green", "nSignal": "green", "eSignal": "red", "sSignal": "red", "wSignal": "red", "activeDirection": "North (เหนือ)", "waitSeconds": 4, "mode": "adaptive"}'::jsonb, '{"lat": 13.7558, "lng": 100.5024}'::jsonb),
+('live', 'parking', 'PK-01', 'ช่องจอด 01', 'อาคาร A', NOW(), 'normal', 'ระบบพร้อมทำงาน', '{"occupied": true, "bay": "A-01"}'::jsonb, '{"lat": 13.7569, "lng": 100.5015}'::jsonb),
+('live', 'streetlight', 'SL-01', 'ไฟถนนอัจฉริยะ 01', 'ถนนสายหลัก', NOW(), 'normal', 'ระบบไฟถนนพร้อมทำงาน', '{"on": false, "brightness": 0, "mode": "auto", "fault": null}'::jsonb, '{"lat": 13.7562, "lng": 100.5035}'::jsonb),
+('live', 'gate', 'GT-01', 'ประตูทิศเหนือ RFID', 'ทางเข้าหลัก อาคาร A', NOW(), 'normal', 'ระบบพร้อมสแกนบัตร', '{"open": false, "direction": null, "access": null, "cardRef": null}'::jsonb, '{"lat": 13.7574, "lng": 100.5029}'::jsonb),
+('live', 'environment', 'EN-01', 'สถานีสิ่งแวดล้อมกลาง', 'ใจกลางวิทยาเขต', NOW(), 'normal', 'สถานะอากาศปกติ', '{"pm25": 24, "temperature": 29.8, "humidity": 65}'::jsonb, '{"lat": 13.7551, "lng": 100.5014}'::jsonb)
+ON CONFLICT DO NOTHING;
+
+-- 9. Row Level Security (RLS) Policies
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.command_audit ENABLE ROW LEVEL SECURITY;
@@ -112,18 +126,27 @@ ALTER TABLE public.gate_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.todos ENABLE ROW LEVEL SECURITY;
 
 -- Allow Anonymous Read & Write via Anon Key (สำหรับบอร์ด IoT & Dashboard)
+DROP POLICY IF EXISTS "Allow public read access to settings" ON public.settings;
+DROP POLICY IF EXISTS "Allow authenticated/anon update settings" ON public.settings;
 CREATE POLICY "Allow public read access to settings" ON public.settings FOR SELECT USING (true);
 CREATE POLICY "Allow authenticated/anon update settings" ON public.settings FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Allow public read events" ON public.events;
+DROP POLICY IF EXISTS "Allow public insert events" ON public.events;
 CREATE POLICY "Allow public read events" ON public.events FOR SELECT USING (true);
 CREATE POLICY "Allow public insert events" ON public.events FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow public read command_audit" ON public.command_audit;
+DROP POLICY IF EXISTS "Allow public insert command_audit" ON public.command_audit;
 CREATE POLICY "Allow public read command_audit" ON public.command_audit FOR SELECT USING (true);
 CREATE POLICY "Allow public insert command_audit" ON public.command_audit FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow public all rfid_cards" ON public.rfid_cards;
+DROP POLICY IF EXISTS "Allow public all gate_logs" ON public.gate_logs;
+DROP POLICY IF EXISTS "Allow public all todos" ON public.todos;
 CREATE POLICY "Allow public all rfid_cards" ON public.rfid_cards FOR ALL USING (true);
 CREATE POLICY "Allow public all gate_logs" ON public.gate_logs FOR ALL USING (true);
 CREATE POLICY "Allow public all todos" ON public.todos FOR ALL USING (true);
 
--- Enable Realtime for Events, RFID Cards, and Gate Logs (สำหรับ Dashboard Real-time Subscription)
-ALTER PUBLICATION supabase_realtime ADD TABLE public.events, public.gate_logs, public.rfid_cards;
+-- 10. Enable Realtime for Events, RFID Cards, Gate Logs, and Settings (สำหรับ Dashboard Real-time Subscription)
+ALTER PUBLICATION supabase_realtime ADD TABLE public.events, public.gate_logs, public.rfid_cards, public.settings;

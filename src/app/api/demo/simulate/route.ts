@@ -37,11 +37,27 @@ export async function POST(request: Request) {
     updatedData.occupied = !updatedData.occupied;
     actionNote = updatedData.occupied ? `รถเข้าจอดที่ ${updatedData.bay}` : `รถออกจากช่องจอด ${updatedData.bay}`;
   } else if (target.system === "traffic") {
-    const signals = ["red", "yellow", "green"] as const;
-    const nextSignal = signals[(signals.indexOf(updatedData.signal) + 1) % signals.length];
-    updatedData.signal = nextSignal;
-    updatedData.waitSeconds = nextSignal === "red" ? 45 : nextSignal === "green" ? 30 : 5;
-    actionNote = `เปลี่ยนสัญญาณไฟเป็น ${nextSignal === "red" ? "แดง" : nextSignal === "green" ? "เขียว" : "เหลือง"} ที่ ${target.name}`;
+    const phases = [
+      { name: "North (เหนือ)", n: "green", e: "red", s: "red", w: "red", sig: "green" as const, sec: 8 },
+      { name: "North (เหนือ)", n: "yellow", e: "red", s: "red", w: "red", sig: "yellow" as const, sec: 2 },
+      { name: "East (ตะวันออก)", n: "red", e: "green", s: "red", w: "red", sig: "green" as const, sec: 8 },
+      { name: "East (ตะวันออก)", n: "red", e: "yellow", s: "red", w: "red", sig: "yellow" as const, sec: 2 },
+      { name: "South (ใต้)", n: "red", e: "red", s: "green", w: "red", sig: "green" as const, sec: 8 },
+      { name: "South (ใต้)", n: "red", e: "red", s: "yellow", w: "red", sig: "yellow" as const, sec: 2 },
+      { name: "West (ตะวันตก)", n: "red", e: "red", s: "red", w: "green", sig: "green" as const, sec: 8 },
+      { name: "West (ตะวันตก)", n: "red", e: "red", s: "red", w: "yellow", sig: "yellow" as const, sec: 2 },
+    ];
+    const currentIndex = phases.findIndex(p => p.name === updatedData.activeDirection && p.sig === updatedData.signal);
+    const nextPhase = phases[(currentIndex + 1) % phases.length];
+    
+    updatedData.activeDirection = nextPhase.name;
+    updatedData.nSignal = nextPhase.n;
+    updatedData.eSignal = nextPhase.e;
+    updatedData.sSignal = nextPhase.s;
+    updatedData.wSignal = nextPhase.w;
+    updatedData.signal = nextPhase.sig;
+    updatedData.waitSeconds = nextPhase.sec;
+    actionNote = `สลับสัญญาณไฟเป็น ${nextPhase.name} (${nextPhase.sig === "green" ? "ไฟเขียว" : "ไฟเหลือง"})`;
   } else if (target.system === "streetlight") {
     updatedData.on = !updatedData.on;
     updatedData.brightness = updatedData.on ? Math.floor(Math.random() * 40) + 60 : 0;

@@ -1,5 +1,6 @@
 #if defined(ESP32)
   #include <WiFi.h>
+  #include <WiFiManager.h>
   #include <HTTPClient.h>
   #include <WiFiClientSecure.h>
 #elif defined(ARDUINO_UNOR4_WIFI)
@@ -7,6 +8,7 @@
   #include <ArduinoHttpClient.h>
 #else
   #include <WiFi.h>
+  #include <WiFiManager.h>
   #include <HTTPClient.h>
   #include <WiFiClientSecure.h>
 #endif
@@ -15,10 +17,6 @@
 // ==============================================================================
 // 1. SUPABASE & WI-FI CONFIGURATION
 // ==============================================================================
-// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด (ตั้งชื่อ Hotspot มือถือตามนี้ แล้วเปิดแชร์เน็ต บอร์ดทั้ง 5 จะติดพร้อมกันทันที)
-const char* WIFI_SSID     = "ACT-SmartCity-2.4G";
-const char* WIFI_PASS     = "ACT12345678";
-
 // ⚙️ โหมดการส่งข้อมูล: "supabase", "dashboard", หรือ "both"
 const String CLOUD_MODE   = "supabase"; 
 
@@ -30,12 +28,17 @@ const String SUPABASE_KEY = "sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc";
 const String DASHBOARD_INGEST_URL   = "http://192.168.1.100:3000/api/ingest";
 const String DASHBOARD_INGEST_TOKEN = "act_smartcity_ingest_secret_token_2026";
 
+// Fallback Wi-Fi สำหรับ Arduino UNO R4
+const char* FALLBACK_SSID = "ACT-SmartCity-2.4G";
+const char* FALLBACK_PASS = "ACT12345678";
+
 // ==============================================================================
 // 2. PIN DEFINITIONS (UNO R4 / ESP32)
 // ==============================================================================
-#define LDR_PIN      A0   // อ่านค่าแสง (Analog In)
-#define PIR_PIN      2    // จับการเคลื่อนไหว (Digital In)
-#define LED_PWM_PIN  3    // ขาควบคุม PWM สั่งหรี่/สว่าง (PWM Pin)
+#define LDR_PIN         A0   // อ่านค่าแสง (Analog In)
+#define PIR_PIN         2    // จับการเคลื่อนไหว (Digital In)
+#define LED_PWM_PIN     3    // ขาควบคุม PWM สั่งหรี่/สว่าง (PWM Pin)
+#define RESET_WIFI_PIN  0    // ปุ่ม BOOT (GPIO 0 สำหรับ Reset Wi-Fi)
 
 // ==============================================================================
 // 3. THRESHOLDS & CONFIGURATION
@@ -64,17 +67,20 @@ unsigned long lastFadeTime   = 0;
 unsigned long lastCloudTime  = 0;
 int lastReportedBrightness   = -1;
 
+#if defined(ESP32)
+WiFiManager wm;
+#endif
+
 // ------------------------------------------------------------------------------
 // ส่งข้อมูลสถานะไฟถนนเข้า Supabase Cloud / Dashboard API
 // ------------------------------------------------------------------------------
 void sendStreetlightTelemetry(bool isOn, int brightnessPercent, String modeType, String noteMsg) {
   if (WiFi.status() != WL_CONNECTED) return;
 
+#if defined(ESP32)
   WiFiClientSecure secureClient;
   secureClient.setInsecure();
   secureClient.setTimeout(4000);
-
-  WiFiClient normalClient;
 
   // 1. ส่งเข้า Supabase REST API
   if (CLOUD_MODE == "supabase" || CLOUD_MODE == "both") {
@@ -108,46 +114,47 @@ void sendStreetlightTelemetry(bool isOn, int brightnessPercent, String modeType,
     String jsonBody;
     serializeJson(doc, jsonBody);
     int code = http.POST(jsonBody);
-    Serial.printf("[SUPABASE LIGHT] Status: %d\n", code);
+    Serial.printf("[SUPABASE STREETLIGHT] Status: %d | Brightness: %d%%\n", code, brightnessPercent);
     http.end();
   }
 
-  // 2. ส่งเข้า Next.js Dashboard API (/api/ingest)
-  if (CLOUD_MODE == "dashboard" || CLOUD_MODE == "both") {
-    HTTPClient http;
-    if (DASHBOARD_INGEST_URL.startsWith("https")) {
-      http.begin(secureClient, DASHBOARD_INGEST_URL);
-    } else {
-      http.begin(normalClient, DASHBOARD_INGEST_URL);
-    }
-    http.addHeader("Content-Type", "application/json");
-    http.addHeader("Authorization", "Bearer " + DASHBOARD_INGEST_TOKEN);
+#elif defined(ARDUINO_UNOR4_WIFI)
+  WiFiSSLClient sslClient;
+  HttpClient http = HttpClient(sslClient, "kqkggjsjwbkodqyeddwj.supabase.co", 443);
 
-    DynamicJsonDocument doc(512);
-    doc["system"]      = "streetlight";
-    doc["deviceId"]    = "SL-1";
-    doc["name"]        = "ไฟถนนอัจฉริยะ 01 (Main Avenue Light)";
-    doc["location"]    = "ถนนสายหลัก";
-    doc["recordedAt"]  = "2026-09-26T12:00:00Z";
-    doc["health"]      = "normal";
-    doc["note"]        = noteMsg;
+  DynamicJsonDocument doc(512);
+  doc["source"]      = "live";
+  doc["system"]      = "streetlight";
+  doc["device_id"]   = "SL-1";
+  doc["name"]        = "ไฟถนนอัจฉริยะ 01";
+  doc["location"]    = "ถนนสายหลัก";
+  doc["recorded_at"] = "2026-09-26T12:00:00Z";
+  doc["health"]      = "normal";
+  doc["note"]        = noteMsg;
 
-    JsonObject pos = doc.createNestedObject("position");
-    pos["lat"] = 13.7562;
-    pos["lng"] = 100.5035;
+  JsonObject data = doc.createNestedObject("data_json");
+  data["on"]         = isOn;
+  data["brightness"] = brightnessPercent;
+  data["mode"]       = modeType;
+  data["fault"]      = nullptr;
 
-    JsonObject data = doc.createNestedObject("data");
-    data["on"]         = isOn;
-    data["brightness"] = brightnessPercent;
-    data["mode"]       = modeType;
-    data["fault"]      = nullptr;
+  String jsonBody;
+  serializeJson(doc, jsonBody);
 
-    String jsonBody;
-    serializeJson(doc, jsonBody);
-    int code = http.POST(jsonBody);
-    Serial.printf("[DASHBOARD LIGHT] Status: %d\n", code);
-    http.end();
-  }
+  http.beginRequest();
+  http.post("/rest/v1/events");
+  http.sendHeader("apikey", SUPABASE_KEY);
+  http.sendHeader("Authorization", "Bearer " + SUPABASE_KEY);
+  http.sendHeader("Content-Type", "application/json");
+  http.sendHeader("Prefer", "return=minimal");
+  http.sendHeader("Content-Length", jsonBody.length());
+  http.beginBody();
+  http.print(jsonBody);
+  http.endRequest();
+
+  int statusCode = http.responseStatusCode();
+  Serial.printf("[UNO R4 SUPABASE] Status: %d | Brightness: %d%%\n", statusCode, brightnessPercent);
+#endif
 }
 
 // ==============================================================================
@@ -160,26 +167,45 @@ void setup() {
   pinMode(LDR_PIN, INPUT);
   pinMode(PIR_PIN, INPUT);
   pinMode(LED_PWM_PIN, OUTPUT);
+  pinMode(RESET_WIFI_PIN, INPUT_PULLUP);
 
   analogWrite(LED_PWM_PIN, BRIGHTNESS_OFF);
 
-  // เชื่อมต่อ Wi-Fi
+  // ตรวจสอบการกดปุ่ม Reset Wi-Fi ตอนเปิดเครื่อง
+  if (digitalRead(RESET_WIFI_PIN) == LOW) {
+    Serial.println("\n⚠️ [RESET] Detected Reset Button Pressed -> Resetting Wi-Fi settings...");
+#if defined(ESP32)
+    wm.resetSettings();
+#endif
+    delay(1000);
+  }
+
+  // เชื่อมต่อ Wi-Fi ผ่าน WiFiManager
+#if defined(ESP32)
+  Serial.println("[Wi-Fi] Launching WiFiManager Portal: ACT-Street-Light-Setup");
+  wm.setConfigPortalTimeout(180);
+  bool res = wm.autoConnect("ACT-Street-Light-Setup");
+  if (!res) {
+    Serial.println("[Wi-Fi] Failed to connect or Portal timed out. Working offline...");
+  } else {
+    Serial.println("[Wi-Fi] Connected Successfully! IP: " + WiFi.localIP().toString());
+    sendStreetlightTelemetry(false, 0, "auto", "ระบบไฟถนนพร้อมทำงาน");
+  }
+#elif defined(ARDUINO_UNOR4_WIFI)
   Serial.print("[Wi-Fi] Connecting to: ");
-  Serial.println(WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  Serial.println(FALLBACK_SSID);
+  WiFi.begin(FALLBACK_SSID, FALLBACK_PASS);
   int retry = 0;
   while (WiFi.status() != WL_CONNECTED && retry < 15) {
     delay(500);
     Serial.print(".");
     retry++;
   }
-
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\n[Wi-Fi] Connected! IP: " + WiFi.localIP().toString());
     sendStreetlightTelemetry(false, 0, "auto", "ระบบไฟถนนพร้อมทำงาน");
-  } else {
-    Serial.println("\n[Wi-Fi] Standalone Mode (Offline)");
   }
+#endif
 
   Serial.println("[STREET LIGHT SYSTEM] Ready & Running!");
 }
@@ -189,6 +215,18 @@ void setup() {
 // ==============================================================================
 void loop() {
   unsigned long currentMillis = millis();
+
+  // ตรวจสอบการกดปุ่ม Reset Wi-Fi ระหว่างทำงาน (กดค้าง 3 วินาทีเพื่อลบ Wi-Fi)
+#if defined(ESP32)
+  if (digitalRead(RESET_WIFI_PIN) == LOW) {
+    delay(3000);
+    if (digitalRead(RESET_WIFI_PIN) == LOW) {
+      Serial.println("\n⚠️ [Wi-Fi RESET] Button Held 3s -> Clearing Stored Wi-Fi & Restarting...");
+      wm.resetSettings();
+      ESP.restart();
+    }
+  }
+#endif
 
   // 1. อ่านค่าเซนเซอร์
   int ldrValue = analogRead(LDR_PIN);
@@ -231,7 +269,7 @@ void loop() {
   }
 
   // 5. ส่งข้อมูลขึ้น Cloud เมื่อความสว่างเปลี่ยนอย่างมีนัยสำคัญ หรือทุกๆ 15 วินาที
-  int currentPercent = Math.round((currentBrightness / 255.0) * 100);
+  int currentPercent = (int)round((currentBrightness / 255.0) * 100);
   bool isOn = currentBrightness > 0;
 
   if (abs(currentPercent - lastReportedBrightness) >= 20 || (currentMillis - lastCloudTime >= CLOUD_INTERVAL)) {
