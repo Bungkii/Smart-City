@@ -1,5 +1,4 @@
 #include <WiFi.h>
-#include <WiFiManager.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
@@ -11,7 +10,7 @@
 // ==============================================================================
 // 1. SUPABASE & CLOUD CONFIGURATION
 // ==============================================================================
-// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด (ตั้งชื่อ Hotspot มือถือตามนี้ แล้วเปิดแชร์เน็ต บอร์ดทั้ง 5 จะติดพร้อมกันทันที)
+// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด
 const char* WIFI_SSID     = "ACT-SmartCity-2.4G";
 const char* WIFI_PASS     = "ACT12345678";
 
@@ -77,10 +76,10 @@ void sendEnvironmentTelemetry(float tempC, float humidity, float pm25Est, String
     doc["source"]      = "live";
     doc["system"]      = "environment";
     doc["device_id"]   = "EN-1";
-    doc["name"]        = "สถานีตรวจวัดคุณภาพอากาศกลาง (Central Station)";
-    doc["location"]    = "ลานหน้าอาคาร A";
+    doc["name"]        = "สถานีวัดสภาพอากาศ (Station Central)";
+    doc["location"]    = "ลานอเนกประสงค์กลางแจ้ง";
     doc["recorded_at"] = "2026-09-26T12:00:00Z";
-    doc["health"]      = pm25Est > 75.0 ? "warning" : "normal";
+    doc["health"]      = (pm25Est > 75.0) ? "warning" : "normal";
     doc["note"]        = noteMsg;
 
     JsonObject pos = doc.createNestedObject("position_json");
@@ -88,9 +87,9 @@ void sendEnvironmentTelemetry(float tempC, float humidity, float pm25Est, String
     pos["lng"] = 100.5014;
 
     JsonObject data = doc.createNestedObject("data_json");
-    data["pm25"]        = pm25Est;
     data["temperature"] = tempC;
     data["humidity"]    = humidity;
+    data["pm25"]        = pm25Est;
 
     String jsonBody;
     serializeJson(doc, jsonBody);
@@ -113,10 +112,10 @@ void sendEnvironmentTelemetry(float tempC, float humidity, float pm25Est, String
     DynamicJsonDocument doc(512);
     doc["system"]      = "environment";
     doc["deviceId"]    = "EN-1";
-    doc["name"]        = "สถานีตรวจวัดคุณภาพอากาศกลาง (Central Station)";
-    doc["location"]    = "ลานหน้าอาคาร A";
+    doc["name"]        = "สถานีวัดสภาพอากาศ (Station Central)";
+    doc["location"]    = "ลานอเนกประสงค์กลางแจ้ง";
     doc["recordedAt"]  = "2026-09-26T12:00:00Z";
-    doc["health"]      = pm25Est > 75.0 ? "warning" : "normal";
+    doc["health"]      = (pm25Est > 75.0) ? "warning" : "normal";
     doc["note"]        = noteMsg;
 
     JsonObject pos = doc.createNestedObject("position");
@@ -124,9 +123,9 @@ void sendEnvironmentTelemetry(float tempC, float humidity, float pm25Est, String
     pos["lng"] = 100.5014;
 
     JsonObject data = doc.createNestedObject("data");
-    data["pm25"]        = pm25Est;
     data["temperature"] = tempC;
     data["humidity"]    = humidity;
+    data["pm25"]        = pm25Est;
 
     String jsonBody;
     serializeJson(doc, jsonBody);
@@ -134,6 +133,41 @@ void sendEnvironmentTelemetry(float tempC, float humidity, float pm25Est, String
     Serial.printf("[DASHBOARD ENV] Status: %d\n", code);
     http.end();
   }
+}
+
+void updateOLED(float temp, float hum, int smokeRaw, float pm25) {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  // Header
+  display.setTextSize(1);
+  display.setCursor(12, 0);
+  display.println(F("ACT ENV MONITOR"));
+  display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+
+  // Temperature & Humidity
+  display.setCursor(0, 16);
+  display.printf("Temp: %.1f C", temp);
+
+  display.setCursor(0, 28);
+  display.printf("Hum:  %.1f %%", hum);
+
+  // Smoke & PM2.5
+  display.setCursor(0, 40);
+  display.printf("Smoke: %d", smokeRaw);
+
+  display.setCursor(0, 52);
+  display.printf("PM2.5: %.1f ug", pm25);
+
+  if (smokeRaw > SMOKE_THRESHOLD) {
+    display.fillRect(80, 48, 48, 16, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK);
+    display.setCursor(84, 52);
+    display.print(F("WARN!"));
+    display.setTextColor(SSD1306_WHITE);
+  }
+
+  display.display();
 }
 
 // ==============================================================================
@@ -159,27 +193,16 @@ void setup() {
   display.println(F("CONNECTING WIFI..."));
   display.display();
 
-  // ลองเชื่อมต่อ Wi-Fi กลางอัตโนมัติ
+  // เชื่อมต่อ Wi-Fi โดยตรง
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  int wifiRetry = 0;
-  while (WiFi.status() != WL_CONNECTED && wifiRetry < 16) {
-    delay(400);
+  Serial.printf("[ENV] Connecting to WiFi '%s'...\n", WIFI_SSID);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
     Serial.print(".");
-    wifiRetry++;
   }
-
-  // หากไม่พบ Wi-Fi กลาง ให้เปิดระบบ Captive Portal AP
-  if (WiFi.status() != WL_CONNECTED) {
-    display.clearDisplay();
-    display.setCursor(10, 25);
-    display.println(F("WIFI: AP MODE"));
-    display.display();
-
-    WiFiManager wm;
-    wm.setConfigPortalTimeout(60);
-    wm.autoConnect("SmartCity-Environment-AP");
-  }
+  Serial.println("\n[ENV] WiFi Connected! IP: " + WiFi.localIP().toString());
 
   display.clearDisplay();
   display.setCursor(10, 25);
@@ -200,52 +223,30 @@ void loop() {
   if (now - lastReadTime >= READ_INTERVAL) {
     lastReadTime = now;
 
-    float humidity   = dht.readHumidity();
-    float tempC      = dht.readTemperature();
-    int smokeRaw     = analogRead(MQ2_PIN); // 0 - 4095
+    float temp = dht.readTemperature();
+    float hum  = dht.readHumidity();
+    int smoke  = analogRead(MQ2_PIN);
 
-    if (isnan(humidity) || isnan(tempC)) {
-      humidity = 60.0;
-      tempC    = 29.5;
+    // ตรวจสอบค่าที่อ่านได้
+    if (isnan(temp) || isnan(hum)) {
+      Serial.println("[ERROR] Failed to read from DHT sensor!");
+      temp = 30.0;
+      hum  = 65.0;
     }
 
-    // คำนวณค่าฝุ่น PM2.5 โดยประมาณจาก Smoke Sensor
-    float pm25Est = +(15.0 + (smokeRaw / 4095.0) * 80.0);
+    // คำนวณค่าประมาณ PM2.5 จากระดับควันและสภาพอากาศ (ug/m3)
+    float pm25Est = (smoke / 4095.0) * 120.0 + (hum * 0.1);
 
-    Serial.printf("Temp: %.1f C | Humi: %.1f %% | Smoke: %d | PM2.5 Est: %.1f\n", 
-                  tempC, humidity, smokeRaw, pm25Est);
+    Serial.printf("[ENV SENSE] Temp: %.1f C | Hum: %.1f %% | Smoke: %d | PM2.5: %.1f ug/m3\n", 
+                  temp, hum, smoke, pm25Est);
 
-    // ------------------------------------------
-    // DISPLAY ON OLED
-    // ------------------------------------------
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(10, 0);
-    display.print("SMART ENV STATION");
-    display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+    updateOLED(temp, hum, smoke, pm25Est);
 
-    display.setCursor(0, 16);
-    display.printf("Temp : %.1f C", tempC);
-    display.setCursor(0, 28);
-    display.printf("Humi : %.1f %%", humidity);
-    display.setCursor(0, 40);
-    display.printf("PM2.5: %.1f ug/m3", pm25Est);
-
-    display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
-    display.setCursor(0, 55);
-    if (smokeRaw > SMOKE_THRESHOLD) {
-      display.print("STATUS: SMOKE WARNING!");
-    } else {
-      display.print("STATUS: GOOD AIR");
-    }
-    display.display();
-
-    // ส่งข้อมูลขึ้น Cloud ทุกๆ 10 วินาที หรือเมื่อพบค่าควันสูงผิดปกติ
-    if (now - lastCloudTime >= CLOUD_INTERVAL || smokeRaw > SMOKE_THRESHOLD) {
+    // ส่งข้อมูลขึ้น Cloud ทุกๆ 10 วินาที
+    if (now - lastCloudTime >= CLOUD_INTERVAL) {
       lastCloudTime = now;
-      String note = (smokeRaw > SMOKE_THRESHOLD) ? "ตรวจพบควันหรือฝุ่นสูงผิดปกติ!" : "สภาพอากาศปกติ";
-      sendEnvironmentTelemetry(tempC, humidity, pm25Est, note);
+      String note = (smoke > SMOKE_THRESHOLD) ? "ตรวจพบควันหรือก๊าซเกินเกณฑ์มาตรฐาน!" : "คุณภาพอากาศปกติ";
+      sendEnvironmentTelemetry(temp, hum, pm25Est, note);
     }
   }
 }

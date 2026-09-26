@@ -1,5 +1,4 @@
 #include <WiFi.h>
-#include <WiFiManager.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
@@ -10,7 +9,7 @@
 // ==============================================================================
 // 1. SUPABASE & CLOUD CONFIGURATION
 // ==============================================================================
-// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด (ตั้งชื่อ Hotspot มือถือตามนี้ แล้วเปิดแชร์เน็ต บอร์ดทั้ง 5 จะติดพร้อมกันทันที)
+// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด
 const char* WIFI_SSID     = "ACT-SmartCity-2.4G";
 const char* WIFI_PASS     = "ACT12345678";
 
@@ -62,52 +61,7 @@ const unsigned long SENSOR_INTERVAL = 40;  // ตรวจสอบเซนเ�
 const unsigned long COOLDOWN        = 800; // หน่วงเวลากันนับซ้ำ 0.8 วินาที
 
 // ==============================================================================
-// 4. OLED DISPLAY FUNCTIONS
-// ==============================================================================
-void updateOLEDDisplay() {
-  display.clearDisplay();
-
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(16, 4);
-  display.print("ACT SMART PARKING");
-  display.drawLine(0, 15, 128, 15, SSD1306_WHITE);
-
-  display.setTextSize(3);
-  display.setCursor(18, 24);
-  display.print(availableSlots);
-
-  display.setTextSize(1);
-  display.setCursor(54, 28);
-  display.print("/ ");
-  display.print(totalSlots);
-  display.setCursor(54, 40);
-  display.print("BAYS");
-
-  display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
-  display.setCursor(14, 55);
-  if (availableSlots <= 0) {
-    display.print("STATUS: FULL (เต็ม)");
-  } else {
-    display.printf("STATUS: %d AVAILABLE", availableSlots);
-  }
-
-  display.display();
-}
-
-void showOLEDMessage(String line1, String line2) {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 18);
-  display.println(line1);
-  display.setCursor(0, 38);
-  display.println(line2);
-  display.display();
-}
-
-// ==============================================================================
-// 5. SENSOR & CLOUD FUNCTIONS
+// 4. HELPER FUNCTIONS
 // ==============================================================================
 float getDistance(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
@@ -116,14 +70,52 @@ float getDistance(int trigPin, int echoPin) {
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  long duration = pulseIn(echoPin, HIGH, 6000); // Timeout 6ms (~1m)
+  long duration = pulseIn(echoPin, HIGH, 30000); // Timeout 30ms (~500cm)
   if (duration == 0) return 999.0;
-  return (float)duration * 0.0343 / 2.0;
+  return duration * 0.034 / 2.0;
 }
 
-// ------------------------------------------------------------------------------
-// ส่งข้อมูลสถานะที่จอดรถเข้า Supabase / Dashboard API
-// ------------------------------------------------------------------------------
+void showOLEDMessage(String line1, String line2) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10, 20);
+  display.println(line1);
+  display.setCursor(10, 38);
+  display.println(line2);
+  display.display();
+}
+
+void updateOLEDDisplay() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(18, 5);
+  display.println(F("ACT SMART PARKING"));
+
+  display.drawLine(0, 16, 128, 16, SSD1306_WHITE);
+
+  display.setCursor(10, 24);
+  display.println(F("AVAILABLE SLOTS:"));
+
+  display.setTextSize(2);
+  display.setCursor(35, 38);
+  display.print(availableSlots);
+  display.print(F(" / "));
+  display.print(totalSlots);
+
+  if (availableSlots == 0) {
+    display.setTextSize(1);
+    display.setCursor(40, 56);
+    display.print(F("[ FULL ]"));
+  }
+
+  display.display();
+}
+
+// ==============================================================================
+// 5. SUPABASE & DASHBOARD TELEMETRY
+// ==============================================================================
 void sendParkingTelemetry(bool isOccupied, String bayId, String noteMsg) {
   if (WiFi.status() != WL_CONNECTED) return;
 
@@ -159,6 +151,8 @@ void sendParkingTelemetry(bool isOccupied, String bayId, String noteMsg) {
     JsonObject data = doc.createNestedObject("data_json");
     data["occupied"] = isOccupied;
     data["bay"]      = bayId;
+    data["vacant"]   = availableSlots;
+    data["total"]    = totalSlots;
 
     String jsonBody;
     serializeJson(doc, jsonBody);
@@ -194,6 +188,8 @@ void sendParkingTelemetry(bool isOccupied, String bayId, String noteMsg) {
     JsonObject data = doc.createNestedObject("data");
     data["occupied"] = isOccupied;
     data["bay"]      = bayId;
+    data["vacant"]   = availableSlots;
+    data["total"]    = totalSlots;
 
     String jsonBody;
     serializeJson(doc, jsonBody);
@@ -216,30 +212,23 @@ void setup() {
     for (;;);
   }
 
-  showOLEDMessage("CONNECTING WIFI...", "SmartCity-Parking");
+  showOLEDMessage("CONNECTING WIFI...", WIFI_SSID);
 
   pinMode(TRIG_IN, OUTPUT);
   pinMode(ECHO_IN, INPUT);
   pinMode(TRIG_OUT, OUTPUT);
   pinMode(ECHO_OUT, INPUT);
 
-  // ลองเชื่อมต่อ Wi-Fi กลางอัตโนมัติ
+  // เชื่อมต่อ Wi-Fi โดยตรง
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  int wifiRetry = 0;
-  while (WiFi.status() != WL_CONNECTED && wifiRetry < 16) {
-    delay(400);
-    Serial.print(".");
-    wifiRetry++;
-  }
+  Serial.printf("[PARKING] Connecting to WiFi '%s'...\n", WIFI_SSID);
 
-  // หากไม่พบ Wi-Fi กลาง ให้เปิดระบบ Captive Portal AP
-  if (WiFi.status() != WL_CONNECTED) {
-    showOLEDMessage("WIFI: AP MODE", "192.168.4.1");
-    WiFiManager wm;
-    wm.setConfigPortalTimeout(60);
-    wm.autoConnect("SmartCity-Parking-AP");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
   }
+  Serial.println("\n[PARKING] WiFi Connected! IP: " + WiFi.localIP().toString());
 
   showOLEDMessage("CONNECTED!", "READY TO DETECT");
   delay(1000);
@@ -258,35 +247,28 @@ void loop() {
   if (now - lastSenseTime >= SENSOR_INTERVAL) {
     lastSenseTime = now;
 
-    float distIn  = getDistance(TRIG_IN, ECHO_IN);
-    float distOut = getDistance(TRIG_OUT, ECHO_OUT);
-
-    // 1. ตรวจจับรถขาเข้า (IN)
-    if (distIn > 0 && distIn <= DETECT_DIST_CM && (now - lockInTime >= COOLDOWN)) {
-      lockInTime = now;
+    // 1. ตรวจจับรถเข้า (IN)
+    float dIn = getDistance(TRIG_IN, ECHO_IN);
+    if (dIn <= DETECT_DIST_CM && (now - lockInTime >= COOLDOWN)) {
       if (availableSlots > 0) {
         availableSlots--;
+        lockInTime = now;
+        Serial.printf("[PARKING EVENT] Car ENTERED. Remaining: %d/%d\n", availableSlots, totalSlots);
+        updateOLEDDisplay();
+        sendParkingTelemetry(true, "A-01", "ตรวจพบรถเข้าจอดในช่อง A-01");
       }
-      updateOLEDDisplay();
-      Serial.printf("[PARK] CAR IN! Available slots: %d\n", availableSlots);
-      
-      String bayNumber = "A-0" + String(8 - availableSlots);
-      sendParkingTelemetry(true, bayNumber, "มีรถเข้าจอด ช่อง " + bayNumber);
     }
 
-    // 2. ตรวจจับรถขาออก (OUT)
-    if (distOut > 0 && distOut <= DETECT_DIST_CM && (now - lockOutTime >= COOLDOWN)) {
-      lockOutTime = now;
+    // 2. ตรวจจับรถออก (OUT)
+    float dOut = getDistance(TRIG_OUT, ECHO_OUT);
+    if (dOut <= DETECT_DIST_CM && (now - lockOutTime >= COOLDOWN)) {
       if (availableSlots < totalSlots) {
         availableSlots++;
-      } else {
-        availableSlots = totalSlots;
+        lockOutTime = now;
+        Serial.printf("[PARKING EVENT] Car EXITED. Remaining: %d/%d\n", availableSlots, totalSlots);
+        updateOLEDDisplay();
+        sendParkingTelemetry(false, "A-01", "รถออกจากช่องจอด A-01");
       }
-      updateOLEDDisplay();
-      Serial.printf("[PARK] CAR OUT! Available slots: %d\n", availableSlots);
-
-      String bayNumber = "A-0" + String(8 - availableSlots + 1);
-      sendParkingTelemetry(false, bayNumber, "รถออกจากช่องจอด " + bayNumber);
     }
   }
 }

@@ -1,5 +1,4 @@
 #include <WiFi.h>
-#include <WiFiManager.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
@@ -10,9 +9,9 @@
 #include "time.h"
 
 // ==============================================================================
-// 1. SUPABASE CLOUD & WI-FI CONFIGURATION (ย้ายจาก Google Sheets มา Supabase 100%)
+// 1. SUPABASE CLOUD & WI-FI CONFIGURATION
 // ==============================================================================
-// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด (ตั้งชื่อ Hotspot มือถือตามนี้ แล้วเปิดแชร์เน็ต บอร์ดทั้ง 5 จะติดพร้อมกันทันที)
+// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด (ตั้งชื่อ Hotspot มือถือ หรือใส่ Wi-Fi ที่ใช้)
 const char* WIFI_SSID     = "ACT-SmartCity-2.4G";
 const char* WIFI_PASS     = "ACT12345678";
 
@@ -49,7 +48,6 @@ const int   daylightOffset_sec = 0;
 // Actuators & Controls
 #define GATE_LED_PIN 14   // LED จำลองสถานะไม้กั้น (HIGH = เปิด, LOW = ปิด)
 #define BUZZER_PIN   25   // Active Buzzer
-#define RESET_PIN    0    // ปุ่ม BOOT (GPIO 0)
 
 #define BUZZER_ON    LOW
 #define BUZZER_OFF   HIGH
@@ -331,8 +329,6 @@ void setup() {
   
   pinMode(GATE_LED_PIN, OUTPUT);
   digitalWrite(GATE_LED_PIN, LOW);
-  
-  pinMode(RESET_PIN, INPUT_PULLUP);
 
   // จอ LCD I2C
   Wire.begin(I2C_SDA, I2C_SCL);
@@ -356,7 +352,7 @@ void setup() {
     while(1);
   }
 
-  // พยายามเชื่อมต่อ Wi-Fi กลางอัตโนมัติ
+  // เชื่อมต่อ Wi-Fi โดยตรง
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   lcd.clear();
@@ -365,25 +361,12 @@ void setup() {
   lcd.setCursor(0, 1);
   lcd.print(WIFI_SSID);
 
-  int wifiRetry = 0;
-  while (WiFi.status() != WL_CONNECTED && wifiRetry < 16) {
-    delay(400);
+  Serial.printf("[GATE] Connecting to WiFi '%s'...\n", WIFI_SSID);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
     Serial.print(".");
-    wifiRetry++;
   }
-
-  // หากไม่พบ Wi-Fi กลาง ให้เปิดระบบ Captive Portal AP
-  if (WiFi.status() != WL_CONNECTED) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("WiFi: AP MODE   ");
-    lcd.setCursor(0, 1);
-    lcd.print("IP: 192.168.4.1 ");
-
-    WiFiManager wm;
-    wm.setConfigPortalTimeout(60);
-    wm.autoConnect("SmartCity-Gate-AP");
-  }
+  Serial.println("\n[GATE] WiFi Connected! IP: " + WiFi.localIP().toString());
 
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -407,31 +390,6 @@ void setup() {
 // 7. MAIN LOOP
 // ==============================================================================
 void loop() {
-  // ตรวจจับปุ่ม Reset Wi-Fi
-  if (digitalRead(RESET_PIN) == LOW) {
-    delay(100);
-    if (digitalRead(RESET_PIN) == LOW) {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("HOLD TO RESET...");
-      unsigned long btnPressTime = millis();
-      while (digitalRead(RESET_PIN) == LOW) {
-        if (millis() - btnPressTime >= 2000) {
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("RESETTING WIFI..");
-          WiFiManager wm;
-          wm.resetSettings();
-          beepBuzzer(2);
-          delay(1000);
-          ESP.restart();
-        }
-      }
-      lcd.clear();
-      updateTopLineWelcome();
-    }
-  }
-
   if (!isGateOpen) {
     if (millis() - lastClockUpdate >= 1000) {
       lastClockUpdate = millis();
