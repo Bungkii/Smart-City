@@ -1,6 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { EventRow, Source, SystemId, Telemetry } from "./model";
-import * as localSqlite from "./db";
 
 let supabaseClient: SupabaseClient | null = null;
 
@@ -18,19 +17,18 @@ function getClient(): SupabaseClient | null {
 
 export async function getMode(): Promise<Source> {
   const sb = getClient();
-  if (!sb) return localSqlite.getMode();
+  if (!sb) return "live";
 
   try {
     const { data, error } = await sb.from("settings").select("value").eq("key", "mode").single();
-    if (error || !data) return localSqlite.getMode();
+    if (error || !data) return "live";
     return (data.value === "demo" ? "demo" : "live") as Source;
   } catch {
-    return localSqlite.getMode();
+    return "live";
   }
 }
 
 export async function setMode(mode: Source): Promise<void> {
-  localSqlite.setMode(mode);
   const sb = getClient();
   if (!sb) return;
 
@@ -42,9 +40,8 @@ export async function setMode(mode: Source): Promise<void> {
 }
 
 export async function insertEvent(event: Telemetry, source: Source, receivedAt = new Date().toISOString()): Promise<number> {
-  const localId = Number(localSqlite.insertEvent(event, source, receivedAt));
   const sb = getClient();
-  if (!sb) return localId;
+  if (!sb) return Date.now();
 
   try {
     const { data, error } = await sb.from("events").insert({
@@ -67,7 +64,7 @@ export async function insertEvent(event: Telemetry, source: Source, receivedAt =
   } catch (err) {
     console.error("PostgreSQL insertEvent error:", err);
   }
-  return localId;
+  return Date.now();
 }
 
 function mapRowToEvent(r: any): EventRow {
@@ -89,7 +86,7 @@ function mapRowToEvent(r: any): EventRow {
 
 export async function latest(source: Source): Promise<EventRow[]> {
   const sb = getClient();
-  if (!sb) return localSqlite.latest(source);
+  if (!sb) return [];
 
   try {
     const { data, error } = await sb
@@ -97,13 +94,12 @@ export async function latest(source: Source): Promise<EventRow[]> {
       .select("*")
       .eq("source", source)
       .order("id", { ascending: false })
-      .limit(50);
+      .limit(60);
 
     if (error || !data || data.length === 0) {
-      return localSqlite.latest(source);
+      return [];
     }
 
-    // Pick latest per device_id
     const seen = new Set<string>();
     const result: EventRow[] = [];
     for (const row of data) {
@@ -114,13 +110,13 @@ export async function latest(source: Source): Promise<EventRow[]> {
     }
     return result;
   } catch {
-    return localSqlite.latest(source);
+    return [];
   }
 }
 
 export async function history(system: SystemId, source: Source, limit = 60): Promise<EventRow[]> {
   const sb = getClient();
-  if (!sb) return localSqlite.history(system, source, limit);
+  if (!sb) return [];
 
   try {
     const { data, error } = await sb
@@ -132,12 +128,12 @@ export async function history(system: SystemId, source: Source, limit = 60): Pro
       .limit(limit);
 
     if (error || !data || data.length === 0) {
-      return localSqlite.history(system, source, limit);
+      return [];
     }
 
     return data.map(mapRowToEvent);
   } catch {
-    return localSqlite.history(system, source, limit);
+    return [];
   }
 }
 
@@ -147,7 +143,6 @@ export async function audit(
   result: string,
   detail = ""
 ): Promise<void> {
-  localSqlite.audit(command, actor, result, detail);
   const sb = getClient();
   if (!sb) return;
 
@@ -169,7 +164,7 @@ export async function audit(
 
 export async function auditHistory(): Promise<any[]> {
   const sb = getClient();
-  if (!sb) return localSqlite.auditHistory();
+  if (!sb) return [];
 
   try {
     const { data, error } = await sb
@@ -178,11 +173,9 @@ export async function auditHistory(): Promise<any[]> {
       .order("id", { ascending: false })
       .limit(100);
 
-    if (error || !data || data.length === 0) {
-      return localSqlite.auditHistory();
-    }
+    if (error || !data) return [];
     return data;
   } catch {
-    return localSqlite.auditHistory();
+    return [];
   }
 }

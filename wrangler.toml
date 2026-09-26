@@ -1,0 +1,16 @@
+name = "smartcity-dashboard"
+compatibility_date = "2024-09-26"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+[vars]
+DB_DRIVER = "postgres"
+NEXT_PUBLIC_SUPABASE_URL = "https://kqkggjsjwbkodqyeddwj.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc"
+SUPABASE_URL = "https://kqkggjsjwbkodqyeddwj.supabase.co"
+SUPABASE_ANON_KEY = "sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc"
+INGEST_TOKEN = "act_smartcity_ingest_secret_token_2026"
+SETTINGS_TOKEN = "act_smartcity_settings_secret_token_2026"
+CONTROL_TOKEN = "act_operator_secret_token_2026"
+OPERATOR_NAME = "ACT_Admin"
+OFFLINE_AFTER_SECONDS = "120"
