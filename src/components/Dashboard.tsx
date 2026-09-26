@@ -3,58 +3,85 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { 
-  Activity, AlertTriangle, ArrowRight, Bell, CarFront, Check, 
-  Clock3, DoorOpen, Download, Gauge, Lightbulb, MapPin, Menu, 
-  Radio, RefreshCw, Search, Settings2, ShieldCheck, Signal, 
-  TrafficCone, X, Zap, PanelLeftClose, PanelLeftOpen
+import {
+  Activity, AlertTriangle, ArrowRight, CarFront, Check,
+  Clock3, DoorOpen, Download, Gauge, Lightbulb, MapPin, Menu,
+  Radio, RefreshCw, Search, Settings2, ShieldCheck, Signal,
+  TrafficCone, X, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
+import { Button, Chip } from "@heroui/react";
 import { deviceHealth, systems, systemIds, type EventRow, type Health, type SystemId } from "@/lib/model";
 import DeviceMap from "./DeviceMap";
 import OperationsOverview from "./OperationsOverview";
-import { 
-  ParkingVisualizer, TrafficVisualizer, StreetlightVisualizer, 
-  GateVisualizer, EnvironmentVisualizer 
+import {
+  ParkingVisualizer, TrafficVisualizer, StreetlightVisualizer,
+  GateVisualizer, EnvironmentVisualizer
 } from "./SystemVisualizers";
 
-type Snapshot = { 
+type Snapshot = {
   mode: "live";
-  devices: EventRow[]; 
-  alerts: { id: number; deviceId: string; name: string; system: SystemId; health: Health; note: string; time: string }[]; 
-  history: Record<SystemId, EventRow[]>; 
+  devices: EventRow[];
+  alerts: { id: number; deviceId: string; name: string; system: SystemId; health: Health; note: string; time: string }[];
+  history: Record<SystemId, EventRow[]>;
   serverTime: string;
 };
 
-const icons = { 
-  parking: CarFront, 
-  traffic: TrafficCone, 
-  streetlight: Lightbulb, 
-  gate: DoorOpen, 
-  environment: Gauge 
+const icons = {
+  parking: CarFront,
+  traffic: TrafficCone,
+  streetlight: Lightbulb,
+  gate: DoorOpen,
+  environment: Gauge
 };
 
 const thaiStatus = { normal: "ปกติ", warning: "ต้องตรวจสอบ", offline: "ออฟไลน์" };
 const time = (s?: string) => s ? new Date(s).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" }) : "—";
 const shortTime = (s?: string) => s ? new Date(s).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "—";
 
-function Status({ value }: { value: Health }) { 
-  return <span className={`status ${value}`}><span className="dot" />{thaiStatus[value]}</span>; 
+function Status({ value }: { value: Health }) {
+  // HeroUI v3 Chip: variant = "primary" | "secondary" | "soft"
+  // color = "accent" | "danger" | "default" | "success" | "warning"
+  const colorMap: Record<Health, "success" | "warning" | "danger"> = {
+    normal: "success",
+    warning: "warning",
+    offline: "danger",
+  };
+  return (
+    <Chip
+      size="sm"
+      color={colorMap[value]}
+      variant="soft"
+      className="font-[IBM_Plex_Sans_Thai]"
+    >
+      {thaiStatus[value]}
+    </Chip>
+  );
 }
 
-function MetricIcon({ id, size = 20 }: { id: SystemId; size?: number }) { 
-  const Icon = icons[id]; 
-  return <Icon size={size} strokeWidth={1.8} />; 
+function MetricIcon({ id, size = 20 }: { id: SystemId; size?: number }) {
+  const Icon = icons[id];
+  return <Icon size={size} strokeWidth={1.8} />;
 }
 
-function Shell({ 
-  children, 
-  active, 
-  mode, 
+function ConnectionChip({ connection }: { connection: "error" | "loading" | "ready" | "empty" }) {
+  const label = connection === "error" ? "CONNECTION ERROR" : connection === "loading" ? "CONNECTING" : "DEVICE DATA";
+  const color: "danger" | "warning" | "success" = connection === "error" ? "danger" : connection === "loading" ? "warning" : "success";
+  return (
+    <Chip size="sm" color={color} variant="soft" className="font-[IBM_Plex_Sans_Thai] tracking-widest text-[10px] font-bold">
+      {label}
+    </Chip>
+  );
+}
+
+function Shell({
+  children,
+  active,
+  mode,
   updated,
   connection
-}: { 
-  children: React.ReactNode; 
-  active?: SystemId | "settings"; 
+}: {
+  children: React.ReactNode;
+  active?: SystemId | "settings";
   mode: "live";
   updated?: string;
   connection: "error" | "loading" | "ready" | "empty";
@@ -141,14 +168,13 @@ function Shell({
           </button>
           <Link href="/" className="header-brand" aria-label="ACT 1961 — ภาพรวมเมืองอัจฉริยะ"><img src="/act-logo-1961.png" alt="ACT 1961" width={32} height={32} /></Link>
           <div className="breadcrumb">
-            <span className="breadcrumb-brand">ASSUMPTION COLLEGE THONBURI</span> 
-            <span>/</span> 
+            <span className="breadcrumb-brand">ASSUMPTION COLLEGE THONBURI</span>
+            <span>/</span>
             {active === "settings" ? "ตั้งค่าระบบ" : active ? systems[active].title : "COMMAND CENTER"}
           </div>
 
           <div className="top-actions">
-
-            <span className={`mode-badge ${mode}`}>{connection === "error" ? "CONNECTION ERROR" : connection === "loading" ? "CONNECTING" : "DEVICE DATA"}</span>
+            <ConnectionChip connection={connection} />
             <span className="top-updated"><Clock3 size={15} /> {shortTime(updated)}</span>
             <Link href="/settings" aria-label="ตั้งค่า"><Settings2 size={18} /></Link>
           </div>
@@ -164,7 +190,6 @@ export default function Dashboard({ systemId, settings = false }: { systemId?: S
   const [data, setData] = useState<Snapshot | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-
 
   const load = useCallback(async () => {
     try {
@@ -191,8 +216,8 @@ export default function Dashboard({ systemId, settings = false }: { systemId?: S
   };
 
   return (
-    <Shell 
-      active={settings ? "settings" : systemId} 
+    <Shell
+      active={settings ? "settings" : systemId}
       mode="live"
       updated={data?.serverTime}
       connection={error ? "error" : !data ? "loading" : data.devices.length ? "ready" : "empty"}
@@ -200,7 +225,8 @@ export default function Dashboard({ systemId, settings = false }: { systemId?: S
       <div className="content">
         {error && (
           <div className="error-bar">
-            {error} {data && "ข้อมูลด้านล่างเป็นข้อมูลที่โหลดสำเร็จครั้งล่าสุด"} <button onClick={refresh}>ลองอีกครั้ง</button>
+            {error} {data && "ข้อมูลด้านล่างเป็นข้อมูลที่โหลดสำเร็จครั้งล่าสุด"}{" "}
+            <button onClick={refresh}>ลองอีกครั้ง</button>
           </div>
         )}
 
@@ -209,16 +235,16 @@ export default function Dashboard({ systemId, settings = false }: { systemId?: S
         ) : settings ? (
           <Settings data={data} reload={load} />
         ) : systemId ? (
-          <SystemDetail 
-            id={systemId} 
-            data={data} 
-            refresh={refresh} 
+          <SystemDetail
+            id={systemId}
+            data={data}
+            refresh={refresh}
             refreshing={refreshing}
           />
         ) : (
           <OperationsOverview
-            data={data} 
-            refresh={refresh} 
+            data={data}
+            refresh={refresh}
             refreshing={refreshing}
           />
         )}
@@ -227,18 +253,18 @@ export default function Dashboard({ systemId, settings = false }: { systemId?: S
   );
 }
 
-function PageHeading({ 
-  eyebrow, 
-  title, 
-  description, 
-  refresh, 
+function PageHeading({
+  eyebrow,
+  title,
+  description,
+  refresh,
   refreshing,
   exportData
-}: { 
-  eyebrow: string; 
-  title: string; 
-  description: string; 
-  refresh?: () => void; 
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  refresh?: () => void;
   refreshing?: boolean;
   exportData?: () => void;
 }) {
@@ -254,14 +280,24 @@ function PageHeading({
       </div>
       <div className="head-actions">
         {exportData && (
-          <button className="export-btn" onClick={exportData}>
-            <Download size={15} /> ส่งออก CSV
-          </button>
+          <Button
+            size="sm"
+            variant="outline"
+            onPress={exportData}
+            className="font-[IBM_Plex_Sans_Thai] gap-1.5"
+          >
+            <Download size={14} /> ส่งออก CSV
+          </Button>
         )}
         {refresh && (
-          <button className="refresh-button" onClick={refresh}>
-            <RefreshCw size={15} className={refreshing ? "spin" : ""} /> รีเฟรช
-          </button>
+          <Button
+            size="sm"
+            variant="outline"
+            onPress={refresh}
+            className="font-[IBM_Plex_Sans_Thai] gap-1.5"
+          >
+            <RefreshCw size={14} className={refreshing ? "spin" : ""} /> รีเฟรช
+          </Button>
         )}
       </div>
     </div>
@@ -269,23 +305,23 @@ function PageHeading({
 }
 
 function TrendChart({ events, system }: { events: EventRow[]; system: SystemId }) {
-  const points = useMemo(() => 
+  const points = useMemo(() =>
     events
       .filter(e => system === "environment" ? e.deviceId === events[0]?.deviceId : e.deviceId === events[0]?.deviceId)
       .slice()
       .reverse()
       .map(e => ({
         time: shortTime(e.recordedAt),
-        value: system === "environment" 
-          ? (e.data as any).pm25 
-          : system === "parking" 
-            ? (e.data as any).occupied ? 1 : 0 
-            : system === "traffic" 
-              ? (e.data as any).waitSeconds 
-              : system === "streetlight" 
-                ? (e.data as any).brightness 
+        value: system === "environment"
+          ? (e.data as any).pm25
+          : system === "parking"
+            ? (e.data as any).occupied ? 1 : 0
+            : system === "traffic"
+              ? (e.data as any).waitSeconds
+              : system === "streetlight"
+                ? (e.data as any).brightness
                 : (e.data as any).open ? 1 : 0
-      })), 
+      })),
     [events, system]
   );
 
@@ -303,23 +339,23 @@ function TrendChart({ events, system }: { events: EventRow[]; system: SystemId }
           <CartesianGrid stroke="#e8eef1" strokeDasharray="3 5" vertical={false} />
           <XAxis dataKey="time" tick={{ fill: "#8b9aa8", fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={30} />
           <YAxis tick={{ fill: "#8b9aa8", fontSize: 11 }} axisLine={false} tickLine={false} />
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: 12, 
-              border: "1px solid #e8eef1", 
+          <Tooltip
+            contentStyle={{
+              borderRadius: 12,
+              border: "1px solid #e8eef1",
               boxShadow: "0 12px 35px #09233c18",
               color: "#183448",
               fontSize: 12
-            }} 
+            }}
           />
-          <Area 
-            type="monotone" 
-            dataKey="value" 
-            stroke="#08b5a4" 
-            strokeWidth={3} 
-            fill={`url(#area-${system})`} 
-            dot={false} 
-            isAnimationActive={false} 
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke="#08b5a4"
+            strokeWidth={3}
+            fill={`url(#area-${system})`}
+            dot={false}
+            isAnimationActive={false}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -361,31 +397,31 @@ function stateText(e: EventRow): string {
   }
 }
 
-function detailTags(e: EventRow) { 
-  const d: any = e.data; 
+function detailTags(e: EventRow) {
+  const d: any = e.data;
   switch (e.system) {
     case "parking": return [`ช่องจอด: ${d.bay}`, d.occupied ? "มีรถจอดอยู่" : "ช่องว่างพร้อมจอด"];
     case "traffic": return [`โหมด: ${d.mode}`, d.incident || "การจราจรปกติ"];
     case "streetlight": return [`โหมด: ${d.mode}`, d.fault || "หลอดไฟสมบูรณ์"];
     case "gate": return [d.direction === "in" ? "ทิศทาง: ขาเข้า (IN)" : d.direction === "out" ? "ทิศทาง: ขาออก (OUT)" : "ไม่มีรายการ", d.access === "granted" ? "ผล: อนุญาต (Granted)" : d.access === "denied" ? "ผล: ปฏิเสธ (Denied)" : "—", d.cardRef || "—"];
     case "environment": return [`อุณหภูมิ ${d.temperature}°C`, `ความชื้น ${d.humidity}%`];
-  } 
+  }
 }
 
-function SystemDetail({ 
-  id, 
-  data, 
-  refresh, 
+function SystemDetail({
+  id,
+  data,
+  refresh,
   refreshing
-}: { 
-  id: SystemId; 
-  data: Snapshot; 
-  refresh: () => void; 
+}: {
+  id: SystemId;
+  data: Snapshot;
+  refresh: () => void;
   refreshing: boolean;
 }) {
-  const devices = data.devices.filter(d => d.system === id); 
+  const devices = data.devices.filter(d => d.system === id);
   const events = data.history[id] || [];
-  const [search, setSearch] = useState(""); 
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
 
   const filtered = devices.filter(d => `${d.name} ${d.deviceId} ${d.location}`.toLowerCase().includes(search.toLowerCase()));
@@ -398,11 +434,11 @@ function SystemDetail({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <PageHeading 
-        eyebrow={`SYSTEM / ${systems[id].en.toUpperCase()}`} 
-        title={systems[id].title} 
-        description={`${systems[id].en} · ควบคุม ตรวจสอบสถานะ และดูข้อมูลย้อนหลังของอุปกรณ์`} 
-        refresh={refresh} 
+      <PageHeading
+        eyebrow={`SYSTEM / ${systems[id].en.toUpperCase()}`}
+        title={systems[id].title}
+        description={`${systems[id].en} · ควบคุม ตรวจสอบสถานะ และดูข้อมูลย้อนหลังของอุปกรณ์`}
+        refresh={refresh}
         refreshing={refreshing}
       />
 
@@ -430,7 +466,7 @@ function SystemDetail({
       )}
 
       {/* Detail Stats */}
-      <motion.div 
+      <motion.div
         className="detail-stats"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -454,19 +490,19 @@ function SystemDetail({
 
           <label className="search">
             <Search size={16} />
-            <input 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
-              placeholder="ค้นหาชื่ออุปกรณ์, จุดติดตั้ง หรือรหัส..." 
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="ค้นหาชื่ออุปกรณ์, จุดติดตั้ง หรือรหัส..."
             />
           </label>
 
           <div className="device-list">
             {filtered.length ? (
               filtered.map(e => (
-                <motion.button 
-                  key={e.deviceId} 
-                  className={`device-row ${selectedDevice?.deviceId === e.deviceId ? "selected" : ""}`} 
+                <motion.button
+                  key={e.deviceId}
+                  className={`device-row ${selectedDevice?.deviceId === e.deviceId ? "selected" : ""}`}
                   onClick={() => setSelected(e.deviceId)}
                   whileHover={{ x: 2, transition: { duration: 0.15 } }}
                   whileTap={{ scale: 0.99 }}
@@ -520,7 +556,9 @@ function SystemDetail({
 
                 <div className="detail-tags">
                   {detailTags(selectedDevice)?.map((tag, i) => (
-                    <span key={i}>{tag}</span>
+                    <Chip key={i} size="sm" variant="soft" color="default" className="font-[IBM_Plex_Sans_Thai]">
+                      {tag}
+                    </Chip>
                   ))}
                 </div>
 
@@ -586,10 +624,10 @@ function SystemDetail({
 }
 
 function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
-  const options = device.system === "gate" 
-    ? ["open", "close"] 
-    : device.system === "traffic" 
-      ? ["adaptive", "fixed", "manual"] 
+  const options = device.system === "gate"
+    ? ["open", "close"]
+    : device.system === "traffic"
+      ? ["adaptive", "fixed", "manual"]
       : ["auto", "manual", "on", "off"];
 
   const [command, setCommand] = useState(options[0]);
@@ -630,28 +668,33 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
       <div className="control-heading">
         <ShieldCheck size={16} /> ส่งคำสั่งควบคุมอุปกรณ์ (Device Control)
       </div>
-      {(
-        <>
-          <select value={command} onChange={e => setCommand(e.target.value)}>
-            {options.map(x => <option key={x} value={x}>{x}</option>)}
-          </select>
-          <input 
-            placeholder="เหตุผลในการสั่ง (อย่างน้อย 3 ตัวอักษร)" 
-            value={reason} 
-            onChange={e => setReason(e.target.value)} 
-          />
-          <input 
-            placeholder="Control Token (จาก .env.local)" 
-            type="password" 
-            value={token} 
-            onChange={e => setToken(e.target.value)} 
-          />
-          <button disabled={!token || reason.length < 3} onClick={send}>
-            ยืนยันและส่งคำสั่งควบคุม
-          </button>
-          {message && <small>{message}</small>}
-        </>
-      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <select value={command} onChange={e => setCommand(e.target.value)}>
+          {options.map(x => <option key={x} value={x}>{x}</option>)}
+        </select>
+        <input
+          placeholder="เหตุผลในการสั่ง (อย่างน้อย 3 ตัวอักษร)"
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+        />
+        <input
+          placeholder="Control Token (จาก .env.local)"
+          type="password"
+          value={token}
+          onChange={e => setToken(e.target.value)}
+        />
+        <Button
+          variant="primary"
+          size="sm"
+          isDisabled={!token || reason.length < 3}
+          onPress={send}
+          className="font-[IBM_Plex_Sans_Thai]"
+          fullWidth
+        >
+          ยืนยันและส่งคำสั่งควบคุม
+        </Button>
+        {message && <small style={{ color: message.includes("สำเร็จ") || message.includes("แล้ว") ? "#16a34a" : "#dc2626" }}>{message}</small>}
+      </div>
     </div>
   );
 }
@@ -718,9 +761,9 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
 
   return (
     <>
-      <PageHeading 
-        eyebrow="PREFERENCES / CONFIGURATION" 
-        title="ตั้งค่าระบบ & ความปลอดภัย" 
+      <PageHeading
+        eyebrow="PREFERENCES / CONFIGURATION"
+        title="ตั้งค่าระบบ & ความปลอดภัย"
         description="จัดการการเชื่อมต่อ Wi-Fi และตรวจสอบประวัติการควบคุมอุปกรณ์"
       />
 
@@ -737,11 +780,11 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
           <p className="setting-desc">ระบบรับข้อมูลจากอุปกรณ์จริงเท่านั้น เมื่อยังไม่มีข้อมูล จะแสดงสถานะรอรับข้อมูลโดยไม่สร้างค่าทดแทน</p>
           <label className="field-label">
             Settings Token (สำหรับอ่านประวัติการควบคุม)
-            <input 
-              type="password" 
-              placeholder="กรอก token จาก .env.local" 
-              value={token} 
-              onChange={e => setToken(e.target.value)} 
+            <input
+              type="password"
+              placeholder="กรอก token จาก .env.local"
+              value={token}
+              onChange={e => setToken(e.target.value)}
             />
           </label>
 
@@ -765,42 +808,35 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
           <form onSubmit={saveWifi} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <label className="field-label">
               ชื่อ Wi-Fi (SSID 2.4 GHz)
-              <input 
-                type="text" 
-                placeholder="เช่น ACT-SmartCity-2.4G หรือชื่อ Hotspot มือถือ" 
-                value={wifiSsid} 
-                onChange={e => setWifiSsid(e.target.value)} 
+              <input
+                type="text"
+                placeholder="เช่น ACT-SmartCity-2.4G หรือชื่อ Hotspot มือถือ"
+                value={wifiSsid}
+                onChange={e => setWifiSsid(e.target.value)}
                 required
               />
             </label>
 
             <label className="field-label">
               รหัสผ่าน Wi-Fi (Password)
-              <input 
-                type="text" 
-                placeholder="เช่น ACT12345678" 
-                value={wifiPass} 
-                onChange={e => setWifiPass(e.target.value)} 
+              <input
+                type="text"
+                placeholder="เช่น ACT12345678"
+                value={wifiPass}
+                onChange={e => setWifiPass(e.target.value)}
               />
             </label>
 
-            <button 
-              type="submit" 
-              disabled={savingWifi}
-              style={{
-                background: "#08aa9a",
-                color: "#fff",
-                border: "none",
-                padding: "10px",
-                borderRadius: "8px",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                cursor: "pointer",
-                marginTop: "4px"
-              }}
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isDisabled={savingWifi}
+              className="font-[IBM_Plex_Sans_Thai]"
+              fullWidth
             >
               {savingWifi ? "กำลังบันทึก..." : "📶 บันทึก Wi-Fi สำหรับทุกบอร์ด"}
-            </button>
+            </Button>
           </form>
 
           {wifiMsg && (
@@ -828,9 +864,15 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
           <ShieldCheck size={18} />
         </div>
 
-        <button className="refresh-button" onClick={loadAudit} disabled={!token}>
+        <Button
+          variant="outline"
+          size="sm"
+          isDisabled={!token}
+          onPress={loadAudit}
+          className="font-[IBM_Plex_Sans_Thai] mb-3"
+        >
           โหลดประวัติด้วย Settings Token
-        </button>
+        </Button>
 
         {auditLoaded ? (
           audit.length ? (

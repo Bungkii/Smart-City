@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Activity, ArrowUpRight, CarFront, Clock3, DoorOpen, Download, Gauge, Lightbulb, Maximize2, Minimize2, Radio, RefreshCw, Server, ShieldCheck, Thermometer, Droplets, Wind, TrafficCone, WifiOff } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Button } from "@heroui/react";
 import { deviceHealth, systems, systemIds, type EventRow, type SystemId } from "@/lib/model";
 import DeviceMap from "./DeviceMap";
 
@@ -162,15 +163,15 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
             <Clock3 size={14} />
             <span>{stamp(data.serverTime)}<small>ตรวจสอบข้อมูลทุก 5 วินาที</small></span>
           </div>
-          <button onClick={refresh} disabled={refreshing} aria-label="รีเฟรชข้อมูล">
-            <RefreshCw size={16} className={refreshing ? "spin" : ""} />
-          </button>
-          <button onClick={exportCsv} disabled={!data.devices.length} aria-label="ส่งออกข้อมูล CSV">
-            <Download size={16} />
-          </button>
-          <button onClick={() => setWallMode(!wallMode)} aria-label={wallMode ? "ออกจากมุมมองจอมอนิเตอร์" : "ขยายมุมมองจอมอนิเตอร์"}>
-            {wallMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
+          <Button isIconOnly size="sm" variant="outline" isDisabled={refreshing} onPress={refresh} aria-label="รีเฟรชข้อมูล">
+            <RefreshCw size={15} className={refreshing ? "spin" : ""} />
+          </Button>
+          <Button isIconOnly size="sm" variant="outline" isDisabled={!data.devices.length} onPress={exportCsv} aria-label="ส่งออกข้อมูล CSV">
+            <Download size={15} />
+          </Button>
+          <Button isIconOnly size="sm" variant="outline" onPress={() => setWallMode(!wallMode)} aria-label={wallMode ? "ออกจากมุมมองจอมอนิเตอร์" : "ขยายมุมมองจอมอนิเตอร์"}>
+            {wallMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+          </Button>
         </div>
       </header>
 

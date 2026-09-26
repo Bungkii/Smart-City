@@ -6,6 +6,7 @@ import "./brand.css";
 import "./operations.css";
 import "./monitor.css";
 import "./navigation.css";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Assumption College Thonburi | Smart City Dashboard",
@@ -20,7 +21,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
+

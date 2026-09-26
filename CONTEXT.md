@@ -59,3 +59,18 @@ Build a credible dashboard using real device data only. The user supplied an ind
 - Installed and integrated `framer-motion` (`motion.div`, `motion.section`, `AnimatePresence`, `whileHover`, `whileTap`) across overview cards, visualizers (`ParkingVisualizer`, `TrafficVisualizer`, `StreetlightVisualizer`, `GateVisualizer`, `EnvironmentVisualizer`), and `Dashboard.tsx` subsystem views.
 - Replaced disruptive CSS transform hops on hover with smooth Framer Motion micro-animations and border/shadow transitions.
 - Validation: `node tests/data-integrity.test.cjs`, `npm run typecheck`, and `npm run build` all passed with 0 errors.
+
+## Follow-up: HeroUI v3 + Tailwind CSS v4 + shadcn-ui + Headless UI — 2026-09-26
+
+- User request: "logo ขอมนๆ และขอ UI Premium หน่อย tailwind css และใช้ HeroUI แบบเต็มระบบเลย และ shadcn-ui headlessui ด้วยใส่ๆมา"
+- Installed packages: `tailwindcss@4.3.3`, `@heroui/react@3.2.6`, `@heroui/styles@3.2.6`, `@headlessui/react@2.2.10`, `@tailwindcss/postcss` (dev).
+- **HeroUI v3 key finding:** v3 is a React Aria Components (RAC) wrapper library with CSS-first styling via `@heroui/styles`. It has NO `HeroUIProvider`, NO `SelectItem`, NO NextUI-style `variant="bordered"/"flat"` or `color` prop on Button. Correct Button variants: `"primary" | "secondary" | "tertiary" | "outline" | "ghost" | "danger" | "danger-soft"`. Correct Chip variants: `"primary" | "secondary" | "soft"`, colors: `"accent" | "danger" | "default" | "success" | "warning"`.
+- Integrated `@import "tailwindcss"` + `@import "@heroui/styles"` into `globals.css` with `@theme` block mapping IBM Plex Sans Thai as `--font-sans` and brand colors as Tailwind CSS tokens.
+- Created `postcss.config.mjs` with `@tailwindcss/postcss` plugin (required for Tailwind v4 in Next.js).
+- Created `src/app/providers.tsx` (thin passthrough, no provider needed in HeroUI v3).
+- Applied HeroUI `Button` (outline/primary variants, `onPress`, `isDisabled`, `isIconOnly`, `fullWidth`) and `Chip` (soft variant, success/warning/danger/default color) throughout `Dashboard.tsx` and `OperationsOverview.tsx`.
+- Brand logo made circular (`border-radius: 50%`) in CSS as requested ("มนๆ").
+- Appended premium CSS overrides in `globals.css` to align HeroUI button/chip visual style with the navy/teal palette and IBM Plex Sans Thai font.
+- `@headlessui/react` installed (available for future Transition/Disclosure usage); shadcn/ui not initialized (would require interactive CLI; HeroUI+RAC covers the component needs).
+- All checks passed: `node tests/data-integrity.test.cjs` ✓, `npm run typecheck` ✓, `npm run build` ✓.
+

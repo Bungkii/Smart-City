@@ -1,4 +1,17 @@
+@import "tailwindcss";
+@import "@heroui/styles";
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap');
+
+@theme {
+  --font-sans: 'IBM Plex Sans Thai', ui-sans-serif, system-ui, sans-serif;
+
+  --color-navy: #0b2338;
+  --color-navy2: #112f45;
+  --color-teal: #08aa9a;
+  --color-teal-dark: #078d81;
+  --color-ink: #183448;
+  --color-muted: #8093a0;
+}
 
 :root {
   --navy: #0b2338;
@@ -1857,3 +1870,118 @@ a { text-decoration: none; color: inherit; }
   .detail-stats { grid-template-columns: repeat(2, 1fr); }
   .parking-lot-grid, .streetlight-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   HeroUI v3 Premium Theme Overrides — ACT Smart City
+   Aligns HeroUI components with our navy/teal brand palette
+   ============================================================ */
+
+/* Brand mark: round logo "มนๆ" as requested */
+.brand-mark {
+  border-radius: 50% !important;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.15), 0 4px 16px rgba(0,0,0,0.25) !important;
+  background: #fff !important;
+  padding: 3px !important;
+}
+
+.brand-mark img {
+  border-radius: 50%;
+}
+
+/* HeroUI Button — outline variant */
+.button.button--outline,
+[class*="button--outline"] {
+  border-color: #dce5ed !important;
+  color: #486676 !important;
+  background: #ffffff !important;
+  font-family: 'IBM Plex Sans Thai', sans-serif !important;
+  transition: all 0.18s ease !important;
+}
+
+.button.button--outline:hover,
+[class*="button--outline"]:hover {
+  border-color: #08aa9a !important;
+  color: #07997f !important;
+  background: #f0faf8 !important;
+}
+
+/* HeroUI Button — primary variant */
+.button.button--primary,
+[class*="button--primary"] {
+  background: #08aa9a !important;
+  color: #fff !important;
+  font-family: 'IBM Plex Sans Thai', sans-serif !important;
+  transition: all 0.18s ease !important;
+}
+
+.button.button--primary:hover:not([disabled]),
+[class*="button--primary"]:hover:not([disabled]) {
+  background: #079085 !important;
+  box-shadow: 0 4px 14px rgba(8,170,154,0.35) !important;
+}
+
+.button.button--primary[disabled],
+[class*="button--primary"][disabled] {
+  opacity: 0.55 !important;
+}
+
+/* HeroUI Button — ghost variant */
+.button.button--ghost,
+[class*="button--ghost"] {
+  color: #486676 !important;
+  background: transparent !important;
+  font-family: 'IBM Plex Sans Thai', sans-serif !important;
+}
+
+.button.button--ghost:hover,
+[class*="button--ghost"]:hover {
+  background: #edf4f7 !important;
+}
+
+/* HeroUI Button icon-only: compact square */
+.button.button--icon-only,
+[class*="button--icon-only"] {
+  border-radius: 7px !important;
+  padding: 0 !important;
+}
+
+/* HeroUI Chip — soft variant color overrides */
+/* success */
+.chip[class*="chip--"][class*="success"],
+[class*="chip--"][class*="success"] {
+  background: #e5f9f4 !important;
+  color: #16866c !important;
+  border: none !important;
+}
+
+/* warning */
+.chip[class*="chip--"][class*="warning"],
+[class*="chip--"][class*="warning"] {
+  background: #fff8e6 !important;
+  color: #b57a24 !important;
+  border: none !important;
+}
+
+/* danger */
+.chip[class*="chip--"][class*="danger"],
+[class*="chip--"][class*="danger"] {
+  background: #fdf0f0 !important;
+  color: #b96773 !important;
+  border: none !important;
+}
+
+/* default */
+.chip[class*="chip--"][class*="default"],
+[class*="chip--"][class*="default"] {
+  background: #f0f4f7 !important;
+  color: #516878 !important;
+  border: none !important;
+}
+
+/* Ensure IBM Plex Sans Thai on all HeroUI elements */
+.button, [class^="button"], [class*=" button"],
+.chip, [class^="chip"], [class*=" chip"] {
+  font-family: 'IBM Plex Sans Thai', sans-serif !important;
+}
+
