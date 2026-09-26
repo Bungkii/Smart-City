@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiManager.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
@@ -9,12 +10,8 @@
 #include "time.h"
 
 // ==============================================================================
-// 1. SUPABASE CLOUD & WI-FI CONFIGURATION
+// 1. SUPABASE CLOUD CONFIGURATION (บันทึกและจำการตั้งค่าลง SQL)
 // ==============================================================================
-// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด (ตั้งชื่อ Hotspot มือถือ หรือใส่ Wi-Fi ที่ใช้)
-const char* WIFI_SSID     = "ACT-SmartCity-2.4G";
-const char* WIFI_PASS     = "ACT12345678";
-
 // ⚙️ โหมดการส่งข้อมูล: "supabase", "dashboard", หรือ "both"
 const String CLOUD_MODE = "supabase"; 
 
@@ -48,6 +45,7 @@ const int   daylightOffset_sec = 0;
 // Actuators & Controls
 #define GATE_LED_PIN 14   // LED จำลองสถานะไม้กั้น (HIGH = เปิด, LOW = ปิด)
 #define BUZZER_PIN   25   // Active Buzzer
+#define RESET_PIN    0    // ปุ่ม BOOT (GPIO 0 สำหรับ Reset Wi-Fi)
 
 #define BUZZER_ON    LOW
 #define BUZZER_OFF   HIGH
@@ -100,7 +98,38 @@ void beepBuzzer(int count) {
 }
 
 // ------------------------------------------------------------------------------
-// 4. SUPABASE ACCESS CONTROL (แทนที่ Google Sheets Data & Logs)
+// 4. บันทึกและจำค่า Wi-Fi ที่ตั้งค่าผ่าน WiFiManager ลง Supabase SQL (ตาราง settings)
+// ------------------------------------------------------------------------------
+void syncWiFiConfigToSupabase(String ssid, String pass) {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure();
+  secureClient.setTimeout(4000);
+
+  HTTPClient http;
+  http.begin(secureClient, SUPABASE_URL + "/settings");
+  http.addHeader("apikey", SUPABASE_KEY);
+  http.addHeader("Authorization", "Bearer " + SUPABASE_KEY);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Prefer", "resolution=merge-duplicates,return=minimal");
+
+  // 1. บันทึก wifi_ssid ลง SQL
+  String bodySsid = "{\"key\":\"wifi_ssid\",\"value\":\"" + ssid + "\",\"updated_at\":\"" + getIsoTimeString() + "\"}";
+  int code1 = http.POST(bodySsid);
+
+  // 2. บันทึก wifi_pass ลง SQL
+  if (pass.length() > 0) {
+    String bodyPass = "{\"key\":\"wifi_pass\",\"value\":\"" + pass + "\",\"updated_at\":\"" + getIsoTimeString() + "\"}";
+    http.POST(bodyPass);
+  }
+  
+  http.end();
+  Serial.printf("[SUPABASE SQL] Synced Wi-Fi '%s' to settings table (HTTP: %d)\n", ssid.c_str(), code1);
+}
+
+// ------------------------------------------------------------------------------
+// 5. SUPABASE ACCESS CONTROL (แทนที่ Google Sheets Data & Logs)
 // ------------------------------------------------------------------------------
 
 // ตรวจสอบสิทธิ์การเข้าผ่าน Supabase REST Table: rfid_cards
@@ -141,7 +170,7 @@ String verifyCardWithSupabase(String cardUID, String &nameOut, String &roleOut) 
   return resultStatus;
 }
 
-// บันทึกประวัติการทาบบัตรลง Supabase Table: gate_logs (แทนที่ Google Sheets Logs Tab)
+// บันทึกประวัติการทาบบัตรลง Supabase Table: gate_logs
 void logGateAccessToSupabase(String cardUID, String name, String role, String status, String action) {
   if (WiFi.status() != WL_CONNECTED) return;
 
@@ -172,7 +201,7 @@ void logGateAccessToSupabase(String cardUID, String name, String role, String st
 }
 
 // ------------------------------------------------------------------------------
-// 5. ส่งข้อมูล Telemetry เข้าสู่ Supabase / Dashboard API
+// 6. ส่งข้อมูล Telemetry เข้าสู่ Supabase / Dashboard API
 // ------------------------------------------------------------------------------
 void sendGateTelemetry(bool isOpen, String direction, String access, String cardRef, String note) {
   if (WiFi.status() != WL_CONNECTED) return;
@@ -318,17 +347,19 @@ void scrollSchoolText() {
 }
 
 // ==============================================================================
-// 6. SETUP
+// 7. SETUP
 // ==============================================================================
 void setup() {
   Serial.begin(115200);
-  Serial.println("\n[GATE SYSTEM] Booting with Supabase Cloud...");
+  Serial.println("\n[GATE SYSTEM] Booting with WiFiManager & Supabase SQL...");
 
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, BUZZER_OFF);
   
   pinMode(GATE_LED_PIN, OUTPUT);
   digitalWrite(GATE_LED_PIN, LOW);
+  
+  pinMode(RESET_PIN, INPUT_PULLUP);
 
   // จอ LCD I2C
   Wire.begin(I2C_SDA, I2C_SCL);
@@ -352,21 +383,31 @@ void setup() {
     while(1);
   }
 
-  // เชื่อมต่อ Wi-Fi โดยตรง
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  WiFiManager wm;
+
+  // ตรวจจับการกดปุ่ม BOOT เพื่อ Reset Wi-Fi ตอนเปิดเครื่อง
+  if (digitalRead(RESET_PIN) == LOW) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("RESETTING WIFI..");
+    wm.resetSettings();
+    beepBuzzer(2);
+    delay(1500);
+  }
+
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("CONNECTING WIFI ");
+  lcd.print("WiFi: SmartCity ");
   lcd.setCursor(0, 1);
-  lcd.print(WIFI_SSID);
+  lcd.print("IP: 192.168.4.1 ");
 
-  Serial.printf("[GATE] Connecting to WiFi '%s'...\n", WIFI_SSID);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // เปิด Captive Portal AP หากยังไม่มีการตั้งค่า
+  if (!wm.autoConnect("SmartCity-Gate-AP")) {
+    ESP.restart();
   }
-  Serial.println("\n[GATE] WiFi Connected! IP: " + WiFi.localIP().toString());
+
+  // เมื่อเชื่อมต่อ Wi-Fi สำเร็จ -> บันทึกและจำค่าลง Supabase SQL (ตาราง settings) อัตโนมัติ
+  syncWiFiConfigToSupabase(WiFi.SSID(), WiFi.psk());
 
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -387,9 +428,34 @@ void setup() {
 }
 
 // ==============================================================================
-// 7. MAIN LOOP
+// 8. MAIN LOOP
 // ==============================================================================
 void loop() {
+  // ตรวจจับปุ่ม Reset Wi-Fi (กดค้าง 2 วินาทีเพื่อเปิดหน้า Portal ใหม่)
+  if (digitalRead(RESET_PIN) == LOW) {
+    delay(100);
+    if (digitalRead(RESET_PIN) == LOW) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("HOLD TO RESET...");
+      unsigned long btnPressTime = millis();
+      while (digitalRead(RESET_PIN) == LOW) {
+        if (millis() - btnPressTime >= 2000) {
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("RESETTING WIFI..");
+          WiFiManager wm;
+          wm.resetSettings();
+          beepBuzzer(2);
+          delay(1000);
+          ESP.restart();
+        }
+      }
+      lcd.clear();
+      updateTopLineWelcome();
+    }
+  }
+
   if (!isGateOpen) {
     if (millis() - lastClockUpdate >= 1000) {
       lastClockUpdate = millis();

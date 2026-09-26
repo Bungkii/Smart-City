@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiManager.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
@@ -7,12 +8,8 @@
 #include <Adafruit_SSD1306.h>
 
 // ==============================================================================
-// 1. SUPABASE & CLOUD CONFIGURATION
+// 1. SUPABASE & CLOUD CONFIGURATION (บันทึก Wi-Fi ลง SQL)
 // ==============================================================================
-// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด
-const char* WIFI_SSID     = "ACT-SmartCity-2.4G";
-const char* WIFI_PASS     = "ACT12345678";
-
 // ⚙️ โหมดการส่งข้อมูล: "supabase", "dashboard", หรือ "both"
 const String CLOUD_MODE = "supabase"; 
 
@@ -113,6 +110,32 @@ void updateOLEDDisplay() {
   display.display();
 }
 
+// บันทึกและจำค่า Wi-Fi ลง Supabase SQL (ตาราง settings)
+void syncWiFiConfigToSupabase(String ssid, String pass) {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure();
+  secureClient.setTimeout(4000);
+
+  HTTPClient http;
+  http.begin(secureClient, SUPABASE_URL + "/settings");
+  http.addHeader("apikey", SUPABASE_KEY);
+  http.addHeader("Authorization", "Bearer " + SUPABASE_KEY);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Prefer", "resolution=merge-duplicates,return=minimal");
+
+  String bodySsid = "{\"key\":\"wifi_ssid\",\"value\":\"" + ssid + "\",\"updated_at\":\"2026-09-26T12:00:00Z\"}";
+  http.POST(bodySsid);
+
+  if (pass.length() > 0) {
+    String bodyPass = "{\"key\":\"wifi_pass\",\"value\":\"" + pass + "\",\"updated_at\":\"2026-09-26T12:00:00Z\"}";
+    http.POST(bodyPass);
+  }
+  http.end();
+  Serial.printf("[SUPABASE SQL] Synced Wi-Fi '%s' to settings table\n", ssid.c_str());
+}
+
 // ==============================================================================
 // 5. SUPABASE & DASHBOARD TELEMETRY
 // ==============================================================================
@@ -204,7 +227,7 @@ void sendParkingTelemetry(bool isOccupied, String bayId, String noteMsg) {
 // ==============================================================================
 void setup() {
   Serial.begin(115200);
-  Serial.println("\n[PARKING SYSTEM] Starting...");
+  Serial.println("\n[PARKING SYSTEM] Starting with WiFiManager...");
 
   Wire.begin(I2C_SDA, I2C_SCL);
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -212,23 +235,20 @@ void setup() {
     for (;;);
   }
 
-  showOLEDMessage("CONNECTING WIFI...", WIFI_SSID);
+  showOLEDMessage("CONNECTING WIFI...", "AP: 192.168.4.1");
 
   pinMode(TRIG_IN, OUTPUT);
   pinMode(ECHO_IN, INPUT);
   pinMode(TRIG_OUT, OUTPUT);
   pinMode(ECHO_OUT, INPUT);
 
-  // เชื่อมต่อ Wi-Fi โดยตรง
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  Serial.printf("[PARKING] Connecting to WiFi '%s'...\n", WIFI_SSID);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  WiFiManager wm;
+  if (!wm.autoConnect("SmartCity-Parking-AP")) {
+    ESP.restart();
   }
-  Serial.println("\n[PARKING] WiFi Connected! IP: " + WiFi.localIP().toString());
+
+  // ซิงก์ Wi-Fi ลง Supabase SQL
+  syncWiFiConfigToSupabase(WiFi.SSID(), WiFi.psk());
 
   showOLEDMessage("CONNECTED!", "READY TO DETECT");
   delay(1000);
