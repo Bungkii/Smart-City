@@ -43,6 +43,16 @@ function getDb(): Database.Database {
   } else {
     db.prepare("UPDATE settings SET value='live' WHERE key='mode'").run();
   }
+  stmts = {
+    getMode: db.prepare("SELECT value FROM settings WHERE key='mode'"),
+    setMode: db.prepare("UPDATE settings SET value=? WHERE key='mode'"),
+    insertEvent: db.prepare("INSERT INTO events(source,system,device_id,name,location,recorded_at,received_at,health,note,data_json,position_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)"),
+    latest: db.prepare("SELECT e.* FROM events e JOIN (SELECT device_id, MAX(id) id FROM events WHERE source=? GROUP BY device_id) x ON e.id=x.id ORDER BY e.system,e.device_id"),
+    history: db.prepare("SELECT * FROM events WHERE system=? AND source=? ORDER BY id DESC LIMIT ?"),
+    insertAudit: db.prepare("INSERT INTO command_audit(time,actor,system,device_id,command,reason,result,detail) VALUES(?,?,?,?,?,?,?,?)"),
+    auditHistory: db.prepare("SELECT * FROM command_audit ORDER BY id DESC LIMIT 100")
+  };
+
   if (!(db.prepare("SELECT 1 FROM events WHERE source='demo' LIMIT 1").get())) {
     const seed = db.transaction(() => {
       for (let h = 23; h >= 0; h--) {
@@ -72,16 +82,6 @@ function getDb(): Database.Database {
     });
     seedLive();
   }
-
-  stmts = {
-    getMode: db.prepare("SELECT value FROM settings WHERE key='mode'"),
-    setMode: db.prepare("UPDATE settings SET value=? WHERE key='mode'"),
-    insertEvent: db.prepare("INSERT INTO events(source,system,device_id,name,location,recorded_at,received_at,health,note,data_json,position_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)"),
-    latest: db.prepare("SELECT e.* FROM events e JOIN (SELECT device_id, MAX(id) id FROM events WHERE source=? GROUP BY device_id) x ON e.id=x.id ORDER BY e.system,e.device_id"),
-    history: db.prepare("SELECT * FROM events WHERE system=? AND source=? ORDER BY id DESC LIMIT ?"),
-    insertAudit: db.prepare("INSERT INTO command_audit(time,actor,system,device_id,command,reason,result,detail) VALUES(?,?,?,?,?,?,?,?)"),
-    auditHistory: db.prepare("SELECT * FROM command_audit ORDER BY id DESC LIMIT 100")
-  };
 
   return db;
 }
