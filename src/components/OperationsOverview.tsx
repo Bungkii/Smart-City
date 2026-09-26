@@ -21,7 +21,15 @@ function Ring({ value, total, label }: { value: number; total: number; label: st
     <div className="monitor-ring">
       <svg viewBox="0 0 120 120" aria-hidden="true">
         <circle cx="60" cy="60" r="49" />
-        <circle className="ring-value" opacity={percent ? 1 : 0} cx="60" cy="60" r="49" pathLength="100" strokeDasharray={`${percent} 100`} />
+        <circle
+          className="ring-value"
+          opacity={percent ? 1 : 0}
+          cx="60"
+          cy="60"
+          r="49"
+          pathLength="100"
+          strokeDasharray={`${percent} 100`}
+        />
       </svg>
       <div>
         <strong>{total ? value : "—"}</strong>
@@ -30,6 +38,16 @@ function Ring({ value, total, label }: { value: number; total: number; label: st
     </div>
   );
 }
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 14, scale: 0.98 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.35, delay: i * 0.06, ease: "easeOut" as const }
+  })
+};
 
 function SystemPanel({ id, devices, index }: { id: SystemId; devices: EventRow[]; index: number }) {
   const list = devices.filter(d => d.system === id);
@@ -46,10 +64,12 @@ function SystemPanel({ id, devices, index }: { id: SystemId; devices: EventRow[]
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-      whileHover={{ y: -3, transition: { duration: 0.2 } }}
+      custom={index}
+      initial="hidden"
+      animate="visible"
+      variants={cardVariants}
+      whileHover={{ y: -4, scale: 1.01, transition: { duration: 0.2 } }}
+      whileTap={{ scale: 0.99 }}
       style={{ display: "flex", flexDirection: "column" }}
     >
       <Link href={`/systems/${id}`} className={`monitor-system ${state}`}>
@@ -150,7 +170,7 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
       className={`monitor-board ${wallMode ? "wall-mode" : ""}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.35 }}
     >
       <header className="monitor-heading">
         <div>
@@ -175,33 +195,55 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
         </div>
       </header>
 
-      <motion.div 
-        className="monitor-kpis"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, staggerChildren: 0.05 }}
-      >
-        <motion.div whileHover={{ y: -2, transition: { duration: 0.15 } }}>
+      <div className="monitor-kpis">
+        <motion.div
+          custom={0}
+          initial="hidden"
+          animate="visible"
+          variants={cardVariants}
+          whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.15 } }}
+        >
           <span className="monitor-kpi-icon"><Server size={21} /></span>
           <span>อุปกรณ์ที่รายงานข้อมูล<small>REGISTERED IN TELEMETRY</small></span>
           <strong>{data.devices.length}<small>อุปกรณ์</small></strong>
         </motion.div>
-        <motion.div className="online" whileHover={{ y: -2, transition: { duration: 0.15 } }}>
+        <motion.div
+          className="online"
+          custom={1}
+          initial="hidden"
+          animate="visible"
+          variants={cardVariants}
+          whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.15 } }}
+        >
           <span className="monitor-kpi-icon"><Activity size={21} /></span>
           <span>เชื่อมต่ออยู่<small>ONLINE DEVICES</small></span>
           <strong>{online}<small>อุปกรณ์</small></strong>
         </motion.div>
-        <motion.div className="warning" whileHover={{ y: -2, transition: { duration: 0.15 } }}>
+        <motion.div
+          className="warning"
+          custom={2}
+          initial="hidden"
+          animate="visible"
+          variants={cardVariants}
+          whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.15 } }}
+        >
           <span className="monitor-kpi-icon"><ShieldCheck size={21} /></span>
           <span>ต้องตรวจสอบ<small>ACTIVE WARNINGS</small></span>
           <strong>{warning}<small>รายการ</small></strong>
         </motion.div>
-        <motion.div className="offline" whileHover={{ y: -2, transition: { duration: 0.15 } }}>
+        <motion.div
+          className="offline"
+          custom={3}
+          initial="hidden"
+          animate="visible"
+          variants={cardVariants}
+          whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.15 } }}
+        >
           <span className="monitor-kpi-icon"><WifiOff size={21} /></span>
           <span>ขาดการติดต่อ<small>OFFLINE DEVICES</small></span>
           <strong>{offline}<small>อุปกรณ์</small></strong>
         </motion.div>
-      </motion.div>
+      </div>
 
       <motion.section 
         className="city-weather" 

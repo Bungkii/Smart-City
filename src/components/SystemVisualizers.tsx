@@ -36,8 +36,14 @@ export function ParkingVisualizer({
           <h3>ผังช่องจอดรถอัจฉริยะ (Real-time Bay Matrix)</h3>
         </div>
         <div className="viz-stats-pills">
-          <span className="pill green">ว่าง: <strong>{vacantCount}</strong></span>
-          <span className="pill red">ไม่ว่าง: <strong>{occupiedCount}</strong></span>
+          <span className="pill green" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
+            ว่าง: <strong>{vacantCount}</strong>
+          </span>
+          <span className="pill red" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 6px #ef4444" }} />
+            ไม่ว่าง: <strong>{occupiedCount}</strong>
+          </span>
           <span className="pill rate">อัตราการใช้งาน: <strong>{occupancyPercent}%</strong></span>
         </div>
       </div>
@@ -53,22 +59,29 @@ export function ParkingVisualizer({
               key={d.deviceId}
               className={`bay-slot ${isOccupied ? "occupied" : "vacant"} ${isSelected ? "selected" : ""}`}
               onClick={() => setSelectedBay(d.deviceId)}
-              whileHover={{ y: -2, transition: { duration: 0.15 } }}
+              whileHover={{ y: -3, scale: 1.02, transition: { duration: 0.18 } }}
               whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, scale: 0.96 }}
+              initial={{ opacity: 0, scale: 0.94 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2, delay: index * 0.03 }}
+              transition={{ duration: 0.25, delay: index * 0.04 }}
             >
               <div className="bay-roof">
                 <span className="bay-id">{bayName}</span>
-                <span className={`bay-status-dot ${isOccupied ? "red" : "green"}`} />
+                <span className={`bay-status-dot ${isOccupied ? "red" : "green"}`} style={{
+                  boxShadow: isOccupied ? "0 0 6px rgba(239,68,68,0.6)" : "0 0 6px rgba(16,185,129,0.6)"
+                }} />
               </div>
               <div className="bay-visual">
                 {isOccupied ? (
-                  <div className="car-model">
-                    <CarFront size={28} className="car-icon" />
+                  <motion.div 
+                    className="car-model"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <CarFront size={30} className="car-icon" />
                     <span className="car-plate">ACT-{100 + index}</span>
-                  </div>
+                  </motion.div>
                 ) : (
                   <div className="bay-empty-spot">
                     <span>ว่าง</span>

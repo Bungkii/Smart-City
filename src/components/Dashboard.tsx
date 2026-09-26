@@ -119,9 +119,13 @@ function Shell({
       <aside id="main-navigation" aria-label="เมนูหลัก" className={`sidebar ${open ? "open" : ""}`}>
         <button className="sidebar-mobile-close" onClick={closeMobileMenu} aria-label="ปิดเมนู"><X size={18} /></button>
         <Link className="brand" href="/" onClick={() => setOpen(false)}>
-          <span className="brand-mark">
+          <motion.span 
+            className="brand-mark"
+            whileHover={{ scale: 1.08, rotate: 3, transition: { duration: 0.2 } }}
+            whileTap={{ scale: 0.95 }}
+          >
             <img src="/act-logo-1961.png" alt="Assumption College Thonburi — ACT 1961" width={56} height={56} />
-          </span>
+          </motion.span>
           <span className="brand-text">
             <strong>Assumption College Thonburi</strong>
             <small>SMART CITY DASHBOARD</small>
@@ -153,7 +157,14 @@ function Shell({
               <strong>สถานะการเชื่อมต่อ</strong>
               <p>{connection === "error" ? "เชื่อมต่อข้อมูลไม่สำเร็จ" : connection === "loading" ? "กำลังเชื่อมต่อ" : connection === "empty" ? "รอข้อมูลจากอุปกรณ์" : "อ่านข้อมูลจากฐานข้อมูล"}</p>
             </div>
-            <span className={`connection-dot ${connection}`} />
+            <span className={`connection-dot ${connection}`} style={{
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              background: connection === "ready" ? "#10b981" : connection === "loading" ? "#f59e0b" : "#ef4444",
+              boxShadow: connection === "ready" ? "0 0 8px #10b981" : "none",
+              animation: connection === "ready" ? "pulse-green 2s infinite" : "none"
+            }} />
           </div>
         </div>
       </aside>
