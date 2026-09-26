@@ -148,5 +148,46 @@ CREATE POLICY "Allow public all rfid_cards" ON public.rfid_cards FOR ALL USING (
 CREATE POLICY "Allow public all gate_logs" ON public.gate_logs FOR ALL USING (true);
 CREATE POLICY "Allow public all todos" ON public.todos FOR ALL USING (true);
 
--- 10. Enable Realtime for Events, RFID Cards, Gate Logs, and Settings (สำหรับ Dashboard Real-time Subscription)
-ALTER PUBLICATION supabase_realtime ADD TABLE public.events, public.gate_logs, public.rfid_cards, public.settings;
+-- 10. Enable Realtime for Events, RFID Cards, Gate Logs, and Settings (แบบ Safe Re-run)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_rel pr
+        JOIN pg_publication p ON p.oid = pr.prpubid
+        JOIN pg_class c ON c.oid = pr.prrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE p.pubname = 'supabase_realtime' AND n.nspname = 'public' AND c.relname = 'events'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.events;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_rel pr
+        JOIN pg_publication p ON p.oid = pr.prpubid
+        JOIN pg_class c ON c.oid = pr.prrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE p.pubname = 'supabase_realtime' AND n.nspname = 'public' AND c.relname = 'gate_logs'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.gate_logs;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_rel pr
+        JOIN pg_publication p ON p.oid = pr.prpubid
+        JOIN pg_class c ON c.oid = pr.prrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE p.pubname = 'supabase_realtime' AND n.nspname = 'public' AND c.relname = 'rfid_cards'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.rfid_cards;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_rel pr
+        JOIN pg_publication p ON p.oid = pr.prpubid
+        JOIN pg_class c ON c.oid = pr.prrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE p.pubname = 'supabase_realtime' AND n.nspname = 'public' AND c.relname = 'settings'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.settings;
+    END IF;
+END $$;
