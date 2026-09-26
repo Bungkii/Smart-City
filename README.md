@@ -1,84 +1,142 @@
-# Assumption College Thonburi — Smart City Dashboard
+# 🏫 Assumption College Thonburi (ACT) — Smart City Dashboard
 
-แดชบอร์ดภาษาไทยสำหรับ 5 ระบบ: ที่จอดรถ, สัญญาณจราจร, ไฟถนน, ประตู RFID และสถานีสิ่งแวดล้อม สร้างด้วย Next.js, TypeScript, SQLite หรือ Cloudflare D1
+ระบบบริหารจัดการและแดชบอร์ดเมืองอัจฉริยะ **Assumption College Thonburi (ACT)** พัฒนาด้วย **Next.js 16 (App Router + Turbopack)**, **TypeScript**, **PostgreSQL (Supabase Cloud)** พร้อมเชื่อมต่อฮาร์ดแวร์จริงทั้ง 5 บอร์ดผ่าน **WiFiManager** และ **Supabase REST / Realtime API**
 
-## เริ่มใช้งาน
+---
 
-ต้องใช้ Node.js 22 ขึ้นไปสำหรับแพ็กเกจ Supabase รุ่นที่ติดตั้ง
+## 🌟 ฟีเจอร์เด่นของระบบ (Key Features)
 
+1. **Dashboard แสดงผลแบบเรียลไทม์ (Live Telemetry)**:
+   - 🚗 **ที่จอดรถอัจฉริยะ (Smart Parking)**: ตรวจจับรถเข้า-ออก แสดงสถานะช่องจอดและคำนวณที่ว่าง
+   - 🚦 **สัญญาณไฟจราจรสี่แยก (4-Way Adaptive Traffic Light)**: แยกเสาสัญญาณ 4 ทิศทาง (เหนือ, ตะวันออก, ใต้, ตะวันตก) พร้อมระบบตรวจจับรถด้วย Ultrasonic และ PIR เพื่อยืดเวลาไฟเขียวอัตโนมัติ
+   - 💡 **ไฟถนนอัจฉริยะ (Adaptive Street Lights)**: เซนเซอร์แสง LDR ตรวจกลางวัน/กลางคืน และ PIR ปรับหรี่-สว่างอัตโนมัติแบบ PWM Smooth Fade
+   - 🚪 **ระบบประตู RFID Gate**: สแกนบัตรนักเรียน/ครู ตรวจสอบสิทธิ์และบันทึกประวัติการผ่านประตูลงฐานข้อมูลแบบเรียลไทม์
+   - 🌿 **สถานีตรวจวัดสภาพแวดล้อม (Environment Station)**: ตรวจจับ PM2.5, อุณหภูมิ, ความชื้น และระดับควัน MQ-2
+
+2. **ฐานข้อมูล PostgreSQL บน Supabase Cloud**:
+   - ย้ายระบบฐานข้อมูลและประวัติการแตะบัตรจาก Google Sheets มาไว้บน Supabase Cloud PostgreSQL 100%
+   - รองรับ Row Level Security (RLS) และ Supabase Realtime Subscription
+
+3. **ระบบ Wi-Fi อัจฉริยะ (WiFiManager สำหรับทุกบอร์ด)**:
+   - บอร์ดทุกตัวมี Captive Portal AP เฉพาะตัวเพื่อตั้งค่า Wi-Fi ผ่านมือถือ (`192.168.4.1`)
+   - บันทึก Wi-Fi ลง Flash/NVS ถาวร
+   - **ปุ่ม Reset Wi-Fi**: กดปุ่ม **BOOT (GPIO 0)** ค้าง 3 วินาที เพื่อล้างค่า Wi-Fi แล้วตั้งค่าใหม่
+
+---
+
+## 🚀 การติดตั้งและรันในเครื่อง (Local Development)
+
+### 1. ติดตั้ง Dependencies
 ```bash
 npm install
+```
+
+### 2. ตั้งค่า Environment Variables
+คัดลอกไฟล์ `.env.example` ไปเป็น `.env.local`:
+```bash
 cp .env.example .env.local
+```
+
+ตรวจสอบค่าใน `.env.local`:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://kqkggjsjwbkodqyeddwj.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc
+SUPABASE_URL=https://kqkggjsjwbkodqyeddwj.supabase.co
+SUPABASE_ANON_KEY=sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc
+DB_DRIVER=postgres
+INGEST_TOKEN=act_smartcity_ingest_secret_token_2026
+SETTINGS_TOKEN=act_smartcity_settings_secret_token_2026
+CONTROL_TOKEN=act_operator_secret_token_2026
+OPERATOR_NAME=ACT_Admin
+OFFLINE_AFTER_SECONDS=120
+```
+
+### 3. เริ่มรัน Dev Server
+```bash
 npm run dev
 ```
+เปิดเบราว์เซอร์ไปที่: **`http://localhost:3000`**
 
-เปิด `http://localhost:3000` ค่าเริ่มต้นเป็น **Demo Mode** และข้อมูลทุกจุดติดป้ายว่าสาธิต ฐานข้อมูล SQLite จะถูกสร้างที่ `data/smartcity.db` อัตโนมัติ
+---
 
-## Supabase SSR
+## 🗄️ การตั้งค่า Supabase Database (PostgreSQL)
 
-ติดตั้ง `@supabase/supabase-js` และ `@supabase/ssr` แล้ว กำหนด URL กับ publishable key ใน `.env.local` ตาม `.env.example` ใช้ `src/utils/supabase/client.ts` ใน Client Component และ `src/utils/supabase/server.ts` ใน Server Component/Route Handler โดยส่ง `await cookies()` เข้า `createClient` ไฟล์ `src/proxy.ts` เรียก `getClaims()` เพื่อรีเฟรช session และส่ง cookie ใหม่กลับเบราว์เซอร์บน Next.js 16
+เปิดหน้า **[Supabase SQL Editor](https://supabase.com/dashboard/project/kqkggjsjwbkodqyeddwj/sql/new)** แล้วนำโค้ดจากไฟล์ [`supabase_schema.sql`](./supabase_schema.sql) ไปวางและกด **Run**
 
-ตัวอย่าง `todos` ไม่ถูกแทนที่ในหน้าแรก เพราะโปรเจกต์ยังไม่มี schema ของตารางนั้น ส่วนข้อมูล Smart City ปัจจุบันยังเก็บใน SQLite หรือ D1 ตาม `DB_DRIVER`; การย้ายข้อมูลไป Supabase ต้องกำหนดตารางและนโยบาย RLS ก่อน
+### โครงสร้างตารางในฐานข้อมูล:
+| ตาราง | คำอธิบาย |
+| :--- | :--- |
+| `public.events` | ข้อมูลเซนเซอร์ Telemetry ทั้ง 5 ระบบ (รวมสัญญาณไฟ 4 ทิศทาง) |
+| `public.rfid_cards` | ฐานข้อมูล UID บัตร RFID, ชื่อผู้ถือบัตร, บทบาท, สถานะ (`allow`/`banned`) |
+| `public.gate_logs` | ประวัติการแตะบัตรผ่านประตูอัตโนมัติ (บันทึกเวลา, ชื่อ, บทบาท, ผลการอนุญาต) |
+| `public.settings` | การตั้งค่าโหมด (`live`/`demo`) และการตั้งค่าระบบ |
+| `public.command_audit` | บันทึกประวัติการส่งคำสั่งควบคุมอุปกรณ์จาก Dashboard |
+| `public.todos` | ตารางทดสอบการเชื่อมต่อ Next.js SSR |
 
-ตั้งค่า `INGEST_TOKEN`, `SETTINGS_TOKEN` และ `CONTROL_OPERATORS_JSON` ใน `.env.local` ก่อนใช้งานจริง แต่ละ token ควรยาว สุ่ม และไม่ซ้ำกัน `CONTROL_OPERATORS_JSON` ผูกชื่อผู้สั่งกับ token เพื่อบันทึก audit log เช่น `{"operator-a":"random-secret-a"}`
+---
 
-## ใช้ Cloudflare D1
+## ☁️ การ Deploy ขึ้น Vercel (แนะนำ)
 
-สร้างฐานข้อมูล D1 ใน Cloudflare แล้วกำหนดค่าต่อไปนี้ใน `.env.local` หรือ secrets ของโฮสต์ Next.js:
+1. เข้าไปที่ **[vercel.com](https://vercel.com)** และ Login ด้วย GitHub
+2. กด **Add New...** -> **Project** -> เลือก Repository **`Bungkii/Smart-City`**
+3. ในส่วน **Environment Variables** ให้ใส่ค่าจาก `.env.local`
+4. กด **Deploy** เว็บไซต์จะพร้อมใช้งานทันทีภายใน 30 วินาที
+
+---
+
+## ☁️ การ Deploy ขึ้น Cloudflare Pages
+
+1. เข้าไปที่ **[dash.cloudflare.com](https://dash.cloudflare.com)**
+2. เมนู **Workers & Pages** -> **Create application** -> **Pages** -> **Connect to Git**
+3. เลือก Repository **`Bungkii/Smart-City`**
+4. ตั้งค่า:
+   - **Framework preset**: `Next.js`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `.next`
+5. เพิ่ม **Environment Variables** ตามตารางใน `.env.local`
+6. กด **Save and Deploy**
+
+---
+
+## 🔌 รายละเอียดบอร์ดฮาร์ดแวร์ทั้ง 5 ระบบ (Hardware Firmware)
+
+| บอร์ด | ไฟล์โค้ด | เซนเซอร์ / อุปกรณ์ | Wi-Fi Captive Portal AP |
+| :--- | :--- | :--- | :--- |
+| **Board 1** | [`ESP32-1_RFID Gate Access.ino`](./Arduino/Board_1/ESP32-1_RFID%20Gate%20Access.ino) | RC522 RFID, LCD 16x2, Relay/LED, Buzzer | `ACT-RFID-Gate-Setup` |
+| **Board 2** | [`UNOR4-2_Traffic Light.ino`](./Arduino/Board_2/UNOR4-2_Traffic%20Light.ino) | 2x Ultrasonic, 2x PIR, 12x LEDs (4 ทิศทาง) | `ACT-Traffic-Light-Setup` |
+| **Board 3** | [`ESP32-3_Smart Parking.ino`](./Arduino/Board_3/ESP32-3_Smart%20Parking.ino) | 2x Ultrasonic (In/Out), OLED SSD1306 | `ACT-Smart-Parking-Setup` |
+| **Board 4** | [`ESP32-4_Smart Environment Station.ino`](./Arduino/Board_4/ESP32-4_Smart%20Environment%20Station.ino) | DHT11, MQ-2 Gas, OLED SSD1306 | `ACT-Environment-Station-Setup` |
+| **Board 5** | [`ESP32-5_Adaptive Street Light.ino`](./Arduino/Board_5/ESP32-5_Adaptive%20Street%20Light.ino) | LDR Sensor, PIR Motion, PWM LED Dimmer | `ACT-Street-Light-Setup` |
+
+### 📶 การเชื่อมต่อ Wi-Fi และ Reset:
+- **เชื่อมต่อครั้งแรก**: เปิดบอร์ด -> เชื่อมต่อ Wi-Fi ชื่อ AP ของบอร์ด -> หน้าต่างเด้งไปที่ `192.168.4.1` -> เลือกชื่อ Wi-Fi ใส่รหัสผ่าน แล้วกด Save
+- **การล้าง Wi-Fi เพื่อเปลี่ยนเครือข่าย**: กดปุ่ม **BOOT (GPIO 0)** บนบอร์ดค้างไว้ **3 วินาที** บอร์ดจะทำการลบค่า Wi-Fi และเปิด Captive Portal ให้ตั้งค่าใหม่ทันที
+
+---
+
+## 📡 API Endpoints
+
+- **`GET /api/dashboard`**: ดึงข้อมูล Realtime Telemetry, สถานะอุปกรณ์, และประวัติย้อนหลัง
+- **`POST /api/ingest`**: รับข้อมูล Telemetry จากบอร์ดฮาร์ดแวร์ภายนอก (Header: `Authorization: Bearer <INGEST_TOKEN>`)
+- **`GET /api/rfid?type=cards`**: ดึงรายชื่อบัตร RFID ทั้งหมดจาก Supabase
+- **`GET /api/rfid?type=logs`**: ดึงประวัติการแตะบัตรผ่านประตู
+- **`POST /api/rfid`**: เพิ่ม/แก้ไขข้อมูลบัตร หรือบันทึก Gate Log
+- **`POST /api/control`**: ส่งคำสั่งควบคุมฮาร์ดแวร์ (เช่น เปิด/ปิด ประตู, เปลี่ยนโหมดไฟจราจร)
+- **`PATCH /api/settings`**: สลับโหมดการทำงาน (`live` / `demo`)
+- **`POST /api/settings/wifi`**: ซิงก์ค่า Wi-Fi ส่วนกลางของระบบ
+
+---
+
+## 🛠️ การตรวจสอบความถูกต้องของโค้ด
 
 ```bash
-DB_DRIVER=d1
-CF_ACCOUNT_ID=...
-CF_D1_DATABASE_ID=...
-CF_API_TOKEN=...
-```
-
-API token ต้องมีสิทธิ์ D1 Read และ D1 Write โค้ดจะสร้างตาราง `settings`, `events`, `command_audit` และข้อมูล Demo Mode ใน D1 เมื่อเรียก API ครั้งแรก ห้ามนำค่าเหล่านี้ไปไว้ในตัวแปร `NEXT_PUBLIC_*` หรือส่งไปยังเบราว์เซอร์ การเชื่อมต่อปัจจุบันใช้ [D1 Query API](https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/query/) ฝั่งเซิร์ฟเวอร์ จึงรัน Next.js บน Node host ได้โดยไม่ต้องติดตั้ง Cloudflare Workers ทั้งแอป สำหรับปริมาณงานสูง ควรย้ายชั้น `src/lib/d1.ts` ไปใช้ Worker ที่มี D1 binding เพราะ Cloudflare ระบุว่า REST API เหมาะกับงานบริหารและมีอัตราจำกัดของ Cloudflare API
-
-## รับข้อมูลอุปกรณ์
-
-`POST /api/ingest` ต้องส่ง `Authorization: Bearer <INGEST_TOKEN>` และ `Content-Type: application/json` ข้อมูลถูกตรวจด้วย Zod, ตรวจเวลาไม่ให้ห่างจากปัจจุบันเกิน 24 ชั่วโมง และเก็บประวัติทุกเหตุการณ์
-
-ตัวอย่าง **schema กลางของแอป** สำหรับสถานีสิ่งแวดล้อม (ไม่ใช่ payload ของฮาร์ดแวร์):
-
-```json
-{
-  "system": "environment",
-  "deviceId": "EN-01",
-  "name": "สถานีหน้าอาคาร",
-  "location": "อาคาร A",
-  "position": { "lat": 13.7563, "lng": 100.5018 },
-  "recordedAt": "2026-09-25T10:00:00Z",
-  "health": "normal",
-  "data": { "pm25": 24.5, "temperature": 30.2, "humidity": 63 }
-}
-```
-
-ดูชนิดข้อมูลครบทั้ง 5 ระบบใน `src/lib/model.ts` อุปกรณ์ HTTP ที่ส่ง schema นี้ได้โดยตรงเรียก API ได้ทันที ถ้า payload ต่างออกไป ให้เขียน adapter ตาม interface ใน `src/lib/adapter.ts` เพื่อ map เป็น schema กลางก่อนส่งเข้า API สำหรับ MQTT ให้ bridge subscribe topic แล้วใช้ `forwardMqttMessage` ส่งข้อมูลหลัง map เข้ามา ระบบไม่กำหนด topic, QoS หรือรูปแบบ payload ของฮาร์ดแวร์เอง
-
-`position` ไม่บังคับ หากมีพิกัดจริง แผนที่ OpenStreetMap จะแสดงหมุดอุปกรณ์และสถานะ หากไม่มีพิกัด แผนที่จะบอกว่ายังไม่มีพิกัด ไม่สร้างตำแหน่งจริงขึ้นเอง ใน Demo Mode พิกัดตัวอย่างจะมีป้ายกำกับชัดเจน
-
-## สลับโหมดและควบคุมอุปกรณ์
-
-- `PATCH /api/settings` รับ `{ "mode": "live" }` หรือ `demo` และ Bearer `SETTINGS_TOKEN` หน้า `/settings` มีฟอร์มให้สลับโหมด
-- Live Mode แสดงเฉพาะข้อมูลที่ `POST /api/ingest` ส่งเข้ามา ไม่มีอุปกรณ์แล้วแสดงว่าง ไม่ใช้ข้อมูลจำลองปน
-- หน้าเว็บดึงข้อมูลใหม่ทุก 5 วินาที และทำเครื่องหมาย **ออฟไลน์** เมื่อไม่มีข้อมูลใหม่เกิน `OFFLINE_AFTER_SECONDS` (ค่าเริ่มต้น 120 วินาที)
-- `POST /api/control` ต้องมี Bearer token ที่ผูกผู้สั่ง, อุปกรณ์จริงที่รู้จักและยังออนไลน์, คำสั่งที่ผ่าน schema และเหตุผลอย่างน้อย 3 ตัวอักษร หน้าเว็บให้ผู้ใช้ยืนยันก่อนส่ง
-- ต้องกำหนด `DEVICE_COMMAND_URL` และ `DEVICE_COMMAND_TOKEN` ให้ชี้ไปยัง **adapter ของคุณเอง** ซึ่งรับคำสั่งรูปแบบกลาง `{system, deviceId, command, reason, actor, requestedAt}` แล้วแปลงเป็น protocol จริง ก่อนมี adapter ระบบจะตอบ 503 และไม่ส่งคำสั่งไปยังฮาร์ดแวร์ คำสั่งที่ส่งหรือปฏิเสธจาก adapter ถูกบันทึกใน `command_audit`
-
-## ข้อมูลที่ต้องขอเพื่อเชื่อมฮาร์ดแวร์จริง
-
-1. รายการอุปกรณ์จริง รหัสอุปกรณ์ ตำแหน่ง และเจ้าของระบบ
-2. ช่องทางเชื่อมต่อของแต่ละรุ่น: HTTP endpoint หรือ MQTT broker, topic, QoS, TLS และวิธียืนยันตัวตน
-3. ตัวอย่าง payload จริงพร้อมหน่วย, timezone, ความหมายของสถานะ/รหัสผิดพลาด และรอบการส่งข้อมูล
-4. ข้อกำหนดคำสั่งควบคุมจริง: endpoint/topic, payload, การตอบรับ, timeout, การยืนยันผล และข้อห้ามด้านความปลอดภัย
-5. บัญชี Cloudflare, D1 database ID และ API token ถ้าจะใช้ D1
-
-## ตรวจสอบ
-
-```bash
+# ตรวจสอบ TypeScript Typecheck
 npm run typecheck
+
+# ทดสอบ Production Build
 npm run build
 ```
 
-เส้นทางหลัก: `/`, `/systems/parking`, `/systems/traffic`, `/systems/streetlight`, `/systems/gate`, `/systems/environment`, `/settings`, `/api/dashboard`, `/api/ingest`, `/api/control`, `/api/settings`
+---
+
+*พัฒนาและดูแลโดย Assumption College Thonburi (ACT) Smart City Initiative* 🇹🇭
