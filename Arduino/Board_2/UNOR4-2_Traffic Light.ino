@@ -75,9 +75,9 @@ void setLights(bool nsG, bool nsY, bool nsR, bool ewG, bool ewY, bool ewR) {
 }
 
 // ------------------------------------------------------------------------------
-// ส่งข้อมูลสถานะสัญญาณไฟจราจรเข้า Supabase Cloud / Dashboard
+// ส่งข้อมูลสถานะสัญญาณไฟจราจรทั้ง 2 ฝั่ง (NS & EW) เข้า Supabase Cloud / Dashboard
 // ------------------------------------------------------------------------------
-void sendTrafficTelemetry(String signalColor, int waitSec, String modeType, String noteMsg) {
+void sendTrafficTelemetry(String nsSignal, String ewSignal, String activeDirection, int waitSec, String modeType, String noteMsg) {
   if (WiFi.status() != WL_CONNECTED) return;
 
 #if defined(ESP32)
@@ -87,7 +87,7 @@ void sendTrafficTelemetry(String signalColor, int waitSec, String modeType, Stri
 
   WiFiClient normalClient;
 
-  // 1. ส่งเข้า Supabase
+  // 1. ส่งเข้า Supabase REST API
   if (CLOUD_MODE == "supabase" || CLOUD_MODE == "both") {
     HTTPClient http;
     http.begin(secureClient, SUPABASE_URL + "/events");
@@ -111,15 +111,18 @@ void sendTrafficTelemetry(String signalColor, int waitSec, String modeType, Stri
     pos["lng"] = 100.5024;
 
     JsonObject data = doc.createNestedObject("data_json");
-    data["signal"]      = signalColor;
-    data["waitSeconds"] = waitSec;
-    data["mode"]        = modeType;
-    data["incident"]    = nullptr;
+    data["signal"]          = (nsSignal == "green" || ewSignal == "green") ? "green" : (nsSignal == "yellow" || ewSignal == "yellow") ? "yellow" : "red";
+    data["nsSignal"]        = nsSignal;
+    data["ewSignal"]        = ewSignal;
+    data["activeDirection"] = activeDirection;
+    data["waitSeconds"]     = waitSec;
+    data["mode"]            = modeType;
+    data["incident"]        = nullptr;
 
     String jsonBody;
     serializeJson(doc, jsonBody);
     int code = http.POST(jsonBody);
-    Serial.printf("[SUPABASE TRAFFIC] Status: %d\n", code);
+    Serial.printf("[SUPABASE TRAFFIC] Status: %d | Active: %s (NS:%s, EW:%s)\n", code, activeDirection.c_str(), nsSignal.c_str(), ewSignal.c_str());
     http.end();
   }
 
@@ -148,10 +151,13 @@ void sendTrafficTelemetry(String signalColor, int waitSec, String modeType, Stri
     pos["lng"] = 100.5024;
 
     JsonObject data = doc.createNestedObject("data");
-    data["signal"]      = signalColor;
-    data["waitSeconds"] = waitSec;
-    data["mode"]        = modeType;
-    data["incident"]    = nullptr;
+    data["signal"]          = (nsSignal == "green" || ewSignal == "green") ? "green" : (nsSignal == "yellow" || ewSignal == "yellow") ? "yellow" : "red";
+    data["nsSignal"]        = nsSignal;
+    data["ewSignal"]        = ewSignal;
+    data["activeDirection"] = activeDirection;
+    data["waitSeconds"]     = waitSec;
+    data["mode"]            = modeType;
+    data["incident"]        = nullptr;
 
     String jsonBody;
     serializeJson(doc, jsonBody);
@@ -160,8 +166,9 @@ void sendTrafficTelemetry(String signalColor, int waitSec, String modeType, Stri
     http.end();
   }
 #elif defined(ARDUINO_UNOR4_WIFI)
+  // สำหรับ UNO R4 WiFi ส่งผ่าน Supabase REST API
   WiFiSSLClient sslClient;
-  HttpClient http = HttpClient(sslClient, "YOUR_PROJECT_ID.supabase.co", 443);
+  HttpClient http = HttpClient(sslClient, "kqkggjsjwbkodqyeddwj.supabase.co", 443);
 
   DynamicJsonDocument doc(512);
   doc["source"]      = "live";
@@ -174,10 +181,13 @@ void sendTrafficTelemetry(String signalColor, int waitSec, String modeType, Stri
   doc["note"]        = noteMsg;
 
   JsonObject data = doc.createNestedObject("data_json");
-  data["signal"]      = signalColor;
-  data["waitSeconds"] = waitSec;
-  data["mode"]        = modeType;
-  data["incident"]    = nullptr;
+  data["signal"]          = (nsSignal == "green" || ewSignal == "green") ? "green" : (nsSignal == "yellow" || ewSignal == "yellow") ? "yellow" : "red";
+  data["nsSignal"]        = nsSignal;
+  data["ewSignal"]        = ewSignal;
+  data["activeDirection"] = activeDirection;
+  data["waitSeconds"]     = waitSec;
+  data["mode"]            = modeType;
+  data["incident"]        = nullptr;
 
   String jsonBody;
   serializeJson(doc, jsonBody);
@@ -187,14 +197,14 @@ void sendTrafficTelemetry(String signalColor, int waitSec, String modeType, Stri
   http.sendHeader("apikey", SUPABASE_KEY);
   http.sendHeader("Authorization", "Bearer " + SUPABASE_KEY);
   http.sendHeader("Content-Type", "application/json");
+  http.sendHeader("Prefer", "return=minimal");
   http.sendHeader("Content-Length", jsonBody.length());
   http.beginBody();
   http.print(jsonBody);
   http.endRequest();
 
   int statusCode = http.responseStatusCode();
-  Serial.print("[UNO R4 SUPABASE] Status: ");
-  Serial.println(statusCode);
+  Serial.printf("[UNO R4 SUPABASE] Status: %d | Active: %s\n", statusCode, activeDirection.c_str());
 #endif
 }
 
@@ -233,7 +243,7 @@ void setup() {
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\n[Wi-Fi] Connected! IP: " + WiFi.localIP().toString());
-    sendTrafficTelemetry("green", 30, "adaptive", "ระบบสัญญาณจราจรพร้อมทำงาน");
+    sendTrafficTelemetry("green", "red", "North-South (เหนือ-ใต้)", 30, "adaptive", "ระบบสัญญาณจราจรพร้อมทำงาน");
   } else {
     Serial.println("\n[Wi-Fi] Standalone Mode (Offline)");
   }
@@ -249,25 +259,25 @@ void loop() {
 
   switch (currentState) {
     // ----------------------------------------
-    // 1. ฝั่งเหนือ-ใต้ (NS) ไฟเขียว
+    // 1. ฝั่งเหนือ-ใต้ (NS) ไฟเขียว / ฝั่ง EW ไฟแดง
     // ----------------------------------------
     case STATE_NS_GREEN:
       if (digitalRead(PIR_NS) == HIGH && currentGreenDuration != EXTENDED_GREEN_TIME) {
         currentGreenDuration = EXTENDED_GREEN_TIME;
         Serial.println("[TRAFFIC] NS Traffic Detected -> Extend Green 8s");
-        sendTrafficTelemetry("green", 45, "adaptive", "พบปริมาณรถฝั่งเหนือ-ใต้ ขยายเวลาไฟเขียว");
+        sendTrafficTelemetry("green", "red", "North-South (เหนือ-ใต้)", 45, "adaptive", "พบปริมาณรถฝั่งเหนือ-ใต้ ขยายเวลาไฟเขียว");
       }
 
       if (currentMillis - lastStateTime >= currentGreenDuration) {
         currentState = STATE_NS_YELLOW;
         setLights(LOW, HIGH, LOW, LOW, LOW, HIGH);
         lastStateTime = currentMillis;
-        sendTrafficTelemetry("yellow", 5, "adaptive", "เปลี่ยนเป็นไฟเหลืองเตือน NS");
+        sendTrafficTelemetry("yellow", "red", "North-South (เหนือ-ใต้)", 5, "adaptive", "ฝั่งเหนือ-ใต้ (NS) เปลี่ยนเป็นไฟเหลือง");
       }
       break;
 
     // ----------------------------------------
-    // 2. ฝั่งเหนือ-ใต้ (NS) ไฟเหลือง
+    // 2. ฝั่งเหนือ-ใต้ (NS) ไฟเหลือง / ฝั่ง EW ไฟแดง
     // ----------------------------------------
     case STATE_NS_YELLOW:
       if (currentMillis - lastStateTime >= YELLOW_TIME) {
@@ -275,30 +285,30 @@ void loop() {
         currentGreenDuration = NORMAL_GREEN_TIME;
         setLights(LOW, LOW, HIGH, HIGH, LOW, LOW);
         lastStateTime = currentMillis;
-        sendTrafficTelemetry("green", 30, "adaptive", "สลับไฟเขียวฝั่งตะวันออก-ตก EW");
+        sendTrafficTelemetry("red", "green", "East-West (ตะวันออก-ตก)", 30, "adaptive", "สลับไฟเขียวให้ฝั่งตะวันออก-ตก (EW)");
       }
       break;
 
     // ----------------------------------------
-    // 3. ฝั่งตะวันออก-ตก (EW) ไฟเขียว
+    // 3. ฝั่งตะวันออก-ตก (EW) ไฟเขียว / ฝั่ง NS ไฟแดง
     // ----------------------------------------
     case STATE_EW_GREEN:
       if (digitalRead(PIR_EW) == HIGH && currentGreenDuration != EXTENDED_GREEN_TIME) {
         currentGreenDuration = EXTENDED_GREEN_TIME;
         Serial.println("[TRAFFIC] EW Traffic Detected -> Extend Green 8s");
-        sendTrafficTelemetry("green", 45, "adaptive", "พบปริมาณรถฝั่งตะวันออก-ตก ขยายเวลาไฟเขียว");
+        sendTrafficTelemetry("red", "green", "East-West (ตะวันออก-ตก)", 45, "adaptive", "พบปริมาณรถฝั่งตะวันออก-ตก ขยายเวลาไฟเขียว");
       }
 
       if (currentMillis - lastStateTime >= currentGreenDuration) {
         currentState = STATE_EW_YELLOW;
         setLights(LOW, LOW, HIGH, LOW, HIGH, LOW);
         lastStateTime = currentMillis;
-        sendTrafficTelemetry("yellow", 5, "adaptive", "เปลี่ยนเป็นไฟเหลืองเตือน EW");
+        sendTrafficTelemetry("red", "yellow", "East-West (ตะวันออก-ตก)", 5, "adaptive", "ฝั่งตะวันออก-ตก (EW) เปลี่ยนเป็นไฟเหลือง");
       }
       break;
 
     // ----------------------------------------
-    // 4. ฝั่งตะวันออก-ตก (EW) ไฟเหลือง
+    // 4. ฝั่งตะวันออก-ตก (EW) ไฟเหลือง / ฝั่ง NS ไฟแดง
     // ----------------------------------------
     case STATE_EW_YELLOW:
       if (currentMillis - lastStateTime >= YELLOW_TIME) {
@@ -306,7 +316,7 @@ void loop() {
         currentGreenDuration = NORMAL_GREEN_TIME;
         setLights(HIGH, LOW, LOW, LOW, LOW, HIGH);
         lastStateTime = currentMillis;
-        sendTrafficTelemetry("green", 30, "adaptive", "สลับไฟเขียวฝั่งเหนือ-ใต้ NS");
+        sendTrafficTelemetry("green", "red", "North-South (เหนือ-ใต้)", 30, "adaptive", "สลับไฟเขียวให้ฝั่งเหนือ-ใต้ (NS)");
       }
       break;
   }

@@ -23,7 +23,15 @@ const base = z.object({
 });
 export const telemetrySchema = z.discriminatedUnion("system", [
   base.extend({ system: z.literal("parking"), data: z.object({ occupied: z.boolean(), bay: z.string().min(1).max(32) }).strict() }),
-  base.extend({ system: z.literal("traffic"), data: z.object({ signal: z.enum(["red", "yellow", "green"]), waitSeconds: z.number().int().min(0).max(600), mode: z.enum(["adaptive", "fixed", "manual"]), incident: z.string().max(200).nullable() }).strict() }),
+  base.extend({ system: z.literal("traffic"), data: z.object({
+    signal: z.enum(["red", "yellow", "green"]),
+    nsSignal: z.enum(["red", "yellow", "green"]).optional(),
+    ewSignal: z.enum(["red", "yellow", "green"]).optional(),
+    activeDirection: z.string().max(100).optional(),
+    waitSeconds: z.number().int().min(0).max(600),
+    mode: z.enum(["adaptive", "fixed", "manual"]),
+    incident: z.string().max(200).nullable()
+  }).strict() }),
   base.extend({ system: z.literal("streetlight"), data: z.object({ on: z.boolean(), brightness: z.number().min(0).max(100), mode: z.enum(["auto", "manual"]), fault: z.string().max(200).nullable() }).strict() }),
   base.extend({ system: z.literal("gate"), data: z.object({ open: z.boolean(), direction: z.enum(["in", "out"]).nullable(), access: z.enum(["granted", "denied"]).nullable(), cardRef: z.string().max(64).nullable() }).strict() }),
   base.extend({ system: z.literal("environment"), data: z.object({ pm25: z.number().min(0).max(2000), temperature: z.number().min(-50).max(80), humidity: z.number().min(0).max(100) }).strict() })

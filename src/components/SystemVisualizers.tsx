@@ -100,6 +100,9 @@ export function TrafficVisualizer({
 }) {
   const data = (device?.data || {}) as any;
   const currentSignal = data.signal || "green";
+  const nsSignal = data.nsSignal || (currentSignal === "green" ? "green" : currentSignal === "yellow" ? "yellow" : "red");
+  const ewSignal = data.ewSignal || (nsSignal === "green" || nsSignal === "yellow" ? "red" : "green");
+  const activeDirection = data.activeDirection || (nsSignal === "green" ? "ฝั่งเหนือ-ใต้ (North-South)" : "ฝั่งตะวันออก-ตก (East-West)");
   const waitSeconds = data.waitSeconds || 25;
   const trafficMode = data.mode || "adaptive";
 
@@ -107,40 +110,93 @@ export function TrafficVisualizer({
     <div className="visualizer-card traffic-viz">
       <div className="viz-header">
         <div>
-          <span className="viz-tag"><TrafficCone size={14} /> INTERSECTION SIGNAL SIMULATOR</span>
-          <h3>สัญญาณไฟจราจร & ระยะเวลารอคอย</h3>
+          <span className="viz-tag"><TrafficCone size={14} /> 4-WAY INTERSECTION CONTROLLER</span>
+          <h3>สัญญาณไฟจราจรสี่แยก (แยก N-S เหนือ-ใต้ & E-W ตะวันออก-ตก)</h3>
         </div>
-        <span className={`mode-pill ${trafficMode}`}>โหมด: {trafficMode.toUpperCase()}</span>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <span style={{
+            background: nsSignal === "green" ? "#e8f7f5" : ewSignal === "green" ? "#eff6ff" : "#fef2f2",
+            color: nsSignal === "green" ? "#08aa9a" : ewSignal === "green" ? "#2563eb" : "#dc2626",
+            padding: "4px 10px",
+            borderRadius: "16px",
+            fontSize: "0.8rem",
+            fontWeight: 700,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px"
+          }}>
+            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "currentColor" }} />
+            🟢 ฝั่งที่เขียว: {activeDirection}
+          </span>
+          <span className={`mode-pill ${trafficMode}`}>โหมด: {trafficMode.toUpperCase()}</span>
+        </div>
       </div>
 
-      <div className="traffic-display-area">
-        {/* Physical traffic light simulator */}
-        <div className="traffic-light-housing">
-          <div className={`signal-lens red ${currentSignal === "red" ? "active glow" : ""}`}>
-            <span className="lens-reflection" />
+      <div className="traffic-display-area" style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "16px", alignItems: "center" }}>
+        {/* Direction 1: North-South */}
+        <div style={{ background: "#f8fafc", border: `2px solid ${nsSignal === "green" ? "#08aa9a" : "#e2e8f0"}`, borderRadius: "12px", padding: "12px", display: "flex", alignItems: "center", gap: "14px" }}>
+          <div className="traffic-light-housing" style={{ transform: "scale(0.9)" }}>
+            <div className={`signal-lens red ${nsSignal === "red" ? "active glow" : ""}`}>
+              <span className="lens-reflection" />
+            </div>
+            <div className={`signal-lens yellow ${nsSignal === "yellow" ? "active glow" : ""}`}>
+              <span className="lens-reflection" />
+            </div>
+            <div className={`signal-lens green ${nsSignal === "green" ? "active glow" : ""}`}>
+              <span className="lens-reflection" />
+            </div>
           </div>
-          <div className={`signal-lens yellow ${currentSignal === "yellow" ? "active glow" : ""}`}>
-            <span className="lens-reflection" />
-          </div>
-          <div className={`signal-lens green ${currentSignal === "green" ? "active glow" : ""}`}>
-            <span className="lens-reflection" />
+          <div>
+            <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600 }}>ทิศทางที่ 1</div>
+            <strong style={{ fontSize: "0.95rem", color: "#0b2338", display: "block" }}>ฝั่งเหนือ-ใต้ (N-S)</strong>
+            <span style={{
+              display: "inline-block",
+              marginTop: "4px",
+              fontSize: "0.78rem",
+              fontWeight: 700,
+              color: nsSignal === "green" ? "#16a34a" : nsSignal === "yellow" ? "#d97706" : "#dc2626"
+            }}>
+              {nsSignal === "green" ? "🟢 ไฟเขียว (ผ่านได้)" : nsSignal === "yellow" ? "🟡 ไฟเหลือง (ชะลอ)" : "🔴 ไฟแดง (หยุด)"}
+            </span>
           </div>
         </div>
 
-        {/* Countdown & Info */}
-        <div className="traffic-countdown-box">
+        {/* Direction 2: East-West */}
+        <div style={{ background: "#f8fafc", border: `2px solid ${ewSignal === "green" ? "#08aa9a" : "#e2e8f0"}`, borderRadius: "12px", padding: "12px", display: "flex", alignItems: "center", gap: "14px" }}>
+          <div className="traffic-light-housing" style={{ transform: "scale(0.9)" }}>
+            <div className={`signal-lens red ${ewSignal === "red" ? "active glow" : ""}`}>
+              <span className="lens-reflection" />
+            </div>
+            <div className={`signal-lens yellow ${ewSignal === "yellow" ? "active glow" : ""}`}>
+              <span className="lens-reflection" />
+            </div>
+            <div className={`signal-lens green ${ewSignal === "green" ? "active glow" : ""}`}>
+              <span className="lens-reflection" />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600 }}>ทิศทางที่ 2</div>
+            <strong style={{ fontSize: "0.95rem", color: "#0b2338", display: "block" }}>ฝั่งตะวันออก-ตก (E-W)</strong>
+            <span style={{
+              display: "inline-block",
+              marginTop: "4px",
+              fontSize: "0.78rem",
+              fontWeight: 700,
+              color: ewSignal === "green" ? "#16a34a" : ewSignal === "yellow" ? "#d97706" : "#dc2626"
+            }}>
+              {ewSignal === "green" ? "🟢 ไฟเขียว (ผ่านได้)" : ewSignal === "yellow" ? "🟡 ไฟเหลือง (ชะลอ)" : "🔴 ไฟแดง (หยุด)"}
+            </span>
+          </div>
+        </div>
+
+        {/* Countdown Box */}
+        <div className="traffic-countdown-box" style={{ minWidth: "140px" }}>
           <div className="countdown-ring">
             <span className={`countdown-number ${currentSignal}`}>{waitSeconds}</span>
             <span className="countdown-unit">วินาที (s)</span>
           </div>
-          <div className="signal-status-detail">
-            <strong>สถานะปัจจุบัน: ไฟ{currentSignal === "red" ? "แดง (หยุด)" : currentSignal === "yellow" ? "เหลือง (เตรียมหยุด)" : "เขียว (ผ่านได้)"}</strong>
-            <p>จุดติดตั้ง: {device?.name || "แยกศาลากลาง"} ({device?.location || "ทางเข้าหลัก"})</p>
-            {data.incident && (
-              <div className="incident-alert">
-                <AlertTriangle size={15} /> {data.incident}
-              </div>
-            )}
+          <div className="signal-status-detail" style={{ textAlign: "center", marginTop: "6px" }}>
+            <small style={{ color: "#64748b" }}>{device?.location || "สี่แยกอาคาร A"}</small>
           </div>
         </div>
       </div>
