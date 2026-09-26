@@ -179,7 +179,7 @@ function Shell({
           <div className="breadcrumb">
             <span className="breadcrumb-brand">ASSUMPTION COLLEGE THONBURI</span>
             <span>/</span>
-            {active === "settings" ? "ตั้งค่าระบบ" : active ? systems[active].title : "COMMAND CENTER"}
+            {active === "settings" ? "ตั้งค่าระบบ" : active ? systems[active].title : "ศูนย์ควบคุม"}
           </div>
 
           <div className="top-actions">
@@ -641,39 +641,39 @@ function SystemDetail({
 
 const systemCommandMap: Record<SystemId, { value: string; label: string; description: string }[]> = {
   gate: [
-    { value: "open", label: "🟢 เปิดไม้กั้น (Open Barrier)", description: "ยกแขนกั้นขึ้นให้ยานพาหนะผ่าน" },
-    { value: "close", label: "🔴 ปิดไม้กั้น (Close Barrier)", description: "ลดแขนกั้นลงปิดกั้นช่องทาง" },
-    { value: "hold_open", label: "⚠️ เปิดค้างฉุกเฉิน (Hold Open)", description: "ยกค้างตลอดเวลาสำหรับกรณีฉุกเฉิน" },
-    { value: "lock", label: "🔒 ล็อคไม้กั้นห้ามผ่าน (Lock Down)", description: "ล็อคไม้กั้นไม่ให้เปิดจนกว่าจะปลดล็อค" },
+    { value: "open", label: "เปิดไม้กั้น (Open Barrier)", description: "ยกแขนกั้นขึ้นเพื่อให้ยานพาหนะผ่าน" },
+    { value: "close", label: "ปิดไม้กั้น (Close Barrier)", description: "ลดแขนกั้นลงเพื่อปิดกั้นช่องทาง" },
+    { value: "hold_open", label: "เปิดค้างฉุกเฉิน (Hold Open)", description: "ยกแขนกั้นค้างไว้สำหรับกรณีฉุกเฉิน" },
+    { value: "lock", label: "ล็อคไม้กั้น (Lock Down)", description: "ล็อคระบบไม้กั้นเพื่อความปลอดภัย" },
   ],
   traffic: [
-    { value: "adaptive", label: "🤖 โหมดปรับตามเซนเซอร์อัตโนมัติ (Adaptive Mode)", description: "ปรับรอบไฟตามปริมาณรถจริงจาก Ultrasonic/PIR" },
-    { value: "fixed", label: "⏱️ โหมดจับเวลาคงที่ (Fixed Timer)", description: "สลับสัญญาณไฟตามรอบเวลาคงที่" },
-    { value: "manual", label: "🖐️ โหมดควบคุมด้วยตนเอง (Manual Override)", description: "ควบคุมสลับไฟด้วยการสั่งการจากศูนย์" },
-    { value: "force_ns_green", label: "⬆️ บังคับไฟเขียวทิศเหนือ-ใต้ (Force N-S Green)", description: "เปิดทางด่วนให้ทิศ N-S ผ่านตลอด" },
-    { value: "force_ew_green", label: "➡️ บังคับไฟเขียวทิศตะวันออก-ตก (Force E-W Green)", description: "เปิดทางด่วนให้ทิศ E-W ผ่านตลอด" },
-    { value: "force_all_red", label: "🚨 บังคับไฟแดงทุกทิศทางฉุกเฉิน (Emergency All-Red)", description: "หยุดรถทุกฝั่งเมื่อเกิดเหตุฉุกเฉิน" },
-    { value: "incident_clear", label: "✅ เคลียร์สถานะอุบัติเหตุ (Clear Incident)", description: "รีเซ็ตสถานะแจ้งเตือนอุบัติเหตุกลับสู่สภาวะปกติ" },
+    { value: "adaptive", label: "โหมดเซนเซอร์อัตโนมัติ (Adaptive Mode)", description: "ปรับรอบสัญญาณไฟตามการตรวจจับรถจริง" },
+    { value: "fixed", label: "โหมดจับเวลาคงที่ (Fixed Timer)", description: "สลับสัญญาณไฟตามรอบเวลามาตรฐาน" },
+    { value: "manual", label: "โหมดควบคุมด้วยตนเอง (Manual Override)", description: "สลับสัญญาณไฟตามการสั่งการจากศูนย์" },
+    { value: "force_ns_green", label: "บังคับไฟเขียวทิศเหนือ-ใต้ (Force N-S Green)", description: "เปิดสัญญาณไฟเขียวให้เส้นทางทิศเหนือ-ใต้" },
+    { value: "force_ew_green", label: "บังคับไฟเขียวทิศตะวันออก-ตก (Force E-W Green)", description: "เปิดสัญญาณไฟเขียวให้เส้นทางทิศตะวันออก-ตก" },
+    { value: "force_all_red", label: "บังคับไฟแดงทุกทิศทางฉุกเฉิน (Emergency All-Red)", description: "หยุดการจราจรทุกทิศทางทันที" },
+    { value: "incident_clear", label: "เคลียร์สถานะเหตุการณ์ (Clear Incident)", description: "รีเซ็ตสถานะแจ้งเตือนอุบัติเหตุกลับสู่ปกติ" },
   ],
   streetlight: [
-    { value: "auto", label: "☀️ โหมดอัตโนมัติ LDR (Auto Light Sensor)", description: "เปิด-ปิดและปรับความสว่างตามแสงแดดธรรมชาติ" },
-    { value: "manual", label: "🖐️ โหมดควบคุมด้วยตนเอง (Manual Override)", description: "ตั้งค่าเปิด-ปิดไฟตามคำสั่งตรงจากศูนย์" },
-    { value: "on", label: "💡 เปิดไฟส่องสว่าง (Turn On)", description: "เปิดไฟหลอดส่องสว่างทันที" },
-    { value: "off", label: "🌑 ปิดไฟส่องสว่าง (Turn Off)", description: "ปิดไฟหลอดส่องสว่าง" },
-    { value: "eco_mode", label: "🌱 โหมดประหยัดพลังงาน Eco (Eco Dimming)", description: "หรี่ไฟเหลือ 30% เมื่อไม่มีคนเดินผ่าน" },
-    { value: "dim_50", label: "🌓 หรี่ความสว่าง 50% (Dim to 50%)", description: "ตั้งระดับความสว่างระดับกลาง 50%" },
-    { value: "full_100", label: "🌟 ความสว่างเต็มพิกัด 100% (Full Brightness)", description: "เพิ่มความสว่างสูงสุด 100%" },
+    { value: "auto", label: "โหมดเซนเซอร์แสงแดด (Auto LDR)", description: "ปรับระดับแสงสว่างอัตโนมัติตามสภาพแสงจริง" },
+    { value: "manual", label: "โหมดควบคุมด้วยตนเอง (Manual Override)", description: "ควบคุมการเปิด-ปิดไฟตามคำสั่งตรง" },
+    { value: "on", label: "เปิดไฟส่องสว่าง (Turn On)", description: "เปิดโคมไฟส่องสว่างทันที" },
+    { value: "off", label: "ปิดไฟส่องสว่าง (Turn Off)", description: "ปิดโคมไฟส่องสว่าง" },
+    { value: "eco_mode", label: "โหมดประหยัดพลังงาน (Eco Mode)", description: "หรี่ไฟเพื่อประหยัดพลังงานเมื่อไม่มีการสัญจร" },
+    { value: "dim_50", label: "ปรับความสว่าง 50% (Dim to 50%)", description: "ตั้งระดับความสว่างที่ 50%" },
+    { value: "full_100", label: "ความสว่างเต็มที่ 100% (Full Brightness)", description: "ตั้งระดับความสว่างสูงสุด 100%" },
   ],
   parking: [
-    { value: "reset_bay", label: "🔄 รีเซ็ตสถานะช่องจอดทั้งหมด (Reset Bay State)", description: "สั่งรีเซ็ตเซนเซอร์ช่องจอดและอ่านค่าใหม่" },
-    { value: "reserve_bay", label: "🏷️ สำรองช่องจอดพิเศษ VIP (Reserve Bay)", description: "ล็อคช่องจอดสำหรับแขกพิเศษหรือผู้บริหาร" },
-    { value: "calibrate", label: "📐 ปรับเทียบเซนเซอร์ระยะ Ultrasonic (Calibrate)", description: "ตั้งค่าระยะตรวจจับรถยนต์ของช่องจอดใหม่" },
+    { value: "reset_bay", label: "รีเซ็ตสถานะช่องจอด (Reset Bay State)", description: "สั่งรีเซ็ตการตรวจจับของเซนเซอร์ช่องจอด" },
+    { value: "reserve_bay", label: "สำรองช่องจอดพิเศษ (Reserve Bay)", description: "กำหนดสถานะสำรองช่องจอด" },
+    { value: "calibrate", label: "ปรับเทียบเซนเซอร์ระยะ (Calibrate Sensors)", description: "ปรับเทียบค่าระยะการตรวจจับของเซนเซอร์" },
   ],
   environment: [
-    { value: "calibrate", label: "🎯 ปรับเทียบเซนเซอร์ฝุ่น & อุณหภูมิ (Calibrate)", description: "ทำการ Zero-Calibration เซนเซอร์วัดคุณภาพอากาศ" },
-    { value: "alert_test", label: "🔔 ทดสอบระบบสัญญาณเตือนภัยฝุ่น (Alarm Test)", description: "ส่งสัญญาณทดสอบ Buzzer/ไฟเตือนเมื่อค่า PM2.5 เกินเกณฑ์" },
-    { value: "fan_on", label: "🌀 เปิดพัดลมระบาย/ฟอกอากาศ (Air Purifier Fan ON)", description: "เปิดระบบระบายและฟอกอากาศในพื้นที่" },
-    { value: "fan_off", label: "⏹️ ปิดพัดลมระบายอากาศ (Air Purifier Fan OFF)", description: "ปิดระบบฟอกอากาศ" },
+    { value: "calibrate", label: "ปรับเทียบเซนเซอร์วัดอากาศ (Calibrate Sensors)", description: "ปรับเทียบค่ามาตรฐานเซนเซอร์ตรวจวัด" },
+    { value: "alert_test", label: "ทดสอบระบบแจ้งเตือน (Alarm Test)", description: "ทดสอบการทำงานของสัญญาณแจ้งเตือน" },
+    { value: "fan_on", label: "เปิดระบบระบายอากาศ (Ventilation On)", description: "สั่งเปิดพัดลมระบายอากาศ" },
+    { value: "fan_off", label: "ปิดระบบระบายอากาศ (Ventilation Off)", description: "สั่งปิดพัดลมระบายอากาศ" },
   ],
 };
 
@@ -712,9 +712,9 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
         })
       });
       const result = await response.json();
-      setMessage(response.ok ? "✓ ส่งคำสั่งไปยังบอร์ดฮาร์ดแวร์แล้ว และบันทึกลง Audit Log เรียบร้อย" : "✕ " + (result.error || "ส่งคำสั่งไม่สำเร็จ"));
+      setMessage(response.ok ? "ส่งคำสั่งไปยังอุปกรณ์เรียบร้อย และบันทึกประวัติแล้ว" : "ไม่สามารถส่งคำสั่งได้: " + (result.error || "เกิดข้อผิดพลาด"));
     } catch (e) {
-      setMessage("✕ เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+      setMessage("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
     } finally {
       setLoading(false);
     }
@@ -723,20 +723,20 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
   return (
     <div className="control-box">
       <div className="control-heading">
-        <ShieldCheck size={16} /> ส่งคำสั่งควบคุมอุปกรณ์ (Hardware Command Center)
+        <ShieldCheck size={16} /> ควบคุมอุปกรณ์
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div>
           <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
-            เลือกคำสั่งควบคุมสำหรับบอร์ด {device.name}:
+            คำสั่งสำหรับ {device.name}:
           </label>
           <select 
             value={command} 
             onChange={e => setCommand(e.target.value)} 
             style={{ 
               width: "100%", 
-              padding: "9px 12px", 
-              borderRadius: "8px", 
+              padding: "8px 12px", 
+              borderRadius: "6px", 
               border: "1px solid #cbd5e1", 
               fontFamily: "'IBM Plex Sans Thai', sans-serif", 
               fontSize: "0.85rem",
@@ -752,7 +752,7 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
           </select>
           {selectedOption?.description && (
             <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#64748b" }}>
-              คำอธิบาย: {selectedOption.description}
+              {selectedOption.description}
             </p>
           )}
         </div>
@@ -768,7 +768,7 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
 
         <div>
           <Input
-            placeholder="Operator Token (จาก .env.local)"
+            placeholder="Operator Token"
             type="password"
             value={token}
             onChange={e => setToken((e.target as HTMLInputElement).value)}
@@ -784,17 +784,17 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
           className="font-[IBM_Plex_Sans_Thai] font-semibold"
           fullWidth
         >
-          {loading ? "กำลังส่งคำสั่ง..." : "🚀 ยืนยันและส่งคำสั่งควบคุมบอร์ด"}
+          {loading ? "กำลังส่งคำสั่ง..." : "ยืนยันการส่งคำสั่ง"}
         </Button>
 
         {message && (
           <div style={{ 
-            color: message.startsWith("✓") ? "#16a34a" : "#dc2626", 
-            background: message.startsWith("✓") ? "#f0fdf4" : "#fef2f2",
+            color: message.includes("เรียบร้อย") ? "#16a34a" : "#dc2626", 
+            background: message.includes("เรียบร้อย") ? "#f0fdf4" : "#fef2f2",
             padding: "6px 10px", 
             borderRadius: "6px", 
             fontSize: "0.8rem", 
-            fontWeight: 600 
+            fontWeight: 500 
           }}>
             {message}
           </div>
@@ -901,14 +901,14 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
         <section className="panel settings-panel">
           <div className="panel-head">
             <div>
-              <span className="section-kicker">FLEET WI-FI SYNC</span>
-              <h2>ตั้งค่า Wi-Fi รวมสำหรับทั้ง 5 บอร์ด</h2>
+              <span className="section-kicker">WI-FI CONFIGURATION</span>
+              <h2>ตั้งค่า Wi-Fi กลางสำหรับอุปกรณ์</h2>
             </div>
             <Radio size={18} />
           </div>
 
           <p className="setting-desc">
-            กำหนดชื่อ Wi-Fi (SSID) และรหัสผ่านกลางสำหรับอุปกรณ์ทุกบอร์ด เมื่อเปิด Hotspot มือถือหรือ Router ตามนี้ บอร์ดทุกตัวจะเชื่อมต่ออัตโนมัติพร้อมกันทันที
+            กำหนดชื่อ Wi-Fi (SSID) และรหัสผ่านกลางสำหรับให้อุปกรณ์บอร์ดเชื่อมต่อเข้าสู่ระบบ
           </p>
 
           <form onSubmit={saveWifi} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -916,7 +916,7 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
               <span style={{ fontSize: "11px", fontWeight: 600, color: "#64748b" }}>ชื่อ Wi-Fi (SSID 2.4 GHz)</span>
               <Input
                 type="text"
-                placeholder="เช่น ACT-SmartCity-2.4G หรือชื่อ Hotspot มือถือ"
+                placeholder="เช่น ACT-SmartCity-2.4G"
                 value={wifiSsid}
                 onChange={e => setWifiSsid((e.target as HTMLInputElement).value)}
                 required
@@ -943,7 +943,7 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
               className="font-[IBM_Plex_Sans_Thai]"
               fullWidth
             >
-              {savingWifi ? "กำลังบันทึก..." : "📶 บันทึก Wi-Fi สำหรับทุกบอร์ด"}
+              {savingWifi ? "กำลังบันทึก..." : "บันทึกการตั้งค่า Wi-Fi"}
             </Button>
           </form>
 
@@ -953,10 +953,10 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
             </div>
           )}
 
-          <div style={{ background: "#e8f7f5", border: "1px solid #bfece5", borderRadius: "8px", padding: "10px 12px", marginTop: "12px", fontSize: "0.82rem", color: "#066a60" }}>
-            <strong>💡 เคล็ดลับการเชื่อมต่อพร้อมกันทุกบอร์ด:</strong>
+          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "10px 12px", marginTop: "12px", fontSize: "0.82rem", color: "#475569" }}>
+            <strong>คำแนะนำการเชื่อมต่อ:</strong>
             <div style={{ marginTop: "4px" }}>
-              เปิด Hotspot มือถือของคุณโดยตั้งชื่อเป็น <code>{wifiSsid}</code> และรหัสผ่าน <code>{wifiPass}</code> จากนั้นเปิดสวิตช์จ่ายไฟให้บอร์ดทั้ง 5 ตัว ทุกบอร์ดจะเชื่อมต่ออินเทอร์เน็ตและส่งข้อมูลเข้า Supabase / Dashboard พร้อมกันทันที!
+              เมื่อตั้งค่า Hotspot หรือ Access Point เป็น <code>{wifiSsid || "SSID"}</code> และรหัสผ่าน <code>{wifiPass || "Password"}</code> บอร์ดที่เปิดใช้งานจะเชื่อมต่อและส่งข้อมูลเข้าสู่ฐานข้อมูลโดยอัตโนมัติ
             </div>
           </div>
         </section>

@@ -174,7 +174,7 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
     >
       <header className="monitor-heading">
         <div>
-          <div className="monitor-eyebrow"><span /> ACT SMART CAMPUS · OPERATIONS CENTER</div>
+          <div className="monitor-eyebrow"><span /> ASSUMPTION COLLEGE THONBURI · SMART CAMPUS</div>
           <h1>ภาพรวมเมืองอัจฉริยะ</h1>
           <p>ติดตามสภาพอากาศและสถานะการทำงานของเมืองในหน้าเดียว</p>
         </div>
@@ -201,9 +201,9 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
           initial="hidden"
           animate="visible"
           variants={cardVariants}
-          whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.15 } }}
+          whileHover={{ y: -2, transition: { duration: 0.15 } }}
         >
-          <span className="monitor-kpi-icon"><Server size={21} /></span>
+          <span className="monitor-kpi-icon"><Server size={20} /></span>
           <span>อุปกรณ์ที่รายงานข้อมูล<small>REGISTERED IN TELEMETRY</small></span>
           <strong>{data.devices.length}<small>อุปกรณ์</small></strong>
         </motion.div>
@@ -213,9 +213,9 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
           initial="hidden"
           animate="visible"
           variants={cardVariants}
-          whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.15 } }}
+          whileHover={{ y: -2, transition: { duration: 0.15 } }}
         >
-          <span className="monitor-kpi-icon"><Activity size={21} /></span>
+          <span className="monitor-kpi-icon"><Activity size={20} /></span>
           <span>เชื่อมต่ออยู่<small>ONLINE DEVICES</small></span>
           <strong>{online}<small>อุปกรณ์</small></strong>
         </motion.div>
@@ -225,9 +225,9 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
           initial="hidden"
           animate="visible"
           variants={cardVariants}
-          whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.15 } }}
+          whileHover={{ y: -2, transition: { duration: 0.15 } }}
         >
-          <span className="monitor-kpi-icon"><ShieldCheck size={21} /></span>
+          <span className="monitor-kpi-icon"><ShieldCheck size={20} /></span>
           <span>ต้องตรวจสอบ<small>ACTIVE WARNINGS</small></span>
           <strong>{warning}<small>รายการ</small></strong>
         </motion.div>
@@ -237,9 +237,9 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
           initial="hidden"
           animate="visible"
           variants={cardVariants}
-          whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.15 } }}
+          whileHover={{ y: -2, transition: { duration: 0.15 } }}
         >
-          <span className="monitor-kpi-icon"><WifiOff size={21} /></span>
+          <span className="monitor-kpi-icon"><WifiOff size={20} /></span>
           <span>ขาดการติดต่อ<small>OFFLINE DEVICES</small></span>
           <strong>{offline}<small>อุปกรณ์</small></strong>
         </motion.div>

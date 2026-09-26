@@ -128,3 +128,21 @@ Build a credible dashboard using real device data only. The user supplied an ind
   - `npm run typecheck` ✓ PASS
   - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
 
+## Follow-up: Clean & Professional Industrial UI (De-AI Polish) — 2026-09-26
+
+- User request: "ทำให้ UI ไม่ Ai เกินไป"
+- **Clean Industrial Aesthetic Refinements**:
+  - **Removed Over-the-Top AI Tropes & Emojis**:
+    - Removed random emoji clutter from all device control options, select menus, Wi-Fi configuration forms, and action buttons.
+    - Replaced sci-fi buzzwords ("COMMAND CENTER MATRIX", "LIVE PARKING BAY MATRIX", "ADAPTIVE LIGHTING MATRIX", "FLEET WI-FI SYNC") with clean, standard industrial engineering terminology ("ผังช่องจอดรถ", "สัญญาณไฟจราจร", "ระบบไฟส่องสว่าง", "ระบบไม้กั้น & บัตรผ่าน", "การตั้งค่า Wi-Fi กลาง").
+  - **Refined Status Indicators & Visual Indicators**:
+    - Removed neon glowing halos, over-hyped box-shadows, and pulsating radar animations.
+    - Switched to crisp, solid SCADA-style status indicators with clean border contrast and standard color definitions.
+  - **Natural & Calmer Micro-Interactions**:
+    - Softened hover transitions (`whileHover={{ y: -2, transition: { duration: 0.15 } }}`) to eliminate distracting bouncy scale shifts.
+    - Refined radial air quality gauge, traffic housing, and streetlight visualizer for an authentic control-room look.
+- **Validation**:
+  - `node tests/data-integrity.test.cjs` ✓ PASS
+  - `npm run typecheck` ✓ PASS
+  - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
+

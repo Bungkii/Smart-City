@@ -34,16 +34,16 @@ export function ParkingVisualizer({
     >
       <div className="viz-header">
         <div>
-          <span className="viz-tag"><CarFront size={14} /> LIVE PARKING BAY MATRIX</span>
-          <h3>ผังช่องจอดรถอัจฉริยะ (Real-time Bay Matrix)</h3>
+          <span className="viz-tag"><CarFront size={14} /> ผังช่องจอดรถ</span>
+          <h3>สถานะช่องจอดรถแบบ Real-time</h3>
         </div>
         <div className="viz-stats-pills">
           <span className="pill green" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
+            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#10b981" }} />
             ว่าง: <strong>{vacantCount}</strong>
           </span>
           <span className="pill red" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 6px #ef4444" }} />
+            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#ef4444" }} />
             ไม่ว่าง: <strong>{occupiedCount}</strong>
           </span>
           <span className="pill rate">อัตราการใช้งาน: <strong>{occupancyPercent}%</strong></span>
@@ -141,24 +141,24 @@ export function TrafficVisualizer({
     >
       <div className="viz-header">
         <div>
-          <span className="viz-tag"><TrafficCone size={14} /> 4-WAY ADAPTIVE INTERSECTION</span>
-          <h3>สัญญาณไฟจราจร 4 ทิศทาง (สี่แยกกลางอัสสัมชัญ)</h3>
+          <span className="viz-tag"><TrafficCone size={14} /> สัญญาณไฟจราจร</span>
+          <h3>สถานะสัญญาณไฟแยกอัสสัมชัญ</h3>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <span style={{
-            background: "#e8f7f5",
-            color: "#08aa9a",
+            background: "#f0fdf4",
+            color: "#15803d",
             padding: "5px 12px",
-            borderRadius: "16px",
+            borderRadius: "6px",
             fontSize: "0.85rem",
-            fontWeight: 700,
+            fontWeight: 600,
             display: "inline-flex",
             alignItems: "center",
             gap: "6px",
-            border: "1px solid rgba(8,170,154,0.3)"
+            border: "1px solid #bbf7d0"
           }}>
-            <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#16a34a", boxShadow: "0 0 8px #16a34a" }} />
-            ทิศทางที่รายงาน: {activeDirection}
+            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#16a34a" }} />
+            ทิศทาง: {activeDirection}
           </span>
           <span className={`mode-pill ${trafficMode}`}>โหมด: {trafficMode.toUpperCase()}</span>
         </div>
@@ -262,8 +262,8 @@ export function StreetlightVisualizer({
     >
       <div className="viz-header">
         <div>
-          <span className="viz-tag"><Lightbulb size={14} /> ADAPTIVE LIGHTING MATRIX</span>
-          <h3>ระบบไฟถนนอัจฉริยะ & ประสิทธิภาพพลังงาน</h3>
+          <span className="viz-tag"><Lightbulb size={14} /> ระบบไฟส่องสว่าง</span>
+          <h3>สถานะไฟส่องสว่างถนน</h3>
         </div>
         <div className="viz-stats-pills">
           <span className="pill green">เปิดใช้งาน: <strong>{onCount} / {slDevices.length}</strong></span>
@@ -451,8 +451,8 @@ export function GateVisualizer({
       {readError && <div role="alert" className="error-bar">{readError}</div>}
       <div className="viz-header">
         <div>
-          <span className="viz-tag"><DoorOpen size={14} /> BARRIER GATE & RFID SCANNER</span>
-          <h3>ระบบไม้กั้น & สแกนเนอร์ RFID (Supabase Cloud Database)</h3>
+          <span className="viz-tag"><DoorOpen size={14} /> ระบบไม้กั้น & บัตรผ่าน RFID</span>
+          <h3>สถานะไม้กั้นและเครื่องอ่านบัตร</h3>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <div className="viz-tab-toggle" style={{ display: "inline-flex", background: "#f0f4f6", padding: "3px", borderRadius: "9px", gap: "3px" }}>
@@ -470,7 +470,7 @@ export function GateVisualizer({
               onPress={() => { setActiveTab("cards"); loadRfidData(); }}
               className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3"
             >
-              จัดการบัตร RFID ({cards.length})
+              ทะเบียนบัตร ({cards.length})
             </Button>
             <Button
               size="sm"
@@ -478,7 +478,7 @@ export function GateVisualizer({
               onPress={() => { setActiveTab("logs"); loadRfidData(); }}
               className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3"
             >
-              ประวัติสแกน ({logs.length})
+              ประวัติการแตะ ({logs.length})
             </Button>
           </div>
           <Chip
@@ -487,7 +487,7 @@ export function GateVisualizer({
             variant="soft"
             className="font-[IBM_Plex_Sans_Thai] font-bold"
           >
-            {isOpen ? "ไม้กั้นเปิดอยู่ (OPEN)" : "ไม้กั้นปิด (CLOSED)"}
+            {isOpen ? "ไม้กั้นเปิด (OPEN)" : "ไม้กั้นปิด (CLOSED)"}
           </Chip>
         </div>
       </div>
@@ -511,7 +511,7 @@ export function GateVisualizer({
                 <div className={`rfid-terminal-scanner ${access === "granted" ? "granted" : "denied"}`}>
                   <div className="scanner-led" />
                   <Radio size={16} />
-                  <small>RFID SENSOR</small>
+                  <small>RFID READER</small>
                 </div>
               </div>
 
@@ -529,7 +529,7 @@ export function GateVisualizer({
                       variant="soft"
                       className="font-[IBM_Plex_Sans_Thai]"
                     >
-                      {access === "granted" ? "✓ อนุญาต (Granted)" : access === "denied" ? "✕ ปฏิเสธ (Denied)" : "ยังไม่มีรายการ"}
+                      {access === "granted" ? "อนุญาต (Granted)" : access === "denied" ? "ปฏิเสธ (Denied)" : "ยังไม่มีรายการ"}
                     </Chip>
                   </div>
                 </div>
@@ -542,7 +542,7 @@ export function GateVisualizer({
                       className="font-[IBM_Plex_Sans_Thai] text-xs gap-1.5 shadow-sm"
                       onPress={() => handleFillUid(cardRef)}
                     >
-                      <Scan size={14} /> + เพิ่ม / จัดการสิทธิ์บัตร UID ({cardRef})
+                      <PlusCircle size={14} /> ลงทะเบียนบัตร UID: {cardRef}
                     </Button>
                   </div>
                 )}
@@ -563,10 +563,10 @@ export function GateVisualizer({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
               <div>
                 <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
-                  ฐานข้อมูลบัตร RFID (Supabase: rfid_cards)
+                  ทะเบียนบัตร RFID ในระบบ
                 </h4>
                 <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                  ลงทะเบียนบัตรใหม่ แก้ไขสิทธิ์ หรือดึง UID ที่สแกนจากหัวอ่านมาบันทึกได้ทันที
+                  ลงทะเบียนบัตรใหม่ แก้ไขสิทธิ์ หรือดึง UID ที่สแกนจากหัวอ่านมาบันทึก
                 </p>
               </div>
               <Button
@@ -586,8 +586,8 @@ export function GateVisualizer({
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 style={{
-                  background: "linear-gradient(135deg, #e8f7f5 0%, #d5f2ed 100%)",
-                  border: "1px solid #a3e5dc",
+                  background: "#f0fdfa",
+                  border: "1px solid #ccfbf1",
                   borderRadius: "8px",
                   padding: "8px 12px",
                   marginBottom: "10px",
@@ -597,26 +597,26 @@ export function GateVisualizer({
                   gap: "8px"
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.82rem", color: "#065f56" }}>
-                  <Sparkles size={15} color="#08aa9a" />
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.82rem", color: "#0f766e" }}>
+                  <Radio size={15} color="#0d9488" />
                   <span>
-                    ตรวจพบ UID จากหัวอ่านล่าสุด: <strong style={{ fontFamily: "monospace", fontSize: "0.9rem", color: "#0b2338" }}>{latestScannedUid}</strong>
+                    UID ล่าสุดที่ตรวจพบ: <strong style={{ fontFamily: "monospace", fontSize: "0.9rem", color: "#0b2338" }}>{latestScannedUid}</strong>
                     {isUidRegistered(latestScannedUid) ? " (ลงทะเบียนแล้ว)" : " (ยังไม่ได้ลงทะเบียน)"}
                   </span>
                 </div>
                 <Button
                   size="sm"
                   variant="primary"
-                  className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3 bg-[#08aa9a]"
+                  className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3 bg-[#0d9488]"
                   onPress={() => handleFillUid(latestScannedUid)}
                 >
-                  ⚡ ดึง UID นี้มากรอกทันที
+                  ดึง UID นี้มากรอก
                 </Button>
               </motion.div>
             )}
 
             {/* Add / Edit Form */}
-            <form onSubmit={handleSaveCard} style={{ display: "grid", gridTemplateColumns: "1.3fr 1.8fr 1fr 1fr auto", gap: "8px", background: "#f4f8f9", padding: "12px", borderRadius: "8px", marginBottom: "1rem", alignItems: "center", border: "1px solid #e1ebed" }}>
+            <form onSubmit={handleSaveCard} style={{ display: "grid", gridTemplateColumns: "1.3fr 1.8fr 1fr 1fr auto", gap: "8px", background: "#f8fafc", padding: "12px", borderRadius: "8px", marginBottom: "1rem", alignItems: "center", border: "1px solid #e2e8f0" }}>
               <div>
                 <Input
                   placeholder="UID บัตร (เช่น 4A6F12C3)"
@@ -638,7 +638,7 @@ export function GateVisualizer({
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #c2d6dc", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif", background: "#fff" }}
+                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif", background: "#fff" }}
               >
                 <option value="Student">Student (นักเรียน)</option>
                 <option value="Teacher">Teacher (ครู)</option>
@@ -649,7 +649,7 @@ export function GateVisualizer({
               <select
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
-                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #c2d6dc", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif", background: "#fff" }}
+                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif", background: "#fff" }}
               >
                 <option value="allow">Allow (อนุญาต)</option>
                 <option value="banned">Banned (ระงับ)</option>
@@ -660,7 +660,7 @@ export function GateVisualizer({
                 size="sm"
                 className="font-[IBM_Plex_Sans_Thai] font-semibold"
               >
-                + บันทึกบัตร
+                บันทึกข้อมูล
               </Button>
             </form>
 
@@ -710,7 +710,7 @@ export function GateVisualizer({
                             color={c.status === "allow" ? "success" : "danger"}
                             className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs cursor-pointer hover:opacity-80"
                           >
-                            {c.status === "allow" ? "✓ อนุญาต (คลิกเพื่อระงับ)" : "✕ ระงับ (คลิกเพื่อเปิด)"}
+                            {c.status === "allow" ? "อนุญาต (คลิกเพื่อระงับ)" : "ระงับ (คลิกเพื่อเปิด)"}
                           </Chip>
                         </Button>
                       </td>
@@ -746,7 +746,7 @@ export function GateVisualizer({
                   {cards.length === 0 && (
                     <tr>
                       <td colSpan={5} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>
-                        ยังไม่มีข้อมูลบัตรในระบบ — สามารถกรอก UID ด้านบนหรือสแกนบัตรที่หัวอ่านเพื่อเพิ่มได้ทันที
+                        ยังไม่มีข้อมูลบัตรในระบบ — กรอก UID ด้านบนหรือสแกนบัตรที่หัวอ่านเพื่อเพิ่ม
                       </td>
                     </tr>
                   )}
@@ -768,10 +768,10 @@ export function GateVisualizer({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
               <div>
                 <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
-                  ประวัติการสแกนผ่านด่าน Real-time (Supabase: gate_logs)
+                  ประวัติการแตะบัตร Real-time
                 </h4>
                 <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                  สามารถกด "+ เพิ่มเป็นบัตรในระบบ" จากรายการที่แตะเข้ามาได้ทันที 1 คลิก
+                  สามารถกดปุ่ม "เพิ่มบัตร" เพื่อนำ UID ที่บันทึกไว้เข้าสู่ระบบ
                 </p>
               </div>
               <Button
@@ -820,7 +820,7 @@ export function GateVisualizer({
                               color={lg.status === "allow" ? "success" : "danger"}
                               className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs"
                             >
-                              {lg.status === "allow" ? "✓ อนุญาต (Granted)" : "✕ ปฏิเสธ (Denied)"}
+                              {lg.status === "allow" ? "อนุญาต (Granted)" : "ปฏิเสธ (Denied)"}
                             </Chip>
                           </td>
                           <td style={{ padding: "8px 12px", textAlign: "right" }}>
@@ -831,7 +831,7 @@ export function GateVisualizer({
                                 className="h-6 px-2 text-xs font-[IBM_Plex_Sans_Thai] text-slate-600"
                                 onPress={() => handleFillUid(lg.card_id, lg.name, lg.role)}
                               >
-                                ✏️ แก้ไขบัตร
+                                แก้ไข
                               </Button>
                             ) : (
                               <Button
@@ -840,7 +840,7 @@ export function GateVisualizer({
                                 className="h-6 px-2 text-xs font-[IBM_Plex_Sans_Thai] bg-[#08aa9a]"
                                 onPress={() => handleFillUid(lg.card_id, lg.name, lg.role)}
                               >
-                                <PlusCircle size={12} /> + เพิ่มบัตรนี้
+                                <PlusCircle size={12} /> เพิ่มบัตร
                               </Button>
                             )}
                           </td>
@@ -898,8 +898,8 @@ export function EnvironmentVisualizer({
     >
       <div className="viz-header">
         <div>
-          <span className="viz-tag"><Gauge size={14} /> AIR QUALITY & METEOROLOGY</span>
-          <h3>สถานีตรวจวัดคุณภาพอากาศ & สภาพแวดล้อม</h3>
+          <span className="viz-tag"><Gauge size={14} /> คุณภาพอากาศ & สภาพอากาศ</span>
+          <h3>สถานีตรวจวัดคุณภาพอากาศ (PCD Standard)</h3>
         </div>
         <Chip
           size="sm"
@@ -914,7 +914,7 @@ export function EnvironmentVisualizer({
       <div className="env-metrics-grid">
         {/* Main PM2.5 Radial Card */}
         <div className="pm25-hero-card" style={{ borderColor: `${aqiCategory.color}40` }}>
-          <div className="pm25-gauge-circle" style={{ background: `radial-gradient(circle, #0f2338 60%, ${aqiCategory.color}30 100%)` }}>
+          <div className="pm25-gauge-circle" style={{ background: "#0b2338" }}>
             <span className="pm25-val" style={{ color: aqiCategory.color }}>{pm25}</span>
             <span className="pm25-unit">µg/m³</span>
             <small>PM2.5</small>
@@ -927,7 +927,7 @@ export function EnvironmentVisualizer({
           <motion.div className="weather-metric-pill" whileHover={{ x: 2, transition: { duration: 0.15 } }}>
             <Thermometer size={20} className="pill-icon red" />
             <div>
-              <span className="pill-label">อุณหภูมิ (Temp)</span>
+              <span className="pill-label">อุณหภูมิ (Temperature)</span>
               <strong>{temp} °C</strong>
             </div>
           </motion.div>
@@ -943,7 +943,7 @@ export function EnvironmentVisualizer({
           <motion.div className="weather-metric-pill" whileHover={{ x: 2, transition: { duration: 0.15 } }}>
             <Wind size={20} className="pill-icon cyan" />
             <div>
-              <span className="pill-label">ดัชนีความสบาย (Comfort)</span>
+              <span className="pill-label">ดัชนีสภาพอากาศ</span>
               <strong>{temp > 33 ? "ร้อนอบอ้าว" : temp < 26 ? "เย็นสบาย" : "เหมาะสม"}</strong>
             </div>
           </motion.div>
@@ -952,3 +952,4 @@ export function EnvironmentVisualizer({
     </motion.div>
   );
 }
+
