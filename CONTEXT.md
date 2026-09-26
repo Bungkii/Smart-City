@@ -90,4 +90,16 @@ Build a credible dashboard using real device data only. The user supplied an ind
   - **Sidebar & Header**: rounded ACT 1961 logo with hover scale/rotation micro-interaction, active navigation glow border, and animated live connection radar beacon.
 - All checks verified: `node tests/data-integrity.test.cjs` ✓, `npm run typecheck` ✓, `npm run build` (all 12 routes static/dynamic generated) ✓.
 
+## Follow-up: Full HeroUI Component Adoption Across All Surfaces — 2026-09-26
+
+- User request: "HeroUI ละใช้แม่งให้หมดเลย"
+- Replaced native UI elements with HeroUI v3 component suite across all pages and visualizers:
+  - **`Alert`**: Replaced standard `.error-bar` with HeroUI `Alert` (`status="danger"`, `Alert.Title`, `Alert.Description`) with retry button integration.
+  - **`Spinner`**: Used HeroUI `Spinner` (`size="sm"`) for the loading state during live telemetry connection.
+  - **`Input`**: Replaced all native text, password, and search inputs in `Dashboard.tsx` (Device Search, Device Control commands, Settings Token, Wi-Fi SSID & Password) and `SystemVisualizers.tsx` (RFID Card UID, Card Holder Name).
+  - **`Button`**: Replaced native HTML `<button>` and interactive triggers with HeroUI `Button` (`variant="primary" | "outline" | "ghost"`, `size="sm"`, `onPress`, `isDisabled`, `fullWidth`) for toolbar tools, CSV export, wall mode, control submissions, Wi-Fi sync, and Gate RFID visualizer tab switches.
+  - **`Chip`**: Replaced status badges with HeroUI `Chip` (`variant="soft"`, `color="success" | "warning" | "danger" | "accent" | "default"`) for connection status, health pills, device metadata tags, RFID roles (Student, Teacher, Staff, VIP), scan direction (IN, OUT), authorization results (Granted, Denied), and Thai PCD air quality badges.
+- All checks verified: `node tests/data-integrity.test.cjs` ✓, `npm run typecheck` ✓, `npm run build` (12/12 static/dynamic routes compiled) ✓.
+
+
 

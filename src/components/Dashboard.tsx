@@ -9,7 +9,7 @@ import {
   Radio, RefreshCw, Search, Settings2, ShieldCheck, Signal,
   TrafficCone, X, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
-import { Button, Chip } from "@heroui/react";
+import { Button, Chip, Input, Spinner, Alert } from "@heroui/react";
 import { deviceHealth, systems, systemIds, type EventRow, type Health, type SystemId } from "@/lib/model";
 import DeviceMap from "./DeviceMap";
 import OperationsOverview from "./OperationsOverview";
@@ -39,8 +39,6 @@ const time = (s?: string) => s ? new Date(s).toLocaleString("th-TH", { dateStyle
 const shortTime = (s?: string) => s ? new Date(s).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "—";
 
 function Status({ value }: { value: Health }) {
-  // HeroUI v3 Chip: variant = "primary" | "secondary" | "soft"
-  // color = "accent" | "danger" | "default" | "success" | "warning"
   const colorMap: Record<Health, "success" | "warning" | "danger"> = {
     normal: "success",
     warning: "warning",
@@ -235,14 +233,22 @@ export default function Dashboard({ systemId, settings = false }: { systemId?: S
     >
       <div className="content">
         {error && (
-          <div className="error-bar">
-            {error} {data && "ข้อมูลด้านล่างเป็นข้อมูลที่โหลดสำเร็จครั้งล่าสุด"}{" "}
-            <button onClick={refresh}>ลองอีกครั้ง</button>
-          </div>
+          <Alert status="danger" className="mb-4 font-[IBM_Plex_Sans_Thai]">
+            <Alert.Title>เกิดข้อผิดพลาดในการเชื่อมต่อ</Alert.Title>
+            <Alert.Description>
+              {error} {data && "ข้อมูลด้านล่างเป็นข้อมูลที่โหลดสำเร็จครั้งล่าสุด"}
+            </Alert.Description>
+            <Button size="sm" variant="outline" onPress={refresh} className="mt-2 font-[IBM_Plex_Sans_Thai]">
+              ลองอีกครั้ง
+            </Button>
+          </Alert>
         )}
 
         {!data ? (
-          <div className="loading">{error ? "ยังไม่สามารถแสดงข้อมูลอุปกรณ์ได้" : "กำลังเชื่อมต่อข้อมูล Smart City..."}</div>
+          <div className="loading" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}>
+            <Spinner size="sm" />
+            <span>{error ? "ยังไม่สามารถแสดงข้อมูลอุปกรณ์ได้" : "กำลังเชื่อมต่อข้อมูล Smart City..."}</span>
+          </div>
         ) : settings ? (
           <Settings data={data} reload={load} />
         ) : systemId ? (
@@ -499,14 +505,15 @@ function SystemDetail({
             <span className="panel-tag">{devices.length} จุด</span>
           </div>
 
-          <label className="search">
-            <Search size={16} />
-            <input
+          <div className="search" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Search size={16} style={{ color: "#78909e", flex: "none" }} />
+            <Input
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => setSearch((e.target as HTMLInputElement).value)}
               placeholder="ค้นหาชื่ออุปกรณ์, จุดติดตั้ง หรือรหัส..."
+              className="font-[IBM_Plex_Sans_Thai] flex-1"
             />
-          </label>
+          </div>
 
           <div className="device-list">
             {filtered.length ? (
@@ -680,19 +687,21 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
         <ShieldCheck size={16} /> ส่งคำสั่งควบคุมอุปกรณ์ (Device Control)
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <select value={command} onChange={e => setCommand(e.target.value)}>
+        <select value={command} onChange={e => setCommand(e.target.value)} style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #dce5ed", fontFamily: "'IBM Plex Sans Thai', sans-serif" }}>
           {options.map(x => <option key={x} value={x}>{x}</option>)}
         </select>
-        <input
+        <Input
           placeholder="เหตุผลในการสั่ง (อย่างน้อย 3 ตัวอักษร)"
           value={reason}
-          onChange={e => setReason(e.target.value)}
+          onChange={e => setReason((e.target as HTMLInputElement).value)}
+          className="font-[IBM_Plex_Sans_Thai]"
         />
-        <input
+        <Input
           placeholder="Control Token (จาก .env.local)"
           type="password"
           value={token}
-          onChange={e => setToken(e.target.value)}
+          onChange={e => setToken((e.target as HTMLInputElement).value)}
+          className="font-[IBM_Plex_Sans_Thai]"
         />
         <Button
           variant="primary"
@@ -789,15 +798,16 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
           </div>
 
           <p className="setting-desc">ระบบรับข้อมูลจากอุปกรณ์จริงเท่านั้น เมื่อยังไม่มีข้อมูล จะแสดงสถานะรอรับข้อมูลโดยไม่สร้างค่าทดแทน</p>
-          <label className="field-label">
-            Settings Token (สำหรับอ่านประวัติการควบคุม)
-            <input
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "#64748b" }}>Settings Token (สำหรับอ่านประวัติการควบคุม)</span>
+            <Input
               type="password"
               placeholder="กรอก token จาก .env.local"
               value={token}
-              onChange={e => setToken(e.target.value)}
+              onChange={e => setToken((e.target as HTMLInputElement).value)}
+              className="font-[IBM_Plex_Sans_Thai]"
             />
-          </label>
+          </div>
 
           {message && <p className="setting-message">{message}</p>}
         </section>
@@ -816,27 +826,29 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
             กำหนดชื่อ Wi-Fi (SSID) และรหัสผ่านกลางสำหรับอุปกรณ์ทุกบอร์ด เมื่อเปิด Hotspot มือถือหรือ Router ตามนี้ บอร์ดทุกตัวจะเชื่อมต่ออัตโนมัติพร้อมกันทันที
           </p>
 
-          <form onSubmit={saveWifi} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <label className="field-label">
-              ชื่อ Wi-Fi (SSID 2.4 GHz)
-              <input
+          <form onSubmit={saveWifi} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 600, color: "#64748b" }}>ชื่อ Wi-Fi (SSID 2.4 GHz)</span>
+              <Input
                 type="text"
                 placeholder="เช่น ACT-SmartCity-2.4G หรือชื่อ Hotspot มือถือ"
                 value={wifiSsid}
-                onChange={e => setWifiSsid(e.target.value)}
+                onChange={e => setWifiSsid((e.target as HTMLInputElement).value)}
                 required
+                className="font-[IBM_Plex_Sans_Thai]"
               />
-            </label>
+            </div>
 
-            <label className="field-label">
-              รหัสผ่าน Wi-Fi (Password)
-              <input
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 600, color: "#64748b" }}>รหัสผ่าน Wi-Fi (Password)</span>
+              <Input
                 type="text"
                 placeholder="เช่น ACT12345678"
                 value={wifiPass}
-                onChange={e => setWifiPass(e.target.value)}
+                onChange={e => setWifiPass((e.target as HTMLInputElement).value)}
+                className="font-[IBM_Plex_Sans_Thai]"
               />
-            </label>
+            </div>
 
             <Button
               type="submit"

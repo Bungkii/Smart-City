@@ -7,6 +7,7 @@ import {
   Sparkles, RefreshCw, Send, Radio, UserCheck, Flame, 
   Wind, Droplets, Thermometer, ChevronRight, Activity
 } from "lucide-react";
+import { Button, Chip, Input } from "@heroui/react";
 import { type EventRow, type SystemId, deviceHealth } from "@/lib/model";
 
 // --- PARKING VISUALIZER ---
@@ -395,59 +396,40 @@ export function GateVisualizer({
           <h3>ระบบไม้กั้น & สแกนเนอร์ RFID (Supabase Cloud Database)</h3>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <div className="viz-tab-toggle" style={{ display: "inline-flex", background: "#f0f4f6", padding: "2px", borderRadius: "8px" }}>
-            <button
-              onClick={() => setActiveTab("visual")}
-              style={{
-                border: "none",
-                background: activeTab === "visual" ? "#08aa9a" : "transparent",
-                color: activeTab === "visual" ? "#fff" : "#546e7a",
-                padding: "4px 10px",
-                borderRadius: "6px",
-                fontSize: "0.78rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-              }}
+          <div className="viz-tab-toggle" style={{ display: "inline-flex", background: "#f0f4f6", padding: "3px", borderRadius: "9px", gap: "3px" }}>
+            <Button
+              size="sm"
+              variant={activeTab === "visual" ? "primary" : "ghost"}
+              onPress={() => setActiveTab("visual")}
+              className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3"
             >
               ภาพจำลอง
-            </button>
-            <button
-              onClick={() => { setActiveTab("cards"); loadRfidData(); }}
-              style={{
-                border: "none",
-                background: activeTab === "cards" ? "#08aa9a" : "transparent",
-                color: activeTab === "cards" ? "#fff" : "#546e7a",
-                padding: "4px 10px",
-                borderRadius: "6px",
-                fontSize: "0.78rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-              }}
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === "cards" ? "primary" : "ghost"}
+              onPress={() => { setActiveTab("cards"); loadRfidData(); }}
+              className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3"
             >
               บัตร RFID ({cards.length})
-            </button>
-            <button
-              onClick={() => { setActiveTab("logs"); loadRfidData(); }}
-              style={{
-                border: "none",
-                background: activeTab === "logs" ? "#08aa9a" : "transparent",
-                color: activeTab === "logs" ? "#fff" : "#546e7a",
-                padding: "4px 10px",
-                borderRadius: "6px",
-                fontSize: "0.78rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-              }}
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === "logs" ? "primary" : "ghost"}
+              onPress={() => { setActiveTab("logs"); loadRfidData(); }}
+              className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3"
             >
               ประวัติสแกน ({logs.length})
-            </button>
+            </Button>
           </div>
-          <span className={`gate-status-pill ${isOpen ? "open" : "closed"}`}>
+          <Chip
+            size="sm"
+            color={isOpen ? "success" : "default"}
+            variant="soft"
+            className="font-[IBM_Plex_Sans_Thai] font-bold"
+          >
             {isOpen ? "ไม้กั้นเปิดอยู่ (OPEN)" : "ไม้กั้นปิด (CLOSED)"}
-          </span>
+          </Chip>
         </div>
       </div>
 
@@ -482,7 +464,14 @@ export function GateVisualizer({
                   <div className="card-number">{cardRef}</div>
                   <div className="card-holder">
                     <span>ทิศทาง: <strong>{direction === "in" ? "ขาเข้า (IN)" : direction === "out" ? "ขาออก (OUT)" : "—"}</strong></span>
-                    <span className={`access-tag ${access}`}>{access === "granted" ? "✓ อนุญาต (Granted)" : access === "denied" ? "✕ ปฏิเสธ (Denied)" : "ยังไม่มีรายการ"}</span>
+                    <Chip
+                      size="sm"
+                      color={access === "granted" ? "success" : access === "denied" ? "danger" : "default"}
+                      variant="soft"
+                      className="font-[IBM_Plex_Sans_Thai]"
+                    >
+                      {access === "granted" ? "✓ อนุญาต (Granted)" : access === "denied" ? "✕ ปฏิเสธ (Denied)" : "ยังไม่มีรายการ"}
+                    </Chip>
                   </div>
                 </div>
               </div>
@@ -503,37 +492,37 @@ export function GateVisualizer({
               <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
                 ฐานข้อมูลบัตร RFID บน Supabase (Table: rfid_cards)
               </h4>
-              <button
-                onClick={loadRfidData}
-                disabled={loading}
-                style={{ border: "1px solid #d0dee2", background: "#f8fafc", padding: "4px 8px", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+              <Button
+                size="sm"
+                variant="outline"
+                isDisabled={loading}
+                onPress={loadRfidData}
+                className="font-[IBM_Plex_Sans_Thai] gap-1"
               >
                 <RefreshCw size={12} className={loading ? "spin" : ""} /> รีเฟรช
-              </button>
+              </Button>
             </div>
 
             {/* Add / Edit Form */}
             <form onSubmit={handleSaveCard} style={{ display: "grid", gridTemplateColumns: "1.2fr 2fr 1fr 1fr auto", gap: "8px", background: "#f4f8f9", padding: "10px", borderRadius: "8px", marginBottom: "1rem", alignItems: "center" }}>
-              <input
-                type="text"
+              <Input
                 placeholder="UID บัตร (เช่น 4A6F12C3)"
                 value={newCardId}
-                onChange={(e) => setNewCardId(e.target.value)}
+                onChange={(e) => setNewCardId((e.target as HTMLInputElement).value)}
                 required
-                style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
+                className="font-[IBM_Plex_Sans_Thai]"
               />
-              <input
-                type="text"
+              <Input
                 placeholder="ชื่อ-นามสกุล / สังกัด"
                 value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                onChange={(e) => setNewName((e.target as HTMLInputElement).value)}
                 required
-                style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
+                className="font-[IBM_Plex_Sans_Thai]"
               />
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
+                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #c2d6dc", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif" }}
               >
                 <option value="Student">Student (นักเรียน)</option>
                 <option value="Teacher">Teacher (ครู)</option>
@@ -544,17 +533,19 @@ export function GateVisualizer({
               <select
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
-                style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
+                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #c2d6dc", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif" }}
               >
                 <option value="allow">Allow (อนุญาต)</option>
                 <option value="banned">Banned (ระงับ)</option>
               </select>
-              <button
+              <Button
                 type="submit"
-                style={{ background: "#08aa9a", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}
+                variant="primary"
+                size="sm"
+                className="font-[IBM_Plex_Sans_Thai]"
               >
                 + บันทึกบัตร
-              </button>
+              </Button>
             </form>
 
             {saveMsg && (
@@ -580,21 +571,19 @@ export function GateVisualizer({
                       <td style={{ padding: "8px 12px", fontWeight: 700, color: "#0b2338" }}>{c.card_id}</td>
                       <td style={{ padding: "8px 12px", color: "#1e293b" }}>{c.name}</td>
                       <td style={{ padding: "8px 12px" }}>
-                        <span style={{ background: "#e8f7f5", color: "#08aa9a", padding: "2px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: 600 }}>
+                        <Chip size="sm" variant="soft" color="accent" className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs">
                           {c.role}
-                        </span>
+                        </Chip>
                       </td>
                       <td style={{ padding: "8px 12px" }}>
-                        <span style={{
-                          background: c.status === "allow" ? "#ecfdf5" : "#fef2f2",
-                          color: c.status === "allow" ? "#16a34a" : "#dc2626",
-                          padding: "2px 8px",
-                          borderRadius: "12px",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                        }}>
+                        <Chip
+                          size="sm"
+                          variant="soft"
+                          color={c.status === "allow" ? "success" : "danger"}
+                          className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs"
+                        >
                           {c.status === "allow" ? "✓ อนุญาต" : "✕ ระงับ"}
-                        </span>
+                        </Chip>
                       </td>
                     </tr>
                   ))}
@@ -617,13 +606,15 @@ export function GateVisualizer({
               <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
                 ประวัติการสแกนผ่านด่าน Real-time บน Supabase (Table: gate_logs)
               </h4>
-              <button
-                onClick={loadRfidData}
-                disabled={loading}
-                style={{ border: "1px solid #d0dee2", background: "#f8fafc", padding: "4px 8px", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+              <Button
+                size="sm"
+                variant="outline"
+                isDisabled={loading}
+                onPress={loadRfidData}
+                className="font-[IBM_Plex_Sans_Thai] gap-1"
               >
                 <RefreshCw size={12} className={loading ? "spin" : ""} /> รีเฟรช
-              </button>
+              </Button>
             </div>
 
             <div style={{ maxHeight: "240px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
@@ -647,21 +638,19 @@ export function GateVisualizer({
                         <td style={{ padding: "8px 12px", fontWeight: 700 }}>{lg.card_id}</td>
                         <td style={{ padding: "8px 12px" }}>{lg.name || "บุคคลภายนอก"} ({lg.role || "Guest"})</td>
                         <td style={{ padding: "8px 12px" }}>
-                          <span style={{ fontWeight: 600, color: lg.action === "IN" ? "#08aa9a" : "#64748b" }}>
+                          <Chip size="sm" variant="soft" color="default" className="font-[IBM_Plex_Sans_Thai] font-bold text-xs">
                             {lg.action}
-                          </span>
+                          </Chip>
                         </td>
                         <td style={{ padding: "8px 12px" }}>
-                          <span style={{
-                            background: lg.status === "allow" ? "#ecfdf5" : "#fef2f2",
-                            color: lg.status === "allow" ? "#16a34a" : "#dc2626",
-                            padding: "2px 8px",
-                            borderRadius: "12px",
-                            fontSize: "0.75rem",
-                            fontWeight: 600,
-                          }}>
+                          <Chip
+                            size="sm"
+                            variant="soft"
+                            color={lg.status === "allow" ? "success" : "danger"}
+                            className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs"
+                          >
                             {lg.status === "allow" ? "✓ อนุญาต (Granted)" : "✕ ปฏิเสธ (Denied)"}
-                          </span>
+                          </Chip>
                         </td>
                       </tr>
                     ))
@@ -719,9 +708,14 @@ export function EnvironmentVisualizer({
           <span className="viz-tag"><Gauge size={14} /> AIR QUALITY & METEOROLOGY</span>
           <h3>สถานีตรวจวัดคุณภาพอากาศ & สภาพแวดล้อม</h3>
         </div>
-        <span className={`aqi-badge ${aqiCategory.class}`}>
+        <Chip
+          size="sm"
+          variant="soft"
+          color={aqiCategory.class === "good" ? "success" : aqiCategory.class === "warning" || aqiCategory.class === "moderate" ? "warning" : "danger"}
+          className="font-[IBM_Plex_Sans_Thai] font-bold"
+        >
           {aqiCategory.label}
-        </span>
+        </Chip>
       </div>
 
       <div className="env-metrics-grid">
