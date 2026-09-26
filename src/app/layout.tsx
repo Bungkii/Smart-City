@@ -5,11 +5,12 @@ import "./map.css";
 import "./brand.css";
 import "./operations.css";
 import "./monitor.css";
+import "./navigation.css";
 
 export const metadata: Metadata = {
   title: "Assumption College Thonburi | Smart City Dashboard",
   description: "แดชบอร์ด Smart City โรงเรียนอัสสัมชัญธนบุรี",
-  icons: { icon: "/act-logo.png" }
+  icons: { icon: "/act-logo-1961.png", apple: "/act-logo-1961.png" }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

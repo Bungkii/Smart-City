@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   CarFront, TrafficCone, Lightbulb, DoorOpen, Gauge, 
   ShieldCheck, AlertTriangle, CheckCircle2, Zap, Clock, 
@@ -23,7 +24,12 @@ export function ParkingVisualizer({
   const occupancyPercent = parkingDevices.length ? Math.round((occupiedCount / parkingDevices.length) * 100) : 0;
 
   return (
-    <div className="visualizer-card parking-viz">
+    <motion.div 
+      className="visualizer-card parking-viz"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
       <div className="viz-header">
         <div>
           <span className="viz-tag"><CarFront size={14} /> LIVE PARKING BAY MATRIX</span>
@@ -43,14 +49,15 @@ export function ParkingVisualizer({
           const isSelected = selectedBay === d.deviceId;
 
           return (
-            <div 
+            <motion.div 
               key={d.deviceId}
               className={`bay-slot ${isOccupied ? "occupied" : "vacant"} ${isSelected ? "selected" : ""}`}
-              onClick={() => {
-                setSelectedBay(d.deviceId);
-
-              }}
-              title={undefined}
+              onClick={() => setSelectedBay(d.deviceId)}
+              whileHover={{ y: -2, transition: { duration: 0.15 } }}
+              whileTap={{ scale: 0.98 }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2, delay: index * 0.03 }}
             >
               <div className="bay-roof">
                 <span className="bay-id">{bayName}</span>
@@ -65,20 +72,17 @@ export function ParkingVisualizer({
                 ) : (
                   <div className="bay-empty-spot">
                     <span>ว่าง</span>
-
                   </div>
                 )}
               </div>
               <div className="bay-footer">
                 <small>{d.name}</small>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
-
-
-    </div>
+    </motion.div>
   );
 }
 
@@ -114,7 +118,12 @@ export function TrafficVisualizer({
   ];
 
   return (
-    <div className="visualizer-card traffic-viz">
+    <motion.div 
+      className="visualizer-card traffic-viz"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
       <div className="viz-header">
         <div>
           <span className="viz-tag"><TrafficCone size={14} /> 4-WAY ADAPTIVE INTERSECTION</span>
@@ -141,12 +150,16 @@ export function TrafficVisualizer({
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: is4Way ? "repeat(auto-fit, minmax(180px, 1fr))" : "1fr 1fr", gap: "12px", margin: "14px 0" }}>
-        {directions.map(d => {
+        {directions.map((d, index) => {
           const isGreen = d.sig === "green";
           const isYellow = d.sig === "yellow";
           return (
-            <div 
+            <motion.div 
               key={d.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: index * 0.04 }}
+              whileHover={{ y: -2, transition: { duration: 0.15 } }}
               style={{
                 background: isGreen ? "#f0fdf4" : isYellow ? "#fffbeb" : "#f8fafc",
                 border: `2px solid ${isGreen ? "#16a34a" : isYellow ? "#f59e0b" : "#e2e8f0"}`,
@@ -156,7 +169,7 @@ export function TrafficVisualizer({
                 alignItems: "center",
                 gap: "12px",
                 boxShadow: isGreen ? "0 4px 12px rgba(22,163,74,0.15)" : "none",
-                transition: "all 0.3s ease"
+                transition: "border-color 0.2s, background-color 0.2s"
               }}
             >
               <div className="traffic-light-housing" style={{ transform: "scale(0.85)", transformOrigin: "left center" }}>
@@ -183,7 +196,7 @@ export function TrafficVisualizer({
                   {isGreen ? "🟢 ไฟเขียว (ผ่านได้)" : isYellow ? "🟡 ไฟเหลือง (ชะลอ)" : d.sig === "red" ? "🔴 ไฟแดง (หยุด)" : "ไม่มีข้อมูลสัญญาณ"}
                 </span>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
@@ -205,9 +218,7 @@ export function TrafficVisualizer({
           </div>
         )}
       </div>
-
-
-    </div>
+    </motion.div>
   );
 }
 
@@ -228,7 +239,12 @@ export function StreetlightVisualizer({
   const estEnergySaved = (slDevices.length * 0.12 * (1 - avgBrightness / 100) * 10).toFixed(1);
 
   return (
-    <div className="visualizer-card streetlight-viz">
+    <motion.div 
+      className="visualizer-card streetlight-viz"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
       <div className="viz-header">
         <div>
           <span className="viz-tag"><Lightbulb size={14} /> ADAPTIVE LIGHTING MATRIX</span>
@@ -242,19 +258,19 @@ export function StreetlightVisualizer({
       </div>
 
       <div className="streetlight-grid">
-        {slDevices.map((d) => {
+        {slDevices.map((d, index) => {
           const dData = (d.data || {}) as any;
           const isOn = dData.on;
           const brightness = dData.brightness || 0;
 
           return (
-            <div 
+            <motion.div 
               key={d.deviceId} 
               className={`light-node ${isOn ? "on" : "off"}`}
-              onClick={() => {
-
-              }}
-              title={undefined}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2, delay: index * 0.03 }}
+              whileHover={{ y: -2, transition: { duration: 0.15 } }}
             >
               <div className="light-lamp-icon" style={{ opacity: isOn ? 0.4 + (brightness / 100) * 0.6 : 0.2 }}>
                 <Lightbulb size={24} className={isOn ? "glow-icon" : ""} />
@@ -268,7 +284,7 @@ export function StreetlightVisualizer({
                 </div>
                 <small>{isOn ? `สว่าง ${brightness}% (${dData.mode})` : "ปิดการทำงาน"}</small>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
@@ -279,7 +295,7 @@ export function StreetlightVisualizer({
           <span>ประหยัดพลังงานสะสมวันนี้: <strong>{estEnergySaved} kWh</strong> (ลด CO₂ ~{(+estEnergySaved * 0.49).toFixed(1)} kg)</span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -314,11 +330,9 @@ export function GateVisualizer({
       const res = await fetch("/api/rfid");
       if (!res.ok) throw new Error("ไม่สามารถโหลดข้อมูลบัตรและประวัติได้");
       setReadError("");
-      if (res.ok) {
-        const json = await res.json();
-        setCards(json.cards || []);
-        setLogs(json.logs || []);
-      }
+      const json = await res.json();
+      setCards(json.cards || []);
+      setLogs(json.logs || []);
     } catch {
       setReadError("ไม่สามารถโหลดข้อมูลบัตรและประวัติได้ กรุณาลองใหม่");
     } finally {
@@ -355,7 +369,12 @@ export function GateVisualizer({
   };
 
   return (
-    <div className="visualizer-card gate-viz">
+    <motion.div 
+      className="visualizer-card gate-viz"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
       {readError && <div role="alert" className="error-bar">{readError}</div>}
       <div className="viz-header">
         <div>
@@ -375,6 +394,7 @@ export function GateVisualizer({
                 fontSize: "0.78rem",
                 fontWeight: 600,
                 cursor: "pointer",
+                transition: "all 0.15s ease",
               }}
             >
               ภาพจำลอง
@@ -390,6 +410,7 @@ export function GateVisualizer({
                 fontSize: "0.78rem",
                 fontWeight: 600,
                 cursor: "pointer",
+                transition: "all 0.15s ease",
               }}
             >
               บัตร RFID ({cards.length})
@@ -405,6 +426,7 @@ export function GateVisualizer({
                 fontSize: "0.78rem",
                 fontWeight: 600,
                 cursor: "pointer",
+                transition: "all 0.15s ease",
               }}
             >
               ประวัติสแกน ({logs.length})
@@ -416,214 +438,234 @@ export function GateVisualizer({
         </div>
       </div>
 
-      {activeTab === "visual" && (
-        <>
-          <div className="gate-display-area">
-            {/* Gate telemetry display */}
-            <div className="gate-barrier-stage">
-              <div className="gate-pole" />
-              <div className={`gate-arm ${isOpen ? "raised" : "lowered"}`}>
-                <span className="arm-stripes" />
+      <AnimatePresence mode="wait">
+        {activeTab === "visual" && (
+          <motion.div
+            key="visual"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="gate-display-area">
+              {/* Gate telemetry display */}
+              <div className="gate-barrier-stage">
+                <div className="gate-pole" />
+                <div className={`gate-arm ${isOpen ? "raised" : "lowered"}`}>
+                  <span className="arm-stripes" />
+                </div>
+                <div className={`rfid-terminal-scanner ${access === "granted" ? "granted" : "denied"}`}>
+                  <div className="scanner-led" />
+                  <Radio size={16} />
+                  <small>RFID SENSOR</small>
+                </div>
               </div>
-              <div className={`rfid-terminal-scanner ${access === "granted" ? "granted" : "denied"}`}>
-                <div className="scanner-led" />
-                <Radio size={16} />
-                <small>RFID SENSOR</small>
-              </div>
-            </div>
 
-            {/* Live Card Tap Reader Detail */}
-            <div className="gate-reader-info">
-              <div className="rfid-card-preview">
-                <div className="card-chip" />
-                <div className="card-brand">ACT SMART CAMPUS PASS</div>
-                <div className="card-number">{cardRef}</div>
-                <div className="card-holder">
-                  <span>ทิศทาง: <strong>{direction === "in" ? "ขาเข้า (IN)" : direction === "out" ? "ขาออก (OUT)" : "—"}</strong></span>
-                  <span className={`access-tag ${access}`}>{access === "granted" ? "✓ อนุญาต (Granted)" : access === "denied" ? "✕ ปฏิเสธ (Denied)" : "ยังไม่มีรายการ"}</span>
+              {/* Live Card Tap Reader Detail */}
+              <div className="gate-reader-info">
+                <div className="rfid-card-preview">
+                  <div className="card-chip" />
+                  <div className="card-brand">ACT SMART CAMPUS PASS</div>
+                  <div className="card-number">{cardRef}</div>
+                  <div className="card-holder">
+                    <span>ทิศทาง: <strong>{direction === "in" ? "ขาเข้า (IN)" : direction === "out" ? "ขาออก (OUT)" : "—"}</strong></span>
+                    <span className={`access-tag ${access}`}>{access === "granted" ? "✓ อนุญาต (Granted)" : access === "denied" ? "✕ ปฏิเสธ (Denied)" : "ยังไม่มีรายการ"}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
+        )}
 
-
-        </>
-      )}
-
-      {activeTab === "cards" && (
-        <div style={{ padding: "1rem 0" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-            <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
-              ฐานข้อมูลบัตร RFID บน Supabase (Table: rfid_cards)
-            </h4>
-            <button
-              onClick={loadRfidData}
-              disabled={loading}
-              style={{ border: "1px solid #d0dee2", background: "#f8fafc", padding: "4px 8px", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-            >
-              <RefreshCw size={12} className={loading ? "spin" : ""} /> รีเฟรช
-            </button>
-          </div>
-
-          {/* Add / Edit Form */}
-          <form onSubmit={handleSaveCard} style={{ display: "grid", gridTemplateColumns: "1.2fr 2fr 1fr 1fr auto", gap: "8px", background: "#f4f8f9", padding: "10px", borderRadius: "8px", marginBottom: "1rem", alignItems: "center" }}>
-            <input
-              type="text"
-              placeholder="UID บัตร (เช่น 4A6F12C3)"
-              value={newCardId}
-              onChange={(e) => setNewCardId(e.target.value)}
-              required
-              style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
-            />
-            <input
-              type="text"
-              placeholder="ชื่อ-นามสกุล / สังกัด"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              required
-              style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
-            />
-            <select
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value)}
-              style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
-            >
-              <option value="Student">Student (นักเรียน)</option>
-              <option value="Teacher">Teacher (ครู)</option>
-              <option value="Staff">Staff (บุคลากร)</option>
-              <option value="VIP">VIP (ผู้บริหาร)</option>
-              <option value="Guest">Guest (บุคคลภายนอก)</option>
-            </select>
-            <select
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-              style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
-            >
-              <option value="allow">Allow (อนุญาต)</option>
-              <option value="banned">Banned (ระงับ)</option>
-            </select>
-            <button
-              type="submit"
-              style={{ background: "#08aa9a", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}
-            >
-              + บันทึกบัตร
-            </button>
-          </form>
-
-          {saveMsg && (
-            <div style={{ color: saveMsg.startsWith("✓") ? "#16a34a" : "#dc2626", fontSize: "0.82rem", marginBottom: "8px", fontWeight: 600 }}>
-              {saveMsg}
+        {activeTab === "cards" && (
+          <motion.div 
+            key="cards"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ padding: "1rem 0" }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
+                ฐานข้อมูลบัตร RFID บน Supabase (Table: rfid_cards)
+              </h4>
+              <button
+                onClick={loadRfidData}
+                disabled={loading}
+                style={{ border: "1px solid #d0dee2", background: "#f8fafc", padding: "4px 8px", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+              >
+                <RefreshCw size={12} className={loading ? "spin" : ""} /> รีเฟรช
+              </button>
             </div>
-          )}
 
-          {/* Card Table */}
-          <div style={{ maxHeight: "220px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
-              <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e1ebed", textAlign: "left", color: "#546e7a" }}>
-                  <th style={{ padding: "8px 12px" }}>Card UID</th>
-                  <th style={{ padding: "8px 12px" }}>ชื่อผู้ถือบัตร</th>
-                  <th style={{ padding: "8px 12px" }}>ประเภท (Role)</th>
-                  <th style={{ padding: "8px 12px" }}>สถานะ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cards.map((c, i) => (
-                  <tr key={c.card_id || i} style={{ borderBottom: "1px solid #f0f4f6" }}>
-                    <td style={{ padding: "8px 12px", fontFamily: "monospace", fontWeight: 700, color: "#0b2338" }}>{c.card_id}</td>
-                    <td style={{ padding: "8px 12px", color: "#1e293b" }}>{c.name}</td>
-                    <td style={{ padding: "8px 12px" }}>
-                      <span style={{ background: "#e8f7f5", color: "#08aa9a", padding: "2px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: 600 }}>
-                        {c.role}
-                      </span>
-                    </td>
-                    <td style={{ padding: "8px 12px" }}>
-                      <span style={{
-                        background: c.status === "allow" ? "#ecfdf5" : "#fef2f2",
-                        color: c.status === "allow" ? "#16a34a" : "#dc2626",
-                        padding: "2px 8px",
-                        borderRadius: "12px",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                      }}>
-                        {c.status === "allow" ? "✓ อนุญาต" : "✕ ระงับ"}
-                      </span>
-                    </td>
+            {/* Add / Edit Form */}
+            <form onSubmit={handleSaveCard} style={{ display: "grid", gridTemplateColumns: "1.2fr 2fr 1fr 1fr auto", gap: "8px", background: "#f4f8f9", padding: "10px", borderRadius: "8px", marginBottom: "1rem", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="UID บัตร (เช่น 4A6F12C3)"
+                value={newCardId}
+                onChange={(e) => setNewCardId(e.target.value)}
+                required
+                style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
+              />
+              <input
+                type="text"
+                placeholder="ชื่อ-นามสกุล / สังกัด"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                required
+                style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
+              />
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
+              >
+                <option value="Student">Student (นักเรียน)</option>
+                <option value="Teacher">Teacher (ครู)</option>
+                <option value="Staff">Staff (บุคลากร)</option>
+                <option value="VIP">VIP (ผู้บริหาร)</option>
+                <option value="Guest">Guest (บุคคลภายนอก)</option>
+              </select>
+              <select
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
+                style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #c2d6dc", fontSize: "0.82rem" }}
+              >
+                <option value="allow">Allow (อนุญาต)</option>
+                <option value="banned">Banned (ระงับ)</option>
+              </select>
+              <button
+                type="submit"
+                style={{ background: "#08aa9a", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}
+              >
+                + บันทึกบัตร
+              </button>
+            </form>
+
+            {saveMsg && (
+              <div style={{ color: saveMsg.startsWith("✓") ? "#16a34a" : "#dc2626", fontSize: "0.82rem", marginBottom: "8px", fontWeight: 600 }}>
+                {saveMsg}
+              </div>
+            )}
+
+            {/* Card Table */}
+            <div style={{ maxHeight: "220px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e1ebed", textAlign: "left", color: "#546e7a" }}>
+                    <th style={{ padding: "8px 12px" }}>Card UID</th>
+                    <th style={{ padding: "8px 12px" }}>ชื่อผู้ถือบัตร</th>
+                    <th style={{ padding: "8px 12px" }}>ประเภท (Role)</th>
+                    <th style={{ padding: "8px 12px" }}>สถานะ</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {activeTab === "logs" && (
-        <div style={{ padding: "1rem 0" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-            <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
-              ประวัติการสแกนผ่านด่าน Real-time บน Supabase (Table: gate_logs)
-            </h4>
-            <button
-              onClick={loadRfidData}
-              disabled={loading}
-              style={{ border: "1px solid #d0dee2", background: "#f8fafc", padding: "4px 8px", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-            >
-              <RefreshCw size={12} className={loading ? "spin" : ""} /> รีเฟรช
-            </button>
-          </div>
-
-          <div style={{ maxHeight: "240px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
-              <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e1ebed", textAlign: "left", color: "#546e7a" }}>
-                  <th style={{ padding: "8px 12px" }}>เวลาที่แตะ</th>
-                  <th style={{ padding: "8px 12px" }}>Card UID</th>
-                  <th style={{ padding: "8px 12px" }}>ผู้ถือบัตร / สังกัด</th>
-                  <th style={{ padding: "8px 12px" }}>ทิศทาง</th>
-                  <th style={{ padding: "8px 12px" }}>ผลการตรวจสิทธิ์</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.length > 0 ? (
-                  logs.map((lg, i) => (
-                    <tr key={lg.id || i} style={{ borderBottom: "1px solid #f0f4f6" }}>
-                      <td style={{ padding: "8px 12px", color: "#64748b" }}>
-                        {lg.scanned_at ? new Date(lg.scanned_at).toLocaleTimeString("th-TH") : "-"}
-                      </td>
-                      <td style={{ padding: "8px 12px", fontFamily: "monospace", fontWeight: 700 }}>{lg.card_id}</td>
-                      <td style={{ padding: "8px 12px" }}>{lg.name || "บุคคลภายนอก"} ({lg.role || "Guest"})</td>
+                </thead>
+                <tbody>
+                  {cards.map((c, i) => (
+                    <tr key={c.card_id || i} style={{ borderBottom: "1px solid #f0f4f6" }}>
+                      <td style={{ padding: "8px 12px", fontWeight: 700, color: "#0b2338" }}>{c.card_id}</td>
+                      <td style={{ padding: "8px 12px", color: "#1e293b" }}>{c.name}</td>
                       <td style={{ padding: "8px 12px" }}>
-                        <span style={{ fontWeight: 600, color: lg.action === "IN" ? "#08aa9a" : "#64748b" }}>
-                          {lg.action}
+                        <span style={{ background: "#e8f7f5", color: "#08aa9a", padding: "2px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: 600 }}>
+                          {c.role}
                         </span>
                       </td>
                       <td style={{ padding: "8px 12px" }}>
                         <span style={{
-                          background: lg.status === "allow" ? "#ecfdf5" : "#fef2f2",
-                          color: lg.status === "allow" ? "#16a34a" : "#dc2626",
+                          background: c.status === "allow" ? "#ecfdf5" : "#fef2f2",
+                          color: c.status === "allow" ? "#16a34a" : "#dc2626",
                           padding: "2px 8px",
                           borderRadius: "12px",
                           fontSize: "0.75rem",
                           fontWeight: 600,
                         }}>
-                          {lg.status === "allow" ? "✓ อนุญาต (Granted)" : "✕ ปฏิเสธ (Denied)"}
+                          {c.status === "allow" ? "✓ อนุญาต" : "✕ ระงับ"}
                         </span>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>
-                      ยังไม่มีประวัติการสแกนบัตร (เมื่อมีการทาบบัตรที่บอร์ด ข้อมูลจะปรากฏที่นี่ทันที)
-                    </td>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === "logs" && (
+          <motion.div 
+            key="logs"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ padding: "1rem 0" }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
+                ประวัติการสแกนผ่านด่าน Real-time บน Supabase (Table: gate_logs)
+              </h4>
+              <button
+                onClick={loadRfidData}
+                disabled={loading}
+                style={{ border: "1px solid #d0dee2", background: "#f8fafc", padding: "4px 8px", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+              >
+                <RefreshCw size={12} className={loading ? "spin" : ""} /> รีเฟรช
+              </button>
+            </div>
+
+            <div style={{ maxHeight: "240px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e1ebed", textAlign: "left", color: "#546e7a" }}>
+                    <th style={{ padding: "8px 12px" }}>เวลาที่แตะ</th>
+                    <th style={{ padding: "8px 12px" }}>Card UID</th>
+                    <th style={{ padding: "8px 12px" }}>ผู้ถือบัตร / สังกัด</th>
+                    <th style={{ padding: "8px 12px" }}>ทิศทาง</th>
+                    <th style={{ padding: "8px 12px" }}>ผลการตรวจสิทธิ์</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
+                </thead>
+                <tbody>
+                  {logs.length > 0 ? (
+                    logs.map((lg, i) => (
+                      <tr key={lg.id || i} style={{ borderBottom: "1px solid #f0f4f6" }}>
+                        <td style={{ padding: "8px 12px", color: "#64748b" }}>
+                          {lg.scanned_at ? new Date(lg.scanned_at).toLocaleTimeString("th-TH") : "-"}
+                        </td>
+                        <td style={{ padding: "8px 12px", fontWeight: 700 }}>{lg.card_id}</td>
+                        <td style={{ padding: "8px 12px" }}>{lg.name || "บุคคลภายนอก"} ({lg.role || "Guest"})</td>
+                        <td style={{ padding: "8px 12px" }}>
+                          <span style={{ fontWeight: 600, color: lg.action === "IN" ? "#08aa9a" : "#64748b" }}>
+                            {lg.action}
+                          </span>
+                        </td>
+                        <td style={{ padding: "8px 12px" }}>
+                          <span style={{
+                            background: lg.status === "allow" ? "#ecfdf5" : "#fef2f2",
+                            color: lg.status === "allow" ? "#16a34a" : "#dc2626",
+                            padding: "2px 8px",
+                            borderRadius: "12px",
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                          }}>
+                            {lg.status === "allow" ? "✓ อนุญาต (Granted)" : "✕ ปฏิเสธ (Denied)"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>
+                        ยังไม่มีประวัติการสแกนบัตร (เมื่อมีการทาบบัตรที่บอร์ด ข้อมูลจะปรากฏที่นี่ทันที)
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -653,7 +695,12 @@ export function EnvironmentVisualizer({
   }
 
   return (
-    <div className="visualizer-card env-viz">
+    <motion.div 
+      className="visualizer-card env-viz"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
       <div className="viz-header">
         <div>
           <span className="viz-tag"><Gauge size={14} /> AIR QUALITY & METEOROLOGY</span>
@@ -677,33 +724,31 @@ export function EnvironmentVisualizer({
 
         {/* Secondary Weather Cards */}
         <div className="weather-sub-cards">
-          <div className="weather-metric-pill">
+          <motion.div className="weather-metric-pill" whileHover={{ x: 2, transition: { duration: 0.15 } }}>
             <Thermometer size={20} className="pill-icon red" />
             <div>
               <span className="pill-label">อุณหภูมิ (Temp)</span>
               <strong>{temp} °C</strong>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="weather-metric-pill">
+          <motion.div className="weather-metric-pill" whileHover={{ x: 2, transition: { duration: 0.15 } }}>
             <Droplets size={20} className="pill-icon blue" />
             <div>
               <span className="pill-label">ความชื้นสัมพัทธ์ (Humidity)</span>
               <strong>{humidity} %</strong>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="weather-metric-pill">
+          <motion.div className="weather-metric-pill" whileHover={{ x: 2, transition: { duration: 0.15 } }}>
             <Wind size={20} className="pill-icon cyan" />
             <div>
               <span className="pill-label">ดัชนีความสบาย (Comfort)</span>
               <strong>{temp > 33 ? "ร้อนอบอ้าว" : temp < 26 ? "เย็นสบาย" : "เหมาะสม"}</strong>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
-
-
-    </div>
+    </motion.div>
   );
 }

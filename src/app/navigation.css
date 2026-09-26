@@ -1,0 +1,37 @@
+.desktop-nav-toggle,
+.sidebar-mobile-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dce5ed;
+  border-radius: 6px;
+  background: #fff;
+  color: #526f87;
+  cursor: pointer;
+}
+.desktop-nav-toggle { margin-right: 14px; }
+.desktop-nav-toggle:hover { background: #edf4f9; }
+.header-brand { display: none; flex: none; margin-right: 12px; }
+.header-brand img { display: block; object-fit: contain; }
+.sidebar-mobile-close, .sidebar-backdrop { display: none; }
+.brand-mark { width: 56px; height: 56px; padding: 0; border-radius: 6px; box-shadow: none; }
+.brand-mark img { width: 100%; height: 100%; object-fit: contain; }
+.sidebar { overflow-y: auto; }
+@media(min-width: 851px) {
+  .app-shell.sidebar-collapsed .sidebar { display: none; }
+  .sidebar-collapsed .header-brand { display: block; }
+}
+@media(max-width: 850px) {
+  .desktop-nav-toggle { display: none; }
+  .header-brand { display: block; margin: 0 8px; }
+  .header-brand img { width: 30px; height: 30px; }
+  .sidebar:not(.open) { visibility: hidden; }
+  .sidebar.open { visibility: visible; }
+  .sidebar-mobile-close { display: grid; position: absolute; right: 8px; top: 7px; width: 28px; height: 28px; border: none; background: transparent; color: #c6d5e5; }
+  .sidebar .brand { margin-top: 15px; }
+  .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 45; background: #0d203a66; border: 0; }
+  .topbar .breadcrumb { margin-left: 0; }
+  .mobile-menu { flex: none; }
+}

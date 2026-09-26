@@ -42,3 +42,20 @@ Build a credible dashboard using real device data only. The user supplied an ind
 - Working branch at task start: main.
 - User explicitly authorized commit/push on each completed change. Keep this agreement in AGENTS.md and update these three documents on future tasks.
 - Consult git log and origin/main for the exact commit IDs rather than hard-coding the current commit hash into this file.
+
+## Follow-up: logo and collapsible navigation — 2026-09-26
+
+- User asked which fonts are used, requested collapsible navigation and supplied a replacement ACT 1961 PNG.
+- Follow-up instruction changed the font to IBM Plex Sans Thai throughout the application, including Latin text, numerals, graph/map UI and RFID identifiers. Removed the Inter font request and monospace overrides; sans-serif remains the network-failure fallback.
+- Copied the supplied PNG intact to `public/act-logo-1961.png`; sidebar, collapsed/mobile header branding and icon metadata use this new asset path to avoid the previous logo cache.
+- Added a desktop collapse/reopen button to the shared Shell, persisting preference in `smartcity.sidebar.collapsed`. It also works before telemetry loads or when storage fails.
+- Mobile menu remains a separate drawer with close button, backdrop and Escape handling. The sidebar is removed from keyboard navigation when hidden.
+- Added `src/app/navigation.css`, loaded after monitor styling so behavior works on overview, subsystem and settings pages.
+
+## Follow-up: UI Equalization & Framer Motion Integration — 2026-09-26
+
+- User request: "ช่วยทำให้หน้าตา UI ดีกว่าหน่อยแบบขนาดเท่าๆกันกดแล้วไม่มีอะไรเด้งแปลกๆ นะจ้ะแล้วขอให้ใช้ FramerMotion"
+- Standardized heights across the 5 subsystem panels (`.monitor-systems` in `OperationsOverview.tsx` and `monitor.css`) so gauges, traffic indicators, gate previews, and air quality cards maintain uniform height (120px) and clean flex alignment without jarring layout shifts.
+- Installed and integrated `framer-motion` (`motion.div`, `motion.section`, `AnimatePresence`, `whileHover`, `whileTap`) across overview cards, visualizers (`ParkingVisualizer`, `TrafficVisualizer`, `StreetlightVisualizer`, `GateVisualizer`, `EnvironmentVisualizer`), and `Dashboard.tsx` subsystem views.
+- Replaced disruptive CSS transform hops on hover with smooth Framer Motion micro-animations and border/shadow transitions.
+- Validation: `node tests/data-integrity.test.cjs`, `npm run typecheck`, and `npm run build` all passed with 0 errors.

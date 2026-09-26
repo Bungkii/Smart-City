@@ -38,3 +38,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Latest confirmed direction — 2026-09-26
 
 The user supplied a monitoring-wall reference, then explicitly chose the original white palette. Keep its at-a-glance multi-system organization without the dark canvas. The weather strip and all five subsystem panels belong on the overview. A button may hide navigation for a wider monitoring view.
+
+## Navigation and brand — 2026-09-26
+
+- Use the user-provided ACT 1961 asset at `public/act-logo-1961.png` for visible branding and browser icons. Keep the supplied image intact.
+- Use IBM Plex Sans Thai throughout the application: Thai, Latin text, numerals, graphs, maps, inputs and RFID identifiers. The user explicitly requested this after the initial font explanation. Do not reintroduce Inter or monospace overrides.
+- The shared shell must let users collapse and reopen desktop navigation on every route, including loading/error screens. Remember desktop preference in localStorage and keep mobile drawer behavior independent.
+- Mobile navigation must offer a close button, backdrop dismissal and Escape dismissal. Hidden menus should not remain keyboard-focusable.

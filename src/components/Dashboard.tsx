@@ -1,12 +1,13 @@
 "use client";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { 
   Activity, AlertTriangle, ArrowRight, Bell, CarFront, Check, 
   Clock3, DoorOpen, Download, Gauge, Lightbulb, MapPin, Menu, 
   Radio, RefreshCw, Search, Settings2, ShieldCheck, Signal, 
-  TrafficCone, X, Zap
+  TrafficCone, X, Zap, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { deviceHealth, systems, systemIds, type EventRow, type Health, type SystemId } from "@/lib/model";
 import DeviceMap from "./DeviceMap";
@@ -59,13 +60,40 @@ function Shell({
   connection: "error" | "loading" | "ready" | "empty";
 }) {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const mobileToggle = useRef<HTMLButtonElement>(null);
+  const closeMobileMenu = useCallback(() => {
+    setOpen(false);
+    mobileToggle.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem("smartcity.sidebar.collapsed") === "true"); } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMobileMenu();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, closeMobileMenu]);
+
+  const toggleSidebar = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    try { localStorage.setItem("smartcity.sidebar.collapsed", String(next)); } catch {}
+  };
 
   return (
-    <div className="app-shell">
-      <aside className={`sidebar ${open ? "open" : ""}`}>
+    <div className={`app-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
+      {open && <button className="sidebar-backdrop" onClick={closeMobileMenu} aria-label="ปิดเมนูด้านข้าง" />}
+      <aside id="main-navigation" aria-label="เมนูหลัก" className={`sidebar ${open ? "open" : ""}`}>
+        <button className="sidebar-mobile-close" onClick={closeMobileMenu} aria-label="ปิดเมนู"><X size={18} /></button>
         <Link className="brand" href="/" onClick={() => setOpen(false)}>
           <span className="brand-mark">
-            <img src="/act-logo.png" alt="Assumption College Thonburi" />
+            <img src="/act-logo-1961.png" alt="Assumption College Thonburi — ACT 1961" width={56} height={56} />
           </span>
           <span className="brand-text">
             <strong>Assumption College Thonburi</strong>
@@ -105,9 +133,13 @@ function Shell({
 
       <main className="main">
         <header className="topbar">
-          <button className="mobile-menu" onClick={() => setOpen(!open)} aria-label="เมนู">
+          <button className="desktop-nav-toggle" onClick={toggleSidebar} aria-label={collapsed ? "เปิดเมนูด้านข้าง" : "หุบเมนูด้านข้าง"} title={collapsed ? "เปิดเมนูด้านข้าง" : "หุบเมนูด้านข้าง"} aria-expanded={!collapsed} aria-controls="main-navigation">
+            {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+          </button>
+          <button ref={mobileToggle} className="mobile-menu" onClick={() => setOpen(!open)} aria-label={open ? "ปิดเมนู" : "เปิดเมนู"} aria-expanded={open} aria-controls="main-navigation">
             {open ? <X /> : <Menu />}
           </button>
+          <Link href="/" className="header-brand" aria-label="ACT 1961 — ภาพรวมเมืองอัจฉริยะ"><img src="/act-logo-1961.png" alt="ACT 1961" width={32} height={32} /></Link>
           <div className="breadcrumb">
             <span className="breadcrumb-brand">ASSUMPTION COLLEGE THONBURI</span> 
             <span>/</span> 
@@ -361,7 +393,11 @@ function SystemDetail({
   const latestUpdate = devices.length ? devices.map(d => d.receivedAt).sort().reverse()[0] : undefined;
 
   return (
-    <>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <PageHeading 
         eyebrow={`SYSTEM / ${systems[id].en.toUpperCase()}`} 
         title={systems[id].title} 
@@ -394,12 +430,17 @@ function SystemDetail({
       )}
 
       {/* Detail Stats */}
-      <div className="detail-stats">
+      <motion.div 
+        className="detail-stats"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+      >
         <div><span>อุปกรณ์ทั้งหมด</span><strong>{devices.length}</strong></div>
         <div><span>ปกติ (Online)</span><strong className="green-text">{devices.filter(d => deviceHealth(d) === "normal").length}</strong></div>
         <div><span>ต้องตรวจสอบ</span><strong className="orange-text">{devices.filter(d => deviceHealth(d) === "warning").length}</strong></div>
         <div><span>ออฟไลน์</span><strong>{devices.filter(d => deviceHealth(d) === "offline").length}</strong></div>
-      </div>
+      </motion.div>
 
       <div className="detail-layout">
         <section className="panel device-panel">
@@ -423,10 +464,12 @@ function SystemDetail({
           <div className="device-list">
             {filtered.length ? (
               filtered.map(e => (
-                <button 
+                <motion.button 
                   key={e.deviceId} 
                   className={`device-row ${selectedDevice?.deviceId === e.deviceId ? "selected" : ""}`} 
                   onClick={() => setSelected(e.deviceId)}
+                  whileHover={{ x: 2, transition: { duration: 0.15 } }}
+                  whileTap={{ scale: 0.99 }}
                 >
                   <span className={`device-icon ${id}`}><MetricIcon id={id} size={18} /></span>
                   <span className="device-main">
@@ -438,7 +481,7 @@ function SystemDetail({
                     <small>{stateText(e)}</small>
                   </span>
                   <ArrowRight size={15} />
-                </button>
+                </motion.button>
               ))
             ) : (
               <div className="empty-state">ไม่พบอุปกรณ์ที่ค้นหา</div>
@@ -456,39 +499,47 @@ function SystemDetail({
           </div>
 
           {selectedDevice ? (
-            <>
-              <div className="focus-header">
-                <span className={`focus-icon ${id}`}><MetricIcon id={id} size={24} /></span>
-                <div>
-                  <h3>{selectedDevice.name}</h3>
-                  <p>{selectedDevice.deviceId} · {selectedDevice.location}</p>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedDevice.deviceId}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+              >
+                <div className="focus-header">
+                  <span className={`focus-icon ${id}`}><MetricIcon id={id} size={24} /></span>
+                  <div>
+                    <h3>{selectedDevice.name}</h3>
+                    <p>{selectedDevice.deviceId} · {selectedDevice.location}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="focus-value">{stateText(selectedDevice)}</div>
-              <Status value={deviceHealth(selectedDevice)} />
+                <div className="focus-value">{stateText(selectedDevice)}</div>
+                <Status value={deviceHealth(selectedDevice)} />
 
-              <div className="detail-tags">
-                {detailTags(selectedDevice)?.map((tag, i) => (
-                  <span key={i}>{tag}</span>
-                ))}
-              </div>
-
-              <div className="focus-times">
-                <div>
-                  <span>เวลาที่อุปกรณ์บันทึก (Recorded):</span>
-                  <strong>{time(selectedDevice.recordedAt)}</strong>
+                <div className="detail-tags">
+                  {detailTags(selectedDevice)?.map((tag, i) => (
+                    <span key={i}>{tag}</span>
+                  ))}
                 </div>
-                <div>
-                  <span>ระบบได้รับข้อมูล (Received):</span>
-                  <strong>{time(selectedDevice.receivedAt)}</strong>
-                </div>
-              </div>
 
-              {["gate", "traffic", "streetlight"].includes(id) && (
-                <ControlPanel device={selectedDevice} mode={data.mode} />
-              )}
-            </>
+                <div className="focus-times">
+                  <div>
+                    <span>เวลาที่อุปกรณ์บันทึก (Recorded):</span>
+                    <strong>{time(selectedDevice.recordedAt)}</strong>
+                  </div>
+                  <div>
+                    <span>ระบบได้รับข้อมูล (Received):</span>
+                    <strong>{time(selectedDevice.receivedAt)}</strong>
+                  </div>
+                </div>
+
+                {["gate", "traffic", "streetlight"].includes(id) && (
+                  <ControlPanel device={selectedDevice} mode={data.mode} />
+                )}
+              </motion.div>
+            </AnimatePresence>
           ) : (
             <div className="empty-state">ยังไม่มีข้อมูลอุปกรณ์</div>
           )}
@@ -530,7 +581,7 @@ function SystemDetail({
           </div>
         </section>
       </div>
-    </>
+    </motion.div>
   );
 }
 

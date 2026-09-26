@@ -103,7 +103,7 @@
 .legend-dot.missing { background: #8a9aa3; }
 
 .leaflet-popup-content {
-  font-family: Inter, 'IBM Plex Sans Thai', sans-serif;
+  font-family: 'IBM Plex Sans Thai', sans-serif;
   font-size: 11px;
 }
 
