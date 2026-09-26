@@ -1,7 +1,6 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import { demoEvents, historicalDemoEvent } from "./demo";
 import type { EventRow, Source, SystemId, Telemetry } from "./model";
 
 const location = process.env.DB_PATH || path.join(process.cwd(), "data", "smartcity.db");
@@ -53,42 +52,12 @@ function getDb(): Database.Database {
     auditHistory: db.prepare("SELECT * FROM command_audit ORDER BY id DESC LIMIT 100")
   };
 
-  if (!(db.prepare("SELECT 1 FROM events WHERE source='demo' LIMIT 1").get())) {
-    const seed = db.transaction(() => {
-      for (let h = 23; h >= 0; h--) {
-        for (const e of demoEvents()) {
-          const historical = historicalDemoEvent(e, h);
-          insertEvent(historical, "demo", historical.recordedAt);
-        }
-      }
-    });
-    seed();
-  }
-  if (!(db.prepare("SELECT 1 FROM events WHERE source='live' LIMIT 1").get())) {
-    const seedLive = db.transaction(() => {
-      const nowIso = new Date().toISOString();
-      for (const e of demoEvents()) {
-        insertEvent(
-          {
-            ...e,
-            recordedAt: nowIso,
-            health: "normal",
-            note: "ระบบเชื่อมต่อพร้อมรับสัญญาณฮาร์ดแวร์จริง",
-          },
-          "live",
-          nowIso
-        );
-      }
-    });
-    seedLive();
-  }
-
   return db;
 }
 
 export function getMode(): Source {
   getDb();
-  return (stmts.getMode!.get() as { value: Source }).value;
+  return "live";
 }
 
 export function setMode(mode: Source) {
@@ -225,4 +194,3 @@ export async function syncFromSupabase() {
     // Network or parse error handled silently
   }
 }
-

@@ -1,142 +1,98 @@
-# 🏫 Assumption College Thonburi (ACT) — Smart City Dashboard
+# ACT Smart City Dashboard
 
-ระบบบริหารจัดการและแดชบอร์ดเมืองอัจฉริยะ **Assumption College Thonburi (ACT)** พัฒนาด้วย **Next.js 16 (App Router + Turbopack)**, **TypeScript**, **PostgreSQL (Supabase Cloud)** พร้อมเชื่อมต่อฮาร์ดแวร์จริงทั้ง 5 บอร์ดผ่าน **WiFiManager** และ **Supabase REST / Realtime API**
+แดชบอร์ดเมืองอัจฉริยะสำหรับ Assumption College Thonburi ใช้ Next.js App Router, React และ TypeScript พร้อมตัวเชื่อมต่อ PostgreSQL/Supabase, SQLite และ Cloudflare D1
 
----
+## หน้าภาพรวม
 
-## 🌟 ฟีเจอร์เด่นของระบบ (Key Features)
+- ใช้พื้นขาวและเมนูกรมท่า แสดงข้อมูลทั้งเมืองในหน้าเดียว
+- สรุปจำนวนอุปกรณ์ที่เคยรายงานข้อมูล อุปกรณ์ออนไลน์ แจ้งเตือน และออฟไลน์
+- แสดงสภาพอากาศจากสถานีที่เลือก: PM2.5 อุณหภูมิ และความชื้น
+- แผงสถานะ 5 ระบบ: ที่จอดรถ สัญญาณจราจร ไฟถนน ประตู RFID และสิ่งแวดล้อม
+- กราฟค่าฝุ่นย้อนหลัง ตำแหน่งอุปกรณ์จากพิกัดจริง และรายการข้อมูลรับเข้าล่าสุด
+- รีเฟรชข้อมูลทุก 5 วินาที ส่งออก CSV และขยายมุมมองโดยซ่อนเมนูได้
+- รองรับจอเดสก์ท็อปและมือถือ; เปิดรายละเอียดระบบโดยคลิกแผงของระบบนั้น
 
-1. **Dashboard แสดงผลแบบเรียลไทม์ (Live Telemetry)**:
-   - 🚗 **ที่จอดรถอัจฉริยะ (Smart Parking)**: ตรวจจับรถเข้า-ออก แสดงสถานะช่องจอดและคำนวณที่ว่าง
-   - 🚦 **สัญญาณไฟจราจรสี่แยก (4-Way Adaptive Traffic Light)**: แยกเสาสัญญาณ 4 ทิศทาง (เหนือ, ตะวันออก, ใต้, ตะวันตก) พร้อมระบบตรวจจับรถด้วย Ultrasonic และ PIR เพื่อยืดเวลาไฟเขียวอัตโนมัติ
-   - 💡 **ไฟถนนอัจฉริยะ (Adaptive Street Lights)**: เซนเซอร์แสง LDR ตรวจกลางวัน/กลางคืน และ PIR ปรับหรี่-สว่างอัตโนมัติแบบ PWM Smooth Fade
-   - 🚪 **ระบบประตู RFID Gate**: สแกนบัตรนักเรียน/ครู ตรวจสอบสิทธิ์และบันทึกประวัติการผ่านประตูลงฐานข้อมูลแบบเรียลไทม์
-   - 🌿 **สถานีตรวจวัดสภาพแวดล้อม (Environment Station)**: ตรวจจับ PM2.5, อุณหภูมิ, ความชื้น และระดับควัน MQ-2
+## นโยบายข้อมูลจริงเท่านั้น
 
-2. **ฐานข้อมูล PostgreSQL บน Supabase Cloud**:
-   - ย้ายระบบฐานข้อมูลและประวัติการแตะบัตรจาก Google Sheets มาไว้บน Supabase Cloud PostgreSQL 100%
-   - รองรับ Row Level Security (RLS) และ Supabase Realtime Subscription
+ไม่มีโหมดสาธิต API จำลองเหตุการณ์ การสุ่มค่า หรือการสร้างข้อมูลอุปกรณ์ตั้งต้น ข้อมูลที่อ่านผ่านชั้น storage ต้องเป็น `source: live`
 
-3. **ระบบ Wi-Fi อัจฉริยะ (WiFiManager สำหรับทุกบอร์ด)**:
-   - บอร์ดทุกตัวมี Captive Portal AP เฉพาะตัวเพื่อตั้งค่า Wi-Fi ผ่านมือถือ (`192.168.4.1`)
-   - บันทึก Wi-Fi ลง Flash/NVS ถาวร
-   - **ปุ่ม Reset Wi-Fi**: กดปุ่ม **BOOT (GPIO 0)** ค้าง 3 วินาที เพื่อล้างค่า Wi-Fi แล้วตั้งค่าใหม่
+เมื่อยังไม่มีข้อมูล หน้าจอแสดงสถานะรอข้อมูลและเครื่องหมาย `—` โดยไม่สร้างตัวเลข กราฟ หรือตำแหน่งทดแทน เมื่อฐานข้อมูลอ่านไม่ได้ API Dashboard ตอบ HTTP 503 และหน้าจอแจ้งข้อผิดพลาด หากเคยโหลดข้อมูลสำเร็จ จะแสดงชัดเจนว่าเป็นข้อมูลครั้งก่อน
 
----
+ค่าปัจจุบันบนหน้าภาพรวมใช้เฉพาะอุปกรณ์ที่ยังไม่ออฟไลน์ ส่วนกราฟและบันทึกเป็นประวัติที่ได้รับล่าสุด ไม่ใช่การรับประกันช่วงข้อมูล 24 ชั่วโมง จำนวนอุปกรณ์หมายถึงอุปกรณ์ที่มี telemetry ในฐานข้อมูล ไม่ใช่ทะเบียนอุปกรณ์ที่ยังไม่เคยส่งข้อมูล
 
-## 🚀 การติดตั้งและรันในเครื่อง (Local Development)
+`src/lib/data-integrity.ts` กรองรายการตัวอย่างจากตัวติดตั้งรุ่นเก่าที่ถูกบันทึกเป็น Live โดยตรวจลักษณะข้อมูลที่รู้จัก และกรองบัตร RFID ตัวอย่างเดิมที่ยังไม่ได้แก้ไข ข้อมูลเหล่านั้นไม่ได้ถูกลบจากฐานข้อมูล ตัวกรองนี้ไม่ใช่ระบบยืนยันแหล่งกำเนิดข้อมูลทั่วไป หากเปลี่ยนข้อมูลตัวอย่างนอกแอป ต้องตรวจสอบแหล่งที่มาเพิ่มเติม
 
-### 1. ติดตั้ง Dependencies
+## เริ่มใช้งาน
+
 ```bash
 npm install
-```
-
-### 2. ตั้งค่า Environment Variables
-คัดลอกไฟล์ `.env.example` ไปเป็น `.env.local`:
-```bash
-cp .env.example .env.local
-```
-
-ตรวจสอบค่าใน `.env.local`:
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://kqkggjsjwbkodqyeddwj.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc
-SUPABASE_URL=https://kqkggjsjwbkodqyeddwj.supabase.co
-SUPABASE_ANON_KEY=sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc
-DB_DRIVER=postgres
-INGEST_TOKEN=act_smartcity_ingest_secret_token_2026
-SETTINGS_TOKEN=act_smartcity_settings_secret_token_2026
-CONTROL_TOKEN=act_operator_secret_token_2026
-OPERATOR_NAME=ACT_Admin
-OFFLINE_AFTER_SECONDS=120
-```
-
-### 3. เริ่มรัน Dev Server
-```bash
 npm run dev
 ```
-เปิดเบราว์เซอร์ไปที่: **`http://localhost:3000`**
 
----
+เปิด [Dashboard ในเครื่อง](http://localhost:3000) และตั้งค่า `.env.local` ด้วยค่าของสภาพแวดล้อมที่ใช้งานจริง ห้าม commit ไฟล์นี้หรือใส่ token จริงในเอกสาร
 
-## 🗄️ การตั้งค่า Supabase Database (PostgreSQL)
+| ตัวแปร | การใช้งาน |
+| --- | --- |
+| `DB_DRIVER` | `postgres` (ค่าเริ่มต้น), `sqlite` หรือ `d1` |
+| `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL` | URL ของ Supabase |
+| `SUPABASE_ANON_KEY` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Key สำหรับ Supabase ตามสิทธิ์ที่ตั้งไว้ |
+| `INGEST_TOKEN` | Bearer token สำหรับรับ telemetry ผ่าน API |
+| `SETTINGS_TOKEN` | สิทธิ์อ่าน audit และแก้การตั้งค่าโหมด |
+| `CONTROL_TOKEN`, `OPERATOR_NAME` | Token และชื่อผู้สั่งควบคุมอุปกรณ์ |
+| `CONTROL_OPERATORS_JSON` | ทางเลือกสำหรับกำหนดผู้สั่งและ token หลายคน |
+| `DEVICE_COMMAND_URL`, `DEVICE_COMMAND_TOKEN` | ตัวเชื่อมต่อส่งคำสั่งไปยังฮาร์ดแวร์ |
+| `OFFLINE_AFTER_SECONDS` | เกณฑ์ออฟไลน์ฝั่งเซิร์ฟเวอร์ ค่าเริ่มต้น 120 วินาที |
+| `DB_PATH` | ที่เก็บ SQLite เมื่อเลือก driver นี้ |
+| `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_API_TOKEN` | การเชื่อมต่อ D1 |
 
-เปิดหน้า **[Supabase SQL Editor](https://supabase.com/dashboard/project/kqkggjsjwbkodqyeddwj/sql/new)** แล้วนำโค้ดจากไฟล์ [`supabase_schema.sql`](./supabase_schema.sql) ไปวางและกด **Run**
+ฟังก์ชัน RFID และ Wi-Fi ใช้ `NEXT_PUBLIC_SUPABASE_URL` และ `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` โดยตรง ต้องตั้งค่าทั้งคู่เมื่อใช้ฟังก์ชันเหล่านี้
 
-### โครงสร้างตารางในฐานข้อมูล:
-| ตาราง | คำอธิบาย |
-| :--- | :--- |
-| `public.events` | ข้อมูลเซนเซอร์ Telemetry ทั้ง 5 ระบบ (รวมสัญญาณไฟ 4 ทิศทาง) |
-| `public.rfid_cards` | ฐานข้อมูล UID บัตร RFID, ชื่อผู้ถือบัตร, บทบาท, สถานะ (`allow`/`banned`) |
-| `public.gate_logs` | ประวัติการแตะบัตรผ่านประตูอัตโนมัติ (บันทึกเวลา, ชื่อ, บทบาท, ผลการอนุญาต) |
-| `public.settings` | การตั้งค่าโหมด (`live`/`demo`) และการตั้งค่าระบบ |
-| `public.command_audit` | บันทึกประวัติการส่งคำสั่งควบคุมอุปกรณ์จาก Dashboard |
-| `public.todos` | ตารางทดสอบการเชื่อมต่อ Next.js SSR |
+สร้างตารางใน Supabase ด้วย `supabase_schema.sql` ซึ่งไม่มีการเติม telemetry หรือบัตรตัวอย่างแล้ว ตารางหลักคือ `events`, `settings`, `rfid_cards`, `gate_logs` และ `command_audit`
 
----
+## API
 
-## ☁️ การ Deploy ขึ้น Vercel (แนะนำ)
+| Endpoint | หน้าที่ |
+| --- | --- |
+| `GET /api/dashboard` | ข้อมูลอุปกรณ์ล่าสุด สถานะ ประวัติ และเวลาเซิร์ฟเวอร์ |
+| `POST /api/ingest` | รับ telemetry ที่ตรวจ schema แล้ว; ต้องใช้ `INGEST_TOKEN` |
+| `GET /api/rfid` | อ่านบัตรและประวัติสแกนใน response เดียว |
+| `POST /api/rfid` | เพิ่มหรือแก้ไขบัตร RFID |
+| `GET /api/settings` | รายงานการตั้งค่าการเชื่อมต่อ |
+| `PATCH /api/settings` | รองรับเฉพาะ `{ "mode": "live" }`; ต้องใช้ `SETTINGS_TOKEN` |
+| `GET /api/settings/wifi` | อ่านค่า Wi-Fi ที่บันทึกไว้ |
+| `POST /api/settings/wifi` | บันทึกค่า Wi-Fi; จะไม่รายงานสำเร็จหากฐานข้อมูลปฏิเสธ |
+| `POST /api/control` | ส่งคำสั่งผ่าน adapter สำหรับอุปกรณ์ออนไลน์; ต้องยืนยันผู้สั่ง |
+| `GET /api/audit` | อ่านประวัติคำสั่งด้วย `SETTINGS_TOKEN` |
 
-1. เข้าไปที่ **[vercel.com](https://vercel.com)** และ Login ด้วย GitHub
-2. กด **Add New...** -> **Project** -> เลือก Repository **`Bungkii/Smart-City`**
-3. ในส่วน **Environment Variables** ให้ใส่ค่าจาก `.env.local`
-4. กด **Deploy** เว็บไซต์จะพร้อมใช้งานทันทีภายใน 30 วินาที
+API จำลองเหตุการณ์และหน้าทดสอบ SSR เดิมถูกนำออกแล้ว
 
----
+## ฮาร์ดแวร์
 
-## ☁️ การ Deploy ขึ้น Cloudflare Pages
+ซอร์สของบอร์ดอยู่ใน `Arduino/Board_1` ถึง `Arduino/Board_5` ตามลำดับ: RFID Gate, Traffic Light, Parking, Environment และ Street Light อ่านรายละเอียดการต่อวงจรและติดตั้งจาก `Arduino/README.md` และ `Arduino/WIRE.md`
 
-1. เข้าไปที่ **[dash.cloudflare.com](https://dash.cloudflare.com)**
-2. เมนู **Workers & Pages** -> **Create application** -> **Pages** -> **Connect to Git**
-3. เลือก Repository **`Bungkii/Smart-City`**
-4. ตั้งค่า:
-   - **Framework preset**: `Next.js`
-   - **Build command**: `npm run build`
-   - **Build output directory**: `.next`
-5. เพิ่ม **Environment Variables** ตามตารางใน `.env.local`
-6. กด **Save and Deploy**
+หน้าจอที่แสดงค่าว่างยังไม่ยืนยันว่าฮาร์ดแวร์เสีย ต้องตรวจการเชื่อมต่อและดูว่ามีข้อมูลที่มาจากอุปกรณ์จริงส่งเข้ามาหรือไม่
 
----
-
-## 🔌 รายละเอียดบอร์ดฮาร์ดแวร์ทั้ง 5 ระบบ (Hardware Firmware)
-
-| บอร์ด | ไฟล์โค้ด | เซนเซอร์ / อุปกรณ์ | Wi-Fi Captive Portal AP |
-| :--- | :--- | :--- | :--- |
-| **Board 1** | [`ESP32-1_RFID Gate Access.ino`](./Arduino/Board_1/ESP32-1_RFID%20Gate%20Access.ino) | RC522 RFID, LCD 16x2, Relay/LED, Buzzer | `ACT-RFID-Gate-Setup` |
-| **Board 2** | [`UNOR4-2_Traffic Light.ino`](./Arduino/Board_2/UNOR4-2_Traffic%20Light.ino) | 2x Ultrasonic, 2x PIR, 12x LEDs (4 ทิศทาง) | `ACT-Traffic-Light-Setup` |
-| **Board 3** | [`ESP32-3_Smart Parking.ino`](./Arduino/Board_3/ESP32-3_Smart%20Parking.ino) | 2x Ultrasonic (In/Out), OLED SSD1306 | `ACT-Smart-Parking-Setup` |
-| **Board 4** | [`ESP32-4_Smart Environment Station.ino`](./Arduino/Board_4/ESP32-4_Smart%20Environment%20Station.ino) | DHT11, MQ-2 Gas, OLED SSD1306 | `ACT-Environment-Station-Setup` |
-| **Board 5** | [`ESP32-5_Adaptive Street Light.ino`](./Arduino/Board_5/ESP32-5_Adaptive%20Street%20Light.ino) | LDR Sensor, PIR Motion, PWM LED Dimmer | `ACT-Street-Light-Setup` |
-
-### 📶 การเชื่อมต่อ Wi-Fi และ Reset:
-- **เชื่อมต่อครั้งแรก**: เปิดบอร์ด -> เชื่อมต่อ Wi-Fi ชื่อ AP ของบอร์ด -> หน้าต่างเด้งไปที่ `192.168.4.1` -> เลือกชื่อ Wi-Fi ใส่รหัสผ่าน แล้วกด Save
-- **การล้าง Wi-Fi เพื่อเปลี่ยนเครือข่าย**: กดปุ่ม **BOOT (GPIO 0)** บนบอร์ดค้างไว้ **3 วินาที** บอร์ดจะทำการลบค่า Wi-Fi และเปิด Captive Portal ให้ตั้งค่าใหม่ทันที
-
----
-
-## 📡 API Endpoints
-
-- **`GET /api/dashboard`**: ดึงข้อมูล Realtime Telemetry, สถานะอุปกรณ์, และประวัติย้อนหลัง
-- **`POST /api/ingest`**: รับข้อมูล Telemetry จากบอร์ดฮาร์ดแวร์ภายนอก (Header: `Authorization: Bearer <INGEST_TOKEN>`)
-- **`GET /api/rfid?type=cards`**: ดึงรายชื่อบัตร RFID ทั้งหมดจาก Supabase
-- **`GET /api/rfid?type=logs`**: ดึงประวัติการแตะบัตรผ่านประตู
-- **`POST /api/rfid`**: เพิ่ม/แก้ไขข้อมูลบัตร หรือบันทึก Gate Log
-- **`POST /api/control`**: ส่งคำสั่งควบคุมฮาร์ดแวร์ (เช่น เปิด/ปิด ประตู, เปลี่ยนโหมดไฟจราจร)
-- **`PATCH /api/settings`**: สลับโหมดการทำงาน (`live` / `demo`)
-- **`POST /api/settings/wifi`**: ซิงก์ค่า Wi-Fi ส่วนกลางของระบบ
-
----
-
-## 🛠️ การตรวจสอบความถูกต้องของโค้ด
+## ตรวจสอบและ build
 
 ```bash
-# ตรวจสอบ TypeScript Typecheck
+node tests/data-integrity.test.cjs
+npx next typegen
 npm run typecheck
-
-# ทดสอบ Production Build
 npm run build
+npm start
 ```
 
----
+ชุดทดสอบตรวจการแยก telemetry จริงออกจากข้อมูลตั้งต้นเก่า การ build ไม่ได้ทดสอบการเชื่อมต่อบอร์ดหรือส่งคำสั่งควบคุมจริง
 
-*พัฒนาและดูแลโดย Assumption College Thonburi (ACT) Smart City Initiative* 🇹🇭
+## ข้อจำกัดที่ต้องทราบ
+
+- PostgreSQL latest query อ่านล่าสุด 60 แถวก่อนแยกตาม device; fleet ขนาดใหญ่หรืออุปกรณ์ที่ส่งถี่อาจต้องใช้ latest-per-device query ฝั่งฐานข้อมูล
+- หน้า client ใช้เกณฑ์ออฟไลน์เริ่มต้น 120 วินาที; การตั้ง `OFFLINE_AFTER_SECONDS` เป็นค่าอื่นฝั่งเซิร์ฟเวอร์ยังไม่ได้ส่งต่อไปยัง client
+- SQL policies และ API RFID/Wi-Fi เดิมยังมีสิทธิ์กว้าง ไม่ควรตีความการปรับหน้าจอครั้งนี้ว่าได้ตรวจสอบความปลอดภัยสำหรับเปิดใช้งานสาธารณะครบแล้ว
+- ทดสอบหน้าจอและ build ในเครื่องแล้ว ยังไม่ได้ยืนยันกับฮาร์ดแวร์จริงหรือ deployment ภายนอก
+
+## ขั้นตอน Git และเอกสาร
+
+Repository หลัก: [Bungkii/Smart-City](https://github.com/Bungkii/Smart-City)
+
+ตามคำขอผู้ดูแล ทุกครั้งหลังแก้งานให้ตรวจสอบงาน อัปเดต `README.md`, `AGENTS.md`, `CONTEXT.md` จากนั้น commit และ push ไปยัง repository นี้ อ่านกติกาการทำงานใน `AGENTS.md` และสถานะล่าสุดใน `CONTEXT.md`

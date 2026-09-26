@@ -15,18 +15,7 @@ function getClient(): SupabaseClient | null {
   return supabaseClient;
 }
 
-export async function getMode(): Promise<Source> {
-  const sb = getClient();
-  if (!sb) return "live";
-
-  try {
-    const { data, error } = await sb.from("settings").select("value").eq("key", "mode").single();
-    if (error || !data) return "live";
-    return (data.value === "demo" ? "demo" : "live") as Source;
-  } catch {
-    return "live";
-  }
-}
+export async function getMode(): Promise<Source> { return "live"; }
 
 export async function setMode(mode: Source): Promise<void> {
   const sb = getClient();
@@ -41,7 +30,7 @@ export async function setMode(mode: Source): Promise<void> {
 
 export async function insertEvent(event: Telemetry, source: Source, receivedAt = new Date().toISOString()): Promise<number> {
   const sb = getClient();
-  if (!sb) return Date.now();
+  if (!sb) throw new Error("Database is not configured");
 
   try {
     const { data, error } = await sb.from("events").insert({
@@ -64,7 +53,7 @@ export async function insertEvent(event: Telemetry, source: Source, receivedAt =
   } catch (err) {
     console.error("PostgreSQL insertEvent error:", err);
   }
-  return Date.now();
+  throw new Error("Unable to persist telemetry");
 }
 
 function mapRowToEvent(r: any): EventRow {
@@ -86,7 +75,7 @@ function mapRowToEvent(r: any): EventRow {
 
 export async function latest(source: Source): Promise<EventRow[]> {
   const sb = getClient();
-  if (!sb) return [];
+  if (!sb) throw new Error("Database is not configured");
 
   try {
     const { data, error } = await sb
@@ -96,7 +85,8 @@ export async function latest(source: Source): Promise<EventRow[]> {
       .order("id", { ascending: false })
       .limit(60);
 
-    if (error || !data || data.length === 0) {
+    if (error) throw error;
+    if (!data || data.length === 0) {
       return [];
     }
 
@@ -109,14 +99,14 @@ export async function latest(source: Source): Promise<EventRow[]> {
       }
     }
     return result;
-  } catch {
-    return [];
+  } catch (error) {
+    throw error;
   }
 }
 
 export async function history(system: SystemId, source: Source, limit = 60): Promise<EventRow[]> {
   const sb = getClient();
-  if (!sb) return [];
+  if (!sb) throw new Error("Database is not configured");
 
   try {
     const { data, error } = await sb
@@ -127,13 +117,14 @@ export async function history(system: SystemId, source: Source, limit = 60): Pro
       .order("id", { ascending: false })
       .limit(limit);
 
-    if (error || !data || data.length === 0) {
+    if (error) throw error;
+    if (!data || data.length === 0) {
       return [];
     }
 
     return data.map(mapRowToEvent);
-  } catch {
-    return [];
+  } catch (error) {
+    throw error;
   }
 }
 
@@ -164,7 +155,7 @@ export async function audit(
 
 export async function auditHistory(): Promise<any[]> {
   const sb = getClient();
-  if (!sb) return [];
+  if (!sb) throw new Error("Database is not configured");
 
   try {
     const { data, error } = await sb
@@ -175,7 +166,7 @@ export async function auditHistory(): Promise<any[]> {
 
     if (error || !data) return [];
     return data;
-  } catch {
-    return [];
+  } catch (error) {
+    throw error;
   }
 }

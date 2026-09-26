@@ -1,3 +1,4 @@
+import { isRegisteredCard } from "@/lib/data-integrity";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -6,17 +7,7 @@ export async function GET() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  if (!url || !key) {
-    return NextResponse.json({
-      cards: [
-        { card_id: "4A6F12C3", name: "นายสมชาย ใจดี", role: "Student", status: "allow" },
-        { card_id: "B3459812", name: "นางสาวกนกวรรณ เพียรธรรม", role: "Teacher", status: "allow" },
-        { card_id: "E19033FA", name: "นายอนันต์ มั่นคง", role: "Staff", status: "allow" },
-        { card_id: "99AA88BB", name: "บัตรระงับการใช้งาน", role: "Guest", status: "banned" },
-      ],
-      logs: [],
-    });
-  }
+  if (!url || !key) return NextResponse.json({ error: "RFID database is not configured" }, { status: 503 });
 
   try {
     const [cardsRes, logsRes] = await Promise.all([
@@ -30,7 +21,8 @@ export async function GET() {
       }),
     ]);
 
-    const cards = cardsRes.ok ? await cardsRes.json() : [];
+    if (!cardsRes.ok || !logsRes.ok) throw new Error("RFID database unavailable");
+    const cards = (await cardsRes.json()).filter(isRegisteredCard);
     const logs = logsRes.ok ? await logsRes.json() : [];
 
     return NextResponse.json({ cards, logs });

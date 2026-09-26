@@ -1,4 +1,3 @@
-import { demoEvents, historicalDemoEvent } from "./demo";
 import type { EventRow, Source, SystemId, Telemetry } from "./model";
 
 type Query = { sql: string; params?: (string | number | null)[] };
@@ -25,20 +24,9 @@ CREATE INDEX IF NOT EXISTS events_lookup ON events(source,system,device_id,id DE
 CREATE TABLE IF NOT EXISTS command_audit (id INTEGER PRIMARY KEY AUTOINCREMENT,time TEXT NOT NULL,actor TEXT NOT NULL,system TEXT NOT NULL,device_id TEXT NOT NULL,command TEXT NOT NULL,reason TEXT NOT NULL,result TEXT NOT NULL,detail TEXT);`);
   const columns = await q("PRAGMA table_info(events)");
   if (!columns.results?.some(c => c.name === "position_json")) await q("ALTER TABLE events ADD COLUMN position_json TEXT");
-  await q("INSERT OR IGNORE INTO settings(key,value) VALUES('mode','demo')");
-  const exists = await q("SELECT 1 FROM events WHERE source='demo' LIMIT 1");
-  if (!exists.results?.length) {
-    const rows: Query[] = [];
-    for (let h = 23; h >= 0; h--) for (const e of demoEvents()) {
-      if (h > 5 && e.system !== "environment") continue;
-      const historical = historicalDemoEvent(e, h);
-      rows.push(insertQuery(historical, "demo", historical.recordedAt));
-    }
-    await query({ batch: rows });
-  }
 }
 function ready() { return initialized ||= init(); }
-export async function getMode(): Promise<Source> { await ready(); return (await q("SELECT value FROM settings WHERE key='mode'")).results?.[0]?.value || "demo"; }
+export async function getMode(): Promise<Source> { return "live"; }
 export async function setMode(mode: Source) { await ready(); await q("UPDATE settings SET value=? WHERE key='mode'", [mode]); }
 export async function insertEvent(event: Telemetry, source: Source, receivedAt = new Date().toISOString()) { await ready(); return (await q(insertSql, insertQuery(event, source, receivedAt).params)).meta?.last_row_id || 0; }
 export async function latest(source: Source): Promise<EventRow[]> { await ready(); return ((await q("SELECT e.* FROM events e JOIN (SELECT device_id,MAX(id) id FROM events WHERE source=? GROUP BY device_id) x ON e.id=x.id ORDER BY e.system,e.device_id", [source])).results || []).map(rowEvent); }

@@ -1,0 +1,127 @@
+/* Monitoring wall inspired by control-room instrumentation. */
+.app-shell:has(.monitor-board) { background:#f3f6f9; }
+.app-shell:has(.monitor-board) .sidebar { width:224px; background:#14243b; border-color:#263b52; padding-top:24px; }
+.app-shell:has(.monitor-board) .brand { padding:0 8px 28px; }
+.app-shell:has(.monitor-board) .nav-link { font-size:11px; }
+.app-shell:has(.monitor-board) .topbar { background:#ffffff; border-color:#dfe7ef; color:#61748a; height:58px; }
+.app-shell:has(.monitor-board) .breadcrumb-brand { color:#687e93; }
+.app-shell:has(.monitor-board) .mode-badge { background:#edf4f9; border-color:#dce7f0; color:#426782; }
+.app-shell:has(.monitor-board) .content { max-width:none; padding:24px; }
+.monitor-board { color:#243b53; --monitor-border:#dfe7ee; font-variant-numeric:tabular-nums; }
+.monitor-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:24px; }
+.monitor-eyebrow { font-size:9px; color:#74899e; letter-spacing:1.7px; display:flex; align-items:center; gap:8px; }
+.monitor-eyebrow > span { width:6px; height:6px; background:#3fc4ef; }
+.monitor-heading h1 { font-size:27px; font-weight:700; letter-spacing:.2px; margin:8px 0; color:#1c344b; }
+.monitor-heading h1 span { font-weight:400; color:#7890a5; }
+.monitor-heading p { font-size:12px; color:#72869b; margin:0; }
+.monitor-toolbar { display:flex; align-items:center; gap:7px; }
+.monitor-toolbar button { width:34px; height:34px; display:grid; place-items:center; color:#537590; border:1px solid #d9e3ed; border-radius:5px; background:#ffffff; }
+.monitor-toolbar button:hover { background:#e9f2f8; }
+.monitor-clock { display:flex; align-items:center; gap:8px; font-size:12px; color:#537087; margin-right:12px; }
+.monitor-clock small { display:block; font-size:9px; color:#7c8fa1; margin-top:4px; }
+.monitor-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:22px; }
+.monitor-kpis > div { display:flex; align-items:center; gap:12px; background:#ffffff; border:1px solid #dfe7ef; border-radius:6px; padding:18px 16px; border-top:2px solid #5898c7; }
+.monitor-kpi-icon { color:#4c91c1; width:38px; height:38px; background:#edf4fa; display:grid; place-items:center; border-radius:5px; flex:none; }
+.monitor-kpis > div > span:nth-child(2) { font-size:11px; color:#51697f; }
+.monitor-kpis small { display:block; font-size:8px; color:#8698a9; margin-top:6px; letter-spacing:.5px; }
+.monitor-kpis strong { margin-left:auto; font-size:31px; color:#294963; text-align:right; font-weight:600; line-height:1; }
+.monitor-kpis strong small { font-weight:400; font-size:9px; margin-top:9px; }
+.monitor-kpis .online { border-top-color:#3bb5a6; }.monitor-kpis .online strong,.monitor-kpis .online .monitor-kpi-icon { color:#17866d; }
+.monitor-kpis .warning { border-top-color:#c3944b; }.monitor-kpis .warning strong,.monitor-kpis .warning .monitor-kpi-icon { color:#b57a24; }
+.monitor-kpis .offline { border-top-color:#9e6471; }.monitor-kpis .offline strong,.monitor-kpis .offline .monitor-kpi-icon { color:#b96773; }
+.monitor-section-label { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 0 12px; }
+.monitor-section-label h2 { display:flex; gap:8px; align-items:center; font-size:11px; font-weight:500; letter-spacing:1px; margin:0; color:#425e76; }
+.monitor-section-label > span { font-size:10px; color:#7f93a6; }
+.monitor-systems { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; }
+.monitor-system { background:#ffffff; border:1px solid #dce5ee; border-radius:6px; padding:14px; overflow:hidden; position:relative; transition:border-color .15s; display:flex; flex-direction:column; }
+.monitor-system:hover { border-color:#81adc9; background:#f8fbfe; }
+.monitor-system-top { display:flex; justify-content:space-between; gap:6px; color:#728da4; font-size:8px; text-transform:uppercase; letter-spacing:.7px; }
+.monitor-system-top > span { display:flex; align-items:center; gap:7px; }
+.monitor-system-title h3 { font-size:13px; color:#284258; margin:14px 0 9px; font-weight:500; }
+.monitor-status { display:inline-flex; gap:5px; align-items:center; font-size:9px; color:#8295a8; }
+.monitor-status i { width:5px; height:5px; border-radius:50%; background:#94a7b9; }
+.monitor-status.normal { color:#16866c; }.monitor-status.normal i { background:#16866c; }
+.monitor-status.warning { color:#b57a24; }.monitor-status.warning i { background:#b57a24; }
+.monitor-status.offline { color:#b96773; }.monitor-status.offline i { background:#b96773; }
+.monitor-ring { width:132px; height:132px; position:relative; margin:8px auto; }
+.monitor-ring svg { width:100%; height:100%; transform:rotate(-90deg); }
+.monitor-ring circle { fill:none; stroke:#e8eff5; stroke-width:7; }
+.monitor-ring circle.ring-value { stroke:#3ca5cf; stroke-linecap:round; }
+.monitor-ring > div { position:absolute; inset:0; display:flex; justify-content:center; align-items:center; flex-direction:column; }
+.monitor-ring strong { font-size:34px; font-weight:500; color:#2e698d; }
+.monitor-ring span { font-size:10px; color:#718ba0; margin-top:5px; }
+.monitor-pair { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:auto; padding-top:6px; }
+.monitor-pair > span { font-size:9px; color:#8295a6; }
+.monitor-pair > span + span { border-left:1px solid #e3eaf0; padding-left:10px; }
+.monitor-pair b { display:block; color:#3b5970; font-size:15px; font-weight:500; margin-top:6px; word-break:break-word; }
+.monitor-pair b small { font-size:9px; font-weight:400; color:#8599aa; }
+.monitor-selection { font-size:8px; color:#879bad; padding-top:8px; }
+.monitor-system-foot { display:flex; justify-content:space-between; gap:5px; border-top:1px solid #e6edf3; padding-top:11px; margin-top:14px; font-size:8px; color:#8b9dac; }
+.monitor-traffic { height:132px; display:flex; justify-content:center; align-items:center; gap:8px; }
+.monitor-traffic i { width:30px; height:30px; border-radius:50%; border:3px solid #e0e8ef; background:#edf1f5; }
+.monitor-traffic .red { background:#ee6f7b; border-color:#bc5964; box-shadow:0 0 16px #ee6f7b25; }
+.monitor-traffic .yellow { background:#efbe62; border-color:#bd9448; }
+.monitor-traffic .green { background:#50cfa9; border-color:#319476; }
+.monitor-gate { height:148px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:#7099b8; }
+.monitor-gate strong { font-size:25px; font-weight:500; color:#355b77; }
+.monitor-gate span { font-size:9px; color:#7990a5; }
+.monitor-air { height:132px; display:flex; flex-direction:column; justify-content:center; align-items:center; }
+.monitor-air strong { font-size:43px; font-weight:500; color:#258daf; }
+.monitor-air span { font-size:10px; color:#5c7b91; margin-top:5px; }.monitor-air small { color:#839bb0; padding-left:5px; }
+.monitor-waiting { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:13px 16px; margin-top:14px; border:1px solid #e6dfca; border-left:3px solid #a58a52; border-radius:4px; background:#fffdf7; color:#9c7a38; font-size:10px; }
+.monitor-waiting strong { font-weight:500; }.monitor-waiting > span { color:#83919c; }.monitor-waiting a { display:flex; align-items:center; gap:5px; margin-left:auto; color:#567990; }
+.monitor-bottom { display:grid; grid-template-columns:1.1fr 1fr 1fr; gap:12px; margin-top:18px; }
+.monitor-panel { background:#ffffff; border:1px solid #dfe7ef; border-radius:6px; min-width:0; overflow:hidden; }
+.monitor-panel-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:16px; border-bottom:1px solid #e7edf3; }
+.monitor-panel-heading small { color:#8ba0b3; font-size:8px; letter-spacing:1.2px; }
+.monitor-panel-heading h2 { margin:5px 0 0; font-size:13px; font-weight:500; }
+.monitor-panel-heading > span { font-size:8px; color:#8b9faf; white-space:nowrap; }
+.monitor-chart-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; justify-content:space-between; margin:14px 16px 0; font-size:9px; color:#7a8fa2; }
+.monitor-chart-tools select { color:#5c788f; border:1px solid #dce6ee; border-radius:4px; background:#f6f9fc; padding:5px; font-size:9px; max-width:170px; }
+.monitor-chart-area { height:220px; padding:10px; }
+.monitor-no-chart { position:relative; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#9aaec0; }
+.monitor-chart-grid { position:absolute; inset:15px; background-image:linear-gradient(#e5edf280 1px,transparent 1px),linear-gradient(90deg,#e5edf280 1px,transparent 1px); background-size:44px 40px; }
+.monitor-no-chart strong,.monitor-no-chart span,.monitor-no-chart svg { z-index:1; }.monitor-no-chart strong { font-size:12px; font-weight:500; color:#6f8a9f; }.monitor-no-chart span { font-size:9px; }
+.monitor-map .location-empty { min-height:221px; background:#f7fafc; color:#9bb3c5; gap:12px; }
+.monitor-map .location-empty strong { color:#6d899f; font-size:12px; font-weight:500; }.monitor-map .location-empty span { font-size:9px; }
+.monitor-map .location-caption { background:#f8fafc; color:#889eaf; border-color:#e4ecf2; font-size:9px; padding:12px; }
+.monitor-map .osm-map { height:221px; min-height:221px; }
+.monitor-log { padding:0 14px; }.monitor-log a { display:flex; align-items:center; gap:9px; padding:13px 0; border-bottom:1px solid #e8eef3; }.monitor-log a:last-child { border:0; }
+.monitor-log strong { display:block; font-size:10px; font-weight:500; color:#4b687f; }.monitor-log small { display:block; font-size:8px; margin-top:5px; color:#8da3b5; }.monitor-log time { font-size:9px; margin-left:auto; color:#839aad; }
+.monitor-log-dot { width:5px; height:5px; background:#50cfa9; border-radius:50%; flex:none; }.monitor-log-dot.offline { background:#ad7b87; }.monitor-log-dot.warning { background:#b57a24; }
+.monitor-log-empty { height:265px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:13px; color:#99aebf; }.monitor-log-empty strong { font-size:12px; font-weight:500; color:#6b889e; }.monitor-log-empty span { font-size:9px; text-align:center; padding:0 14px; }
+.monitor-footer { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-top:17px; font-size:8px; color:#8ca0b1; letter-spacing:.5px; }.monitor-footer span:first-child { display:flex; align-items:center; gap:7px; }
+.app-shell:has(.wall-mode) .sidebar,.app-shell:has(.wall-mode) .topbar { display:none; }
+.app-shell:has(.wall-mode) .content { padding:28px; }
+@media(min-width:1700px) { .monitor-heading h1 { font-size:34px; }.monitor-kpis > div { padding:24px; }.monitor-system { padding:20px; }.monitor-ring { width:155px; height:155px; }.monitor-air,.monitor-traffic { height:155px; }.monitor-gate { height:171px; }.monitor-chart-area { height:280px; }.monitor-map .location-empty { min-height:281px; }.monitor-map .osm-map { height:281px; }.monitor-log-empty { height:325px; } }
+@media(max-width:1100px) { .monitor-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }.monitor-systems { grid-template-columns:repeat(3,minmax(0,1fr)); }.monitor-bottom { grid-template-columns:repeat(2,minmax(0,1fr)); }.monitor-events { grid-column:1/-1; }.monitor-log-empty { height:160px; }.monitor-heading { flex-wrap:wrap; } }
+@media(max-width:850px) { .app-shell:has(.monitor-board) .sidebar { position:fixed; }.monitor-systems { grid-template-columns:repeat(2,minmax(0,1fr)); }.monitor-system:last-child { grid-column:1/-1; }.monitor-system:last-child .monitor-air { height:100px; }.monitor-bottom { grid-template-columns:1fr; }.app-shell:has(.monitor-board) .content { padding:18px; }.monitor-section-label { align-items:flex-start; }.monitor-section-label > span { max-width:130px; text-align:right; }.monitor-heading h1 { font-size:24px; }.monitor-kpis > div { padding:14px; gap:9px; }.monitor-kpi-icon { display:none; } }
+@media(max-width:420px) { .monitor-heading h1 { font-size:21px; }.monitor-eyebrow { font-size:7px; }.monitor-kpis strong { font-size:27px; }.monitor-kpis > div > span:nth-child(2) { font-size:10px; }.monitor-kpis small { font-size:6px; }.monitor-system { padding:11px; }.monitor-system-title h3 { font-size:12px; }.monitor-system-top { font-size:7px; }.monitor-system-foot { font-size:7px; }.monitor-ring { width:115px; height:115px; }.monitor-traffic,.monitor-air { height:115px; } }
+
+.city-weather { display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; background:#fff; border:1px solid #dfe7ef; border-radius:7px; margin:0 0 22px; padding:22px 20px; gap:18px; }
+.city-weather-heading { display:flex; align-items:center; gap:13px; }.city-weather-icon { display:grid; place-items:center; width:49px; height:49px; border-radius:10px; background:#eaf4fa; color:#5997bb; flex:none; }.city-weather-heading small { display:block; color:#8aa0b3; font-size:8px; letter-spacing:.5px; line-height:1.7; }.city-weather-heading h2 { color:#2d4b63; font-size:16px; margin:5px 0; font-weight:600; }.city-weather-heading div > span { color:#7c94a7; font-size:10px; }.city-weather-metric { border-left:1px solid #e4ebf1; padding-left:20px; display:flex; flex-direction:column; justify-content:center; gap:10px; }.city-weather-metric > span:first-child { display:flex; align-items:center; gap:7px; color:#6a849a; font-size:11px; }.city-weather-metric strong { font-size:32px; color:#2f698e; font-weight:500; }.city-weather-metric strong small { font-size:12px; color:#8099ab; font-weight:400; }.city-weather-metric > span:last-child { font-size:9px; color:#92a4b3; }
+@media(max-width:1100px) { .city-weather { grid-template-columns:repeat(3,minmax(0,1fr)); }.city-weather-heading { grid-column:1/-1; }.city-weather-metric:nth-child(2) { border:0; padding-left:0; } }
+@media(max-width:420px) { .city-weather { padding:16px; gap:12px; }.city-weather-metric { padding-left:10px; }.city-weather-metric strong { font-size:25px; }.city-weather-metric > span:first-child { font-size:9px; }.city-weather-metric > span:last-child { font-size:8px; }.city-weather-metric strong small { font-size:9px; } }
+/* Keep the city overview compact enough for a monitoring display. */
+@media(min-width:1101px) and (max-height:1100px) {
+  .app-shell:has(.monitor-board) .content { padding:20px 24px; }
+  .monitor-heading { margin-bottom:17px; }
+  .monitor-kpis { margin-bottom:16px; }
+  .monitor-kpis > div { padding:14px 16px; }
+  .city-weather { padding:17px 20px; margin-bottom:17px; }
+  .monitor-ring { width:105px; height:105px; margin:4px auto; }
+  .monitor-traffic,.monitor-air { height:113px; }
+  .monitor-gate { height:113px; }
+  .monitor-system-title h3 { margin-top:10px; }
+  .monitor-system-foot { padding-top:9px; margin-top:10px; }
+  .monitor-bottom { margin-top:14px; }
+  .monitor-panel-heading { padding:13px 16px; }
+  .monitor-chart-area { height:170px; }
+  .monitor-map .location-empty { min-height:171px; }
+  .monitor-map .osm-map { height:171px; min-height:171px; }
+  .monitor-log-empty { height:215px; }
+  .monitor-log a { padding:9px 0; }
+}
+.monitor-system-foot,.monitor-selection { color:#6f8496; }
+.monitor-kpis small,.monitor-panel-heading small { color:#71889d; }
+.city-weather-metric > span:last-child { color:#748b9d; }

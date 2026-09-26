@@ -73,20 +73,7 @@
   color: #96a8b0;
 }
 
-.map-demo-label {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 500;
-  background: #fff8e8;
-  color: #a87927;
-  border: 1px solid #efddb7;
-  border-radius: 5px;
-  padding: 5px 8px;
-  font-size: 9px;
-  font-weight: 700;
-  box-shadow: 0 3px 10px #173a4b1b;
-}
+
 
 .osm-legend {
   position: absolute;

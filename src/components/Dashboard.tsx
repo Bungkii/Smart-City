@@ -6,17 +6,18 @@ import {
   Activity, AlertTriangle, ArrowRight, Bell, CarFront, Check, 
   Clock3, DoorOpen, Download, Gauge, Lightbulb, MapPin, Menu, 
   Radio, RefreshCw, Search, Settings2, ShieldCheck, Signal, 
-  Sparkles, TrafficCone, X, Zap 
+  TrafficCone, X, Zap
 } from "lucide-react";
 import { deviceHealth, systems, systemIds, type EventRow, type Health, type SystemId } from "@/lib/model";
 import DeviceMap from "./DeviceMap";
+import OperationsOverview from "./OperationsOverview";
 import { 
   ParkingVisualizer, TrafficVisualizer, StreetlightVisualizer, 
   GateVisualizer, EnvironmentVisualizer 
 } from "./SystemVisualizers";
 
 type Snapshot = { 
-  mode: "demo" | "live"; 
+  mode: "live";
   devices: EventRow[]; 
   alerts: { id: number; deviceId: string; name: string; system: SystemId; health: Health; note: string; time: string }[]; 
   history: Record<SystemId, EventRow[]>; 
@@ -49,13 +50,13 @@ function Shell({
   active, 
   mode, 
   updated,
-  onSimulate
+  connection
 }: { 
   children: React.ReactNode; 
   active?: SystemId | "settings"; 
-  mode: "demo" | "live"; 
+  mode: "live";
   updated?: string;
-  onSimulate?: () => void;
+  connection: "error" | "loading" | "ready" | "empty";
 }) {
   const [open, setOpen] = useState(false);
 
@@ -95,9 +96,9 @@ function Shell({
             <span className="side-help-icon"><Radio size={16} /></span>
             <div>
               <strong>สถานะการเชื่อมต่อ</strong>
-              <p>{mode === "demo" ? "กำลังใช้ข้อมูลจำลอง (Demo)" : "เชื่อมต่ออุปกรณ์จริง (Live)"}</p>
+              <p>{connection === "error" ? "เชื่อมต่อข้อมูลไม่สำเร็จ" : connection === "loading" ? "กำลังเชื่อมต่อ" : connection === "empty" ? "รอข้อมูลจากอุปกรณ์" : "อ่านข้อมูลจากฐานข้อมูล"}</p>
             </div>
-            <span className="online-dot" />
+            <span className={`connection-dot ${connection}`} />
           </div>
         </div>
       </aside>
@@ -114,12 +115,8 @@ function Shell({
           </div>
 
           <div className="top-actions">
-            {mode === "demo" && onSimulate && (
-              <button className="sim-top-btn" onClick={onSimulate} title="จำลองข้อมูลสุ่มแบบ Real-time">
-                <Sparkles size={14} /> จำลองเหตุการณ์สด
-              </button>
-            )}
-            <span className={`mode-badge ${mode}`}>{mode === "demo" ? "DEMO MODE" : "LIVE MODE"}</span>
+
+            <span className={`mode-badge ${mode}`}>{connection === "error" ? "CONNECTION ERROR" : connection === "loading" ? "CONNECTING" : "DEVICE DATA"}</span>
             <span className="top-updated"><Clock3 size={15} /> {shortTime(updated)}</span>
             <Link href="/settings" aria-label="ตั้งค่า"><Settings2 size={18} /></Link>
           </div>
@@ -135,12 +132,12 @@ export default function Dashboard({ systemId, settings = false }: { systemId?: S
   const [data, setData] = useState<Snapshot | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
 
   const load = useCallback(async () => {
     try {
       const r = await fetch("/api/dashboard", { cache: "no-store" });
-      if (!r.ok) throw new Error("โหลดข้อมูลไม่สำเร็จ");
+      if (!r.ok) throw new Error("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาตรวจสอบการตั้งค่าและเครือข่าย");
       setData(await r.json());
       setError("");
     } catch (e) {
@@ -161,55 +158,22 @@ export default function Dashboard({ systemId, settings = false }: { systemId?: S
     load();
   };
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
-  };
-
-  const handleSimulate = async (targetDeviceId?: string) => {
-    try {
-      const res = await fetch("/api/demo/simulate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          system: systemId,
-          deviceId: targetDeviceId 
-        })
-      });
-      const result = await res.json();
-      if (result.success) {
-        showToast(`⚡ ${result.message}`);
-        load();
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   return (
     <Shell 
       active={settings ? "settings" : systemId} 
-      mode={data?.mode || "demo"} 
+      mode="live"
       updated={data?.serverTime}
-      onSimulate={data?.mode === "demo" ? () => handleSimulate() : undefined}
+      connection={error ? "error" : !data ? "loading" : data.devices.length ? "ready" : "empty"}
     >
       <div className="content">
-        {/* Toast Notification */}
-        {toastMessage && (
-          <div className="live-toast">
-            <Zap size={16} className="toast-icon" />
-            <span>{toastMessage}</span>
-          </div>
-        )}
-
         {error && (
           <div className="error-bar">
-            {error} <button onClick={refresh}>ลองอีกครั้ง</button>
+            {error} {data && "ข้อมูลด้านล่างเป็นข้อมูลที่โหลดสำเร็จครั้งล่าสุด"} <button onClick={refresh}>ลองอีกครั้ง</button>
           </div>
         )}
 
         {!data ? (
-          <div className="loading">กำลังเชื่อมต่อข้อมูล Smart City...</div>
+          <div className="loading">{error ? "ยังไม่สามารถแสดงข้อมูลอุปกรณ์ได้" : "กำลังเชื่อมต่อข้อมูล Smart City..."}</div>
         ) : settings ? (
           <Settings data={data} reload={load} />
         ) : systemId ? (
@@ -217,15 +181,13 @@ export default function Dashboard({ systemId, settings = false }: { systemId?: S
             id={systemId} 
             data={data} 
             refresh={refresh} 
-            refreshing={refreshing} 
-            onSimulate={handleSimulate}
+            refreshing={refreshing}
           />
         ) : (
-          <Overview 
+          <OperationsOverview
             data={data} 
             refresh={refresh} 
-            refreshing={refreshing} 
-            onSimulate={handleSimulate}
+            refreshing={refreshing}
           />
         )}
       </div>
@@ -274,43 +236,10 @@ function PageHeading({
   );
 }
 
-function SummaryCard({ id, devices }: { id: SystemId; devices: EventRow[] }) {
-  const list = devices.filter(d => d.system === id);
-  const healthy = list.filter(d => deviceHealth(d) === "normal").length;
-  const value = id === "parking" 
-    ? `${list.filter(d => !((d.data as any).occupied)).length} / ${list.length}` 
-    : id === "environment" 
-      ? (list.length ? `${(list[0].data as any).pm25}` : "—") 
-      : `${healthy} / ${list.length}`;
-  const label = id === "parking" 
-    ? "ช่องว่าง / ทั้งหมด" 
-    : id === "environment" 
-      ? "PM2.5  µg/m³" 
-      : "ทำงานปกติ / ทั้งหมด";
-  const flagged = list.some(d => deviceHealth(d) !== "normal");
-
-  return (
-    <Link href={`/systems/${id}`} className="summary-card">
-      <div className="card-top">
-        <span className={`card-icon ${id}`}><MetricIcon id={id} /></span>
-        <ArrowRight size={17} className="card-arrow" />
-      </div>
-      <div className="card-label">{systems[id].title}</div>
-      <div className="card-value">{value}</div>
-      <div className="card-foot">
-        <span>{label}</span>
-        <span className={`tiny-indicator ${flagged || !list.length ? "warn" : ""}`}>
-          {!list.length ? "ไม่มีข้อมูล" : flagged ? "มีแจ้งเตือน" : "ปกติ"}
-        </span>
-      </div>
-    </Link>
-  );
-}
-
 function TrendChart({ events, system }: { events: EventRow[]; system: SystemId }) {
   const points = useMemo(() => 
     events
-      .filter(e => system === "environment" ? e.deviceId === "EN-1" : e.deviceId === events[0]?.deviceId)
+      .filter(e => system === "environment" ? e.deviceId === events[0]?.deviceId : e.deviceId === events[0]?.deviceId)
       .slice()
       .reverse()
       .map(e => ({
@@ -328,6 +257,7 @@ function TrendChart({ events, system }: { events: EventRow[]; system: SystemId }
     [events, system]
   );
 
+  if (!points.length) return <div className="empty-state chart-empty">ยังไม่มีข้อมูลสำหรับแสดงแนวโน้ม</div>;
   return (
     <div className="chart-wrap">
       <ResponsiveContainer width="100%" height="100%">
@@ -381,143 +311,10 @@ function AlertList({ alerts }: { alerts: Snapshot["alerts"] }) {
         ))
       ) : (
         <div className="empty-state">
-          <Check size={20} /> ทุกระบบทำงานในสภาวะปกติ ไม่มีรายการแจ้งเตือน
+          <Check size={20} /> ไม่มีรายการแจ้งเตือนจากข้อมูลที่ได้รับ
         </div>
       )}
     </div>
-  );
-}
-
-function Overview({ 
-  data, 
-  refresh, 
-  refreshing, 
-  onSimulate 
-}: { 
-  data: Snapshot; 
-  refresh: () => void; 
-  refreshing: boolean;
-  onSimulate: (deviceId?: string) => void;
-}) {
-  const normal = data.devices.filter(d => deviceHealth(d) === "normal").length;
-  const warnings = data.alerts.filter(a => a.health === "warning").length;
-  const offlines = data.alerts.filter(a => a.health === "offline").length;
-
-  const exportCsv = () => {
-    const headers = "ID,System,DeviceID,Name,Location,RecordedAt,Health\n";
-    const rows = data.devices.map(d => 
-      `"${d.id}","${d.system}","${d.deviceId}","${d.name}","${d.location}","${d.recordedAt}","${d.health}"`
-    ).join("\n");
-    const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `act_smartcity_devices_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  return (
-    <>
-      <PageHeading 
-        eyebrow="SMART CAMPUS SOC / COMMAND CENTER" 
-        title="ศูนย์ควบคุมและสั่งการเมืองอัจฉริยะ" 
-        description="ติดตามความปลอดภัย การจราจร พลังงาน และสิ่งแวดล้อมทั่วโรงเรียนอัสสัมชัญธนบุรีแบบ Real-time" 
-        refresh={refresh} 
-        refreshing={refreshing}
-        exportData={exportCsv}
-      />
-
-      <div className={`notice ${data.mode}`}>
-        <span className="notice-icon"><Radio size={18} /></span>
-        <div>
-          <strong>{data.mode === "demo" ? "กำลังแสดงข้อมูลสาธิต (Interactive Demo Mode)" : "กำลังแสดงข้อมูลจริง (Live Ingestion Mode)"}</strong>
-          <p>{data.mode === "demo" ? "สามารถคลิกสุ่มจำลองเหตุการณ์ หรือทดสอบการทำงานของระบบต่างๆ แบบ Real-time ได้ทันที" : "รับส่งข้อมูลจริงผ่าน Ingestion API หากไม่มีข้อมูลส่งเข้าตามเวลาที่กำหนดจะปรับสถานะเป็นออฟไลน์อัตโนมัติ"}</p>
-        </div>
-        <Link href="/settings">จัดการโหมด <ArrowRight size={15} /></Link>
-      </div>
-
-      {/* Key Metrics Stats Row */}
-      <div className="stats-row">
-        <div>
-          <span>อุปกรณ์ทั้งหมด (Connected)</span>
-          <strong>{data.devices.length}</strong>
-          <small>ครอบคลุม 5 ระบบหลัก</small>
-        </div>
-        <div>
-          <span>สถานะปกติ (Online)</span>
-          <strong className="green-text">{normal}</strong>
-          <small className="green-text">● ออนไลน์สมบูรณ์</small>
-        </div>
-        <div>
-          <span>แจ้งเตือน (Warnings)</span>
-          <strong className="orange-text">{warnings}</strong>
-          <small>รายการต้องตรวจสอบ</small>
-        </div>
-        <div>
-          <span>ขาดการติดต่อ (Offline)</span>
-          <strong>{offlines}</strong>
-          <small>อุปกรณ์ออฟไลน์</small>
-        </div>
-      </div>
-
-      {/* Subsystem Cards */}
-      <div className="section-title">
-        <div>
-          <span className="section-kicker">SYSTEM MODULES</span>
-          <h2>สถานะ 5 ระบบหลัก</h2>
-        </div>
-        <span>คลิกที่การ์ดเพื่อเปิดดูรายละเอียด <ArrowRight size={14} /></span>
-      </div>
-
-      <div className="summary-grid">
-        {systemIds.map(id => (
-          <SummaryCard key={id} id={id} devices={data.devices} />
-        ))}
-      </div>
-
-      {/* Map & Trend Chart */}
-      <div className="two-column">
-        <section className="panel map-panel">
-          <div className="panel-head">
-            <div>
-              <span className="section-kicker">CAMPUS DIGITAL TWIN & GIS</span>
-              <h2>แผนผังและตำแหน่งอุปกรณ์ (Campus Map)</h2>
-            </div>
-            <MapPin size={18} />
-          </div>
-          <DeviceMap devices={data.devices} mode={data.mode} />
-        </section>
-
-        <section className="panel">
-          <div className="panel-head">
-            <div>
-              <span className="section-kicker">AIR QUALITY TELEMETRY</span>
-              <h2>แนวโน้มค่าฝุ่น PM2.5 ย้อนหลัง</h2>
-            </div>
-            <span className="panel-tag">24 ชั่วโมงล่าสุด</span>
-          </div>
-          <TrendChart events={data.history.environment || []} system="environment" />
-          <div className="chart-caption">
-            <span><i /> PM2.5 Concentration</span>
-            <span>หน่วยมาตรฐาน: µg/m³</span>
-          </div>
-        </section>
-      </div>
-
-      {/* Live Alerts Section */}
-      <section className="panel alerts-panel">
-        <div className="panel-head">
-          <div>
-            <span className="section-kicker">INCIDENT MONITORING</span>
-            <h2>รายการแจ้งเตือนที่ต้องตรวจสอบ ({data.alerts.length})</h2>
-          </div>
-          <Bell size={18} />
-        </div>
-        <AlertList alerts={data.alerts} />
-      </section>
-    </>
   );
 }
 
@@ -547,14 +344,12 @@ function SystemDetail({
   id, 
   data, 
   refresh, 
-  refreshing,
-  onSimulate
+  refreshing
 }: { 
   id: SystemId; 
   data: Snapshot; 
   refresh: () => void; 
   refreshing: boolean;
-  onSimulate: (deviceId?: string) => void;
 }) {
   const devices = data.devices.filter(d => d.system === id); 
   const events = data.history[id] || [];
@@ -577,25 +372,25 @@ function SystemDetail({
 
       <div className={`notice compact ${data.mode}`}>
         <Radio size={16} />
-        <strong>{data.mode === "demo" ? "โหมดสาธิต (Demo)" : "โหมดข้อมูลจริง (Live)"}</strong>
+        <strong>{"โหมดข้อมูลจริง (Live)"}</strong>
         <span>อัปเดตล่าสุด: {time(latestUpdate)}</span>
       </div>
 
       {/* System Interactive Visualizer */}
       {id === "parking" && (
-        <ParkingVisualizer devices={data.devices} mode={data.mode} onSimulate={onSimulate} />
+        <ParkingVisualizer devices={data.devices} mode={data.mode} />
       )}
       {id === "traffic" && selectedDevice && (
-        <TrafficVisualizer device={selectedDevice} mode={data.mode} onSimulate={onSimulate} />
+        <TrafficVisualizer device={selectedDevice} mode={data.mode} />
       )}
       {id === "streetlight" && (
-        <StreetlightVisualizer devices={data.devices} mode={data.mode} onSimulate={onSimulate} />
+        <StreetlightVisualizer devices={data.devices} mode={data.mode} />
       )}
       {id === "gate" && selectedDevice && (
-        <GateVisualizer device={selectedDevice} mode={data.mode} onSimulate={onSimulate} />
+        <GateVisualizer device={selectedDevice} mode={data.mode} />
       )}
       {id === "environment" && selectedDevice && (
-        <EnvironmentVisualizer device={selectedDevice} mode={data.mode} onSimulate={onSimulate} />
+        <EnvironmentVisualizer device={selectedDevice} mode={data.mode} />
       )}
 
       {/* Detail Stats */}
@@ -739,7 +534,7 @@ function SystemDetail({
   );
 }
 
-function ControlPanel({ device, mode }: { device: EventRow; mode: "demo" | "live" }) {
+function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
   const options = device.system === "gate" 
     ? ["open", "close"] 
     : device.system === "traffic" 
@@ -784,9 +579,7 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "demo" | "live
       <div className="control-heading">
         <ShieldCheck size={16} /> ส่งคำสั่งควบคุมอุปกรณ์ (Device Control)
       </div>
-      {mode === "demo" ? (
-        <p>โหมดสาธิตปิดการส่งคำสั่งตรงไปยังฮาร์ดแวร์จริง หากต้องการใช้งานจริงให้สลับเป็น Live Mode</p>
-      ) : (
+      {(
         <>
           <select value={command} onChange={e => setCommand(e.target.value)}>
             {options.map(x => <option key={x} value={x}>{x}</option>)}
@@ -815,13 +608,13 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "demo" | "live
 function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
   const [token, setToken] = useState("");
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
+
   const [audit, setAudit] = useState<any[]>([]);
   const [auditLoaded, setAuditLoaded] = useState(false);
 
   // Fleet Wi-Fi Sync State
-  const [wifiSsid, setWifiSsid] = useState("ACT-SmartCity-2.4G");
-  const [wifiPass, setWifiPass] = useState("ACT12345678");
+  const [wifiSsid, setWifiSsid] = useState("");
+  const [wifiPass, setWifiPass] = useState("");
   const [wifiMsg, setWifiMsg] = useState("");
   const [savingWifi, setSavingWifi] = useState(false);
 
@@ -872,28 +665,12 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
     }
   };
 
-  const changeMode = async (mode: "demo" | "live") => {
-    setBusy(true);
-    const r = await fetch("/api/settings", {
-      method: "PATCH",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ mode })
-    });
-    const body = await r.json();
-    setMessage(r.ok ? `เปลี่ยนเป็น ${mode === "demo" ? "Demo Mode" : "Live Mode"} เรียบร้อยแล้ว` : body.error || "ไม่สามารถเปลี่ยนโหมด");
-    setBusy(false);
-    if (r.ok) reload();
-  };
-
   return (
     <>
       <PageHeading 
         eyebrow="PREFERENCES / CONFIGURATION" 
         title="ตั้งค่าระบบ & ความปลอดภัย" 
-        description="เลือกแหล่งข้อมูล จัดการ Wi-Fi กลางสำหรับทุกบอร์ด และดู Security Audit Log" 
+        description="จัดการการเชื่อมต่อ Wi-Fi และตรวจสอบประวัติการควบคุมอุปกรณ์"
       />
 
       <div className="settings-grid">
@@ -906,39 +683,9 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
             <Settings2 size={18} />
           </div>
 
-          <p className="setting-desc">
-            <strong>Demo Mode:</strong> ใช้ข้อมูลจำลองและผังเมืองสาธิตเพื่อการทดลองและนำเสนอ<br />
-            <strong>Live Mode:</strong> เชื่อมต่อเซนเซอร์จริงจาก 5 บอร์ดผ่าน Supabase & Ingest API
-          </p>
-
-          <div className="mode-options">
-            <button 
-              className={data.mode === "demo" ? "chosen" : ""} 
-              onClick={() => changeMode("demo")} 
-              disabled={busy}
-            >
-              <span>
-                <strong>Demo Mode (ข้อมูลสาธิต)</strong>
-                <small>ข้อมูลจำลอง 24 ชม. สำหรับทดลองหน้าจอ</small>
-              </span>
-              {data.mode === "demo" && <Check size={18} />}
-            </button>
-
-            <button 
-              className={data.mode === "live" ? "chosen" : ""} 
-              onClick={() => changeMode("live")} 
-              disabled={busy}
-            >
-              <span>
-                <strong>Live Mode (ข้อมูลจริง)</strong>
-                <small>ข้อมูลจริงจากอุปกรณ์ผ่าน Supabase & REST API</small>
-              </span>
-              {data.mode === "live" && <Check size={18} />}
-            </button>
-          </div>
-
+          <p className="setting-desc">ระบบรับข้อมูลจากอุปกรณ์จริงเท่านั้น เมื่อยังไม่มีข้อมูล จะแสดงสถานะรอรับข้อมูลโดยไม่สร้างค่าทดแทน</p>
           <label className="field-label">
-            Settings Token (เพื่อยืนยันสิทธิ์การเปลี่ยนโหมด)
+            Settings Token (สำหรับอ่านประวัติการควบคุม)
             <input 
               type="password" 
               placeholder="กรอก token จาก .env.local" 

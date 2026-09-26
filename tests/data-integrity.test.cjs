@@ -1,0 +1,12 @@
+const fs=require('fs');const ts=require('typescript');const vm=require('node:vm');const assert=require('node:assert/strict');
+const source=fs.readFileSync('src/lib/data-integrity.ts','utf8');
+const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+const ctx={exports:{}};vm.runInNewContext(js,ctx);
+const base={source:'live',system:'environment',deviceId:'sensor-actual',name:'Station',location:'Campus',note:'',data:{pm25:24,temperature:29.8,humidity:65}};
+assert.equal(ctx.exports.isDeviceEvent(base),true);
+assert.equal(ctx.exports.isDeviceEvent({...base,source:'demo'}),false);
+assert.equal(ctx.exports.isDeviceEvent({...base,note:'ระบบเชื่อมต่อพร้อมรับสัญญาณฮาร์ดแวร์จริง'}),false);
+const legacy={...base,deviceId:'EN-01',name:'สถานีสิ่งแวดล้อมกลาง',location:'ใจกลางวิทยาเขต',note:'สถานะอากาศปกติ',position:{lat:13.7551,lng:100.5014}};
+assert.equal(ctx.exports.isDeviceEvent(legacy),false);
+assert.equal(ctx.exports.isDeviceEvent({...legacy,data:{...legacy.data,pm25:25}}),true);
+console.log('PASS: real telemetry retained; legacy synthetic records excluded; changed measurements retained.');

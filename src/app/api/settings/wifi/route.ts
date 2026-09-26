@@ -6,13 +6,7 @@ export async function GET() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  if (!url || !key) {
-    return NextResponse.json({
-      ssid: "ACT-SmartCity-2.4G",
-      pass: "ACT12345678",
-      hotspotRecommendation: "เปิด Hotspot มือถือชื่อ 'ACT-SmartCity-2.4G' รหัส 'ACT12345678' เพื่อให้บอร์ดทั้งหมด 5 บอร์ดเชื่อมต่อพร้อมกันทันที",
-    });
-  }
+  if (!url || !key) return NextResponse.json({ error: "Wi-Fi settings unavailable" }, { status: 503 });
 
   try {
     const res = await fetch(`${url}/rest/v1/settings?select=*`, {
@@ -20,9 +14,10 @@ export async function GET() {
       cache: "no-store",
     });
 
-    let ssid = "ACT-SmartCity-2.4G";
-    let pass = "ACT12345678";
+    let ssid = "";
+    let pass = "";
 
+    if (!res.ok) throw new Error("Wi-Fi settings unavailable");
     if (res.ok) {
       const rows = (await res.json()) as Array<{ key: string; value: string }>;
       const ssidRow = rows.find((r) => r.key === "wifi_ssid");
@@ -37,7 +32,7 @@ export async function GET() {
       hotspotRecommendation: `เปิด Hotspot มือถือชื่อ '${ssid}' รหัส '${pass}' เพื่อให้บอร์ดทั้งหมด 5 บอร์ดเชื่อมต่อพร้อมกันทันที`,
     });
   } catch (err: any) {
-    return NextResponse.json({ ssid: "ACT-SmartCity-2.4G", pass: "ACT12345678" });
+    return NextResponse.json({ error: "Wi-Fi settings unavailable" }, { status: 503 });
   }
 }
 
@@ -53,9 +48,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "SSID is required" }, { status: 400 });
     }
 
+    if (!url || !key) return NextResponse.json({ error: "Wi-Fi settings unavailable" }, { status: 503 });
     if (url && key) {
       // Upsert to Supabase settings
-      await Promise.all([
+      const results = await Promise.all([
         fetch(`${url}/rest/v1/settings`, {
           method: "POST",
           headers: {
@@ -77,6 +73,7 @@ export async function POST(request: Request) {
           body: JSON.stringify({ key: "wifi_pass", value: pass || "", updated_at: new Date().toISOString() }),
         }),
       ]);
+      if (results.some(result => !result.ok)) throw new Error("Unable to save Wi-Fi settings");
     }
 
     return NextResponse.json({

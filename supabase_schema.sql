@@ -6,7 +6,7 @@
 -- 1. Enable UUID Extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Settings Table (โหมดการทำงาน demo / live และการตั้งค่า Wi-Fi กลาง)
+-- 2. Settings Table (การรับข้อมูลอุปกรณ์จริง และการตั้งค่า Wi-Fi กลาง)
 CREATE TABLE IF NOT EXISTS public.settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -70,15 +70,7 @@ CREATE TABLE IF NOT EXISTS public.rfid_cards (
 );
 
 -- เพิ่มข้อมูลบัตรเริ่มต้นสำหรับทดสอบ (สามารถเพิ่มหรือแก้ไข UID บัตรจริงได้)
-INSERT INTO public.rfid_cards (card_id, name, role, status) VALUES 
-('4A6F12C3', 'นายสมชาย ใจดี', 'Student', 'allow'),
-('B3459812', 'นางสาวกนกวรรณ เพียรธรรม', 'Teacher', 'allow'),
-('E19033FA', 'นายอนันต์ มั่นคง', 'Staff', 'allow'),
-('99AA88BB', 'บัตรระงับการใช้งาน', 'Guest', 'banned')
-ON CONFLICT (card_id) DO UPDATE SET 
-    name = EXCLUDED.name,
-    role = EXCLUDED.role,
-    status = EXCLUDED.status;
+
 
 -- 6. Gate Access Logs Table (ย้ายจาก Google Sheets Logs มาไว้บน Supabase Cloud)
 CREATE TABLE IF NOT EXISTS public.gate_logs (
@@ -95,27 +87,11 @@ CREATE TABLE IF NOT EXISTS public.gate_logs (
 CREATE INDEX IF NOT EXISTS idx_gate_logs_scanned_at ON public.gate_logs (scanned_at DESC);
 CREATE INDEX IF NOT EXISTS idx_gate_logs_card_id ON public.gate_logs (card_id);
 
--- 7. Todos Table (สำหรับทดสอบเชื่อมต่อ SSR)
-CREATE TABLE IF NOT EXISTS public.todos (
-    id BIGSERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
 
-INSERT INTO public.todos (name) VALUES 
-('Setup Smart City Telemetry Sync'),
-('Deploy Board 1-5 to Campus Ground'),
-('Verify Supabase Real-time Stream')
-ON CONFLICT DO NOTHING;
 
--- 8. Seed Initial Live Events for All 5 Systems
-INSERT INTO public.events (source, system, device_id, name, location, recorded_at, health, note, data_json, position_json) VALUES
-('live', 'traffic', 'TR-1', 'สี่แยกกลางอัสสัมชัญ (Central 4-Way Junction)', 'สี่แยกสายหลัก อาคารเรียน A', NOW(), 'normal', 'ระบบไฟจราจร 4 ทิศทางพร้อมทำงาน', '{"signal": "green", "nSignal": "green", "eSignal": "red", "sSignal": "red", "wSignal": "red", "activeDirection": "North (เหนือ)", "waitSeconds": 4, "mode": "adaptive"}'::jsonb, '{"lat": 13.7558, "lng": 100.5024}'::jsonb),
-('live', 'parking', 'PK-01', 'ช่องจอด 01', 'อาคาร A', NOW(), 'normal', 'ระบบพร้อมทำงาน', '{"occupied": true, "bay": "A-01"}'::jsonb, '{"lat": 13.7569, "lng": 100.5015}'::jsonb),
-('live', 'streetlight', 'SL-01', 'ไฟถนนอัจฉริยะ 01', 'ถนนสายหลัก', NOW(), 'normal', 'ระบบไฟถนนพร้อมทำงาน', '{"on": false, "brightness": 0, "mode": "auto", "fault": null}'::jsonb, '{"lat": 13.7562, "lng": 100.5035}'::jsonb),
-('live', 'gate', 'GT-01', 'ประตูทิศเหนือ RFID', 'ทางเข้าหลัก อาคาร A', NOW(), 'normal', 'ระบบพร้อมสแกนบัตร', '{"open": false, "direction": null, "access": null, "cardRef": null}'::jsonb, '{"lat": 13.7574, "lng": 100.5029}'::jsonb),
-('live', 'environment', 'EN-01', 'สถานีสิ่งแวดล้อมกลาง', 'ใจกลางวิทยาเขต', NOW(), 'normal', 'สถานะอากาศปกติ', '{"pm25": 24, "temperature": 29.8, "humidity": 65}'::jsonb, '{"lat": 13.7551, "lng": 100.5014}'::jsonb)
-ON CONFLICT DO NOTHING;
+
+
+-- Telemetry is written only by connected devices.
 
 -- 9. Row Level Security (RLS) Policies
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
@@ -123,7 +99,6 @@ ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.command_audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rfid_cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.gate_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.todos ENABLE ROW LEVEL SECURITY;
 
 -- Allow Anonymous Read & Write via Anon Key (สำหรับบอร์ด IoT & Dashboard)
 DROP POLICY IF EXISTS "Allow public read access to settings" ON public.settings;
@@ -143,10 +118,8 @@ CREATE POLICY "Allow public insert command_audit" ON public.command_audit FOR IN
 
 DROP POLICY IF EXISTS "Allow public all rfid_cards" ON public.rfid_cards;
 DROP POLICY IF EXISTS "Allow public all gate_logs" ON public.gate_logs;
-DROP POLICY IF EXISTS "Allow public all todos" ON public.todos;
 CREATE POLICY "Allow public all rfid_cards" ON public.rfid_cards FOR ALL USING (true);
 CREATE POLICY "Allow public all gate_logs" ON public.gate_logs FOR ALL USING (true);
-CREATE POLICY "Allow public all todos" ON public.todos FOR ALL USING (true);
 
 -- 10. Enable Realtime for Events, RFID Cards, Gate Logs, and Settings (แบบ Safe Re-run)
 DO $$

@@ -3,6 +3,8 @@ import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import "./map.css";
 import "./brand.css";
+import "./operations.css";
+import "./monitor.css";
 
 export const metadata: Metadata = {
   title: "Assumption College Thonburi | Smart City Dashboard",

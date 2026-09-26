@@ -3,7 +3,7 @@ import { z } from "zod";
 export const systemIds = ["parking", "traffic", "streetlight", "gate", "environment"] as const;
 export type SystemId = (typeof systemIds)[number];
 export type Health = "normal" | "warning" | "offline";
-export type Source = "demo" | "live";
+export type Source = "live";
 export const systems: Record<SystemId, { title: string; en: string; icon: string; unit: string }> = {
   parking: { title: "ที่จอดรถอัจฉริยะ", en: "Smart Parking", icon: "P", unit: "ช่องจอด" },
   traffic: { title: "สัญญาณจราจร", en: "Adaptive Traffic", icon: "T", unit: "แยก" },

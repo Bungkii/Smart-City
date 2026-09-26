@@ -11,12 +11,10 @@ import { type EventRow, type SystemId, deviceHealth } from "@/lib/model";
 // --- PARKING VISUALIZER ---
 export function ParkingVisualizer({ 
   devices, 
-  mode, 
-  onSimulate 
+  mode
 }: { 
   devices: EventRow[]; 
-  mode: "demo" | "live"; 
-  onSimulate?: (deviceId: string) => void;
+  mode: "live";
 }) {
   const [selectedBay, setSelectedBay] = useState<string | null>(null);
   const parkingDevices = devices.filter(d => d.system === "parking");
@@ -50,9 +48,9 @@ export function ParkingVisualizer({
               className={`bay-slot ${isOccupied ? "occupied" : "vacant"} ${isSelected ? "selected" : ""}`}
               onClick={() => {
                 setSelectedBay(d.deviceId);
-                if (mode === "demo" && onSimulate) onSimulate(d.deviceId);
+
               }}
-              title={mode === "demo" ? "คลิกเพื่อจำลอง รถเข้า/ออกช่องจอด" : undefined}
+              title={undefined}
             >
               <div className="bay-roof">
                 <span className="bay-id">{bayName}</span>
@@ -67,7 +65,7 @@ export function ParkingVisualizer({
                 ) : (
                   <div className="bay-empty-spot">
                     <span>ว่าง</span>
-                    {mode === "demo" && <small>คลิกเพื่อจอด</small>}
+
                   </div>
                 )}
               </div>
@@ -79,11 +77,7 @@ export function ParkingVisualizer({
         })}
       </div>
 
-      {mode === "demo" && (
-        <div className="viz-hint">
-          <Sparkles size={14} /> <span>โหมดสาธิต: คลิกที่ช่องจอดด้านบนเพื่อจำลองรถเข้าจอดหรือออกจากช่องจอดทันที</span>
-        </div>
-      )}
+
     </div>
   );
 }
@@ -91,25 +85,23 @@ export function ParkingVisualizer({
 // --- TRAFFIC VISUALIZER ---
 export function TrafficVisualizer({ 
   device, 
-  mode, 
-  onSimulate 
+  mode
 }: { 
   device: EventRow; 
-  mode: "demo" | "live";
-  onSimulate?: (deviceId: string) => void;
+  mode: "live";
 }) {
   const data = (device?.data || {}) as any;
-  const currentSignal = data.signal || "green";
-  const activeDirection = data.activeDirection || "North (เหนือ)";
-  const waitSeconds = data.waitSeconds || 4;
-  const trafficMode = data.mode || "adaptive";
+  const currentSignal = data.signal;
+  const activeDirection = data.activeDirection || "ไม่ระบุทิศทาง";
+  const waitSeconds = data.waitSeconds ?? "—";
+  const trafficMode = data.mode || "—";
 
   // Check if 4-way signals exist or compute from 2-way / fallback
   const is4Way = Boolean(data.nSignal || data.eSignal || data.sSignal || data.wSignal);
-  const nSignal = data.nSignal || data.nsSignal || (currentSignal === "green" ? "green" : currentSignal === "yellow" ? "yellow" : "red");
-  const eSignal = data.eSignal || data.ewSignal || (nSignal === "green" || nSignal === "yellow" ? "red" : "green");
-  const sSignal = data.sSignal || data.nsSignal || (nSignal === "green" ? "green" : "red");
-  const wSignal = data.wSignal || data.ewSignal || (eSignal === "green" ? "green" : "red");
+  const nSignal = data.nSignal || data.nsSignal;
+  const eSignal = data.eSignal || data.ewSignal;
+  const sSignal = data.sSignal || data.nsSignal;
+  const wSignal = data.wSignal || data.ewSignal;
 
   const directions = is4Way ? [
     { id: "N", name: "ทิศเหนือ (North - N)", sensor: "Ultrasonic 1", sig: nSignal },
@@ -142,7 +134,7 @@ export function TrafficVisualizer({
             border: "1px solid rgba(8,170,154,0.3)"
           }}>
             <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#16a34a", boxShadow: "0 0 8px #16a34a" }} />
-            🟢 ฝั่งที่ไฟเขียว: {activeDirection}
+            ทิศทางที่รายงาน: {activeDirection}
           </span>
           <span className={`mode-pill ${trafficMode}`}>โหมด: {trafficMode.toUpperCase()}</span>
         </div>
@@ -188,7 +180,7 @@ export function TrafficVisualizer({
                   fontWeight: 700,
                   color: isGreen ? "#16a34a" : isYellow ? "#d97706" : "#dc2626"
                 }}>
-                  {isGreen ? "🟢 ไฟเขียว (ผ่านได้)" : isYellow ? "🟡 ไฟเหลือง (ชะลอ)" : "🔴 ไฟแดง (หยุด)"}
+                  {isGreen ? "🟢 ไฟเขียว (ผ่านได้)" : isYellow ? "🟡 ไฟเหลือง (ชะลอ)" : d.sig === "red" ? "🔴 ไฟแดง (หยุด)" : "ไม่มีข้อมูลสัญญาณ"}
                 </span>
               </div>
             </div>
@@ -203,7 +195,7 @@ export function TrafficVisualizer({
           </div>
           <div>
             <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0b2338" }}>เวลานับถอยหลังของเฟสปัจจุบัน: {waitSeconds} วินาที</div>
-            <small style={{ color: "#64748b" }}>จุดติดตั้ง: {device?.location || "สี่แยกสายหลัก อาคารเรียน A"}</small>
+            <small style={{ color: "#64748b" }}>จุดติดตั้ง: {device?.location || "ไม่ระบุจุดติดตั้ง"}</small>
           </div>
         </div>
 
@@ -214,13 +206,7 @@ export function TrafficVisualizer({
         )}
       </div>
 
-      {mode === "demo" && onSimulate && (
-        <div className="viz-actions" style={{ marginTop: "12px" }}>
-          <button className="sim-btn" onClick={() => onSimulate(device.deviceId)}>
-            <RefreshCw size={15} /> สลับสัญญาณไฟเฟสถัดไป (Cycle Next 4-Way Phase)
-          </button>
-        </div>
-      )}
+
     </div>
   );
 }
@@ -228,12 +214,10 @@ export function TrafficVisualizer({
 // --- STREETLIGHT VISUALIZER ---
 export function StreetlightVisualizer({ 
   devices, 
-  mode, 
-  onSimulate 
+  mode
 }: { 
   devices: EventRow[]; 
-  mode: "demo" | "live";
-  onSimulate?: (deviceId: string) => void;
+  mode: "live";
 }) {
   const slDevices = devices.filter(d => d.system === "streetlight");
   const onCount = slDevices.filter(d => (d.data as any).on).length;
@@ -268,9 +252,9 @@ export function StreetlightVisualizer({
               key={d.deviceId} 
               className={`light-node ${isOn ? "on" : "off"}`}
               onClick={() => {
-                if (mode === "demo" && onSimulate) onSimulate(d.deviceId);
+
               }}
-              title={mode === "demo" ? "คลิกเพื่อสลับ เปิด/ปิดไฟ" : undefined}
+              title={undefined}
             >
               <div className="light-lamp-icon" style={{ opacity: isOn ? 0.4 + (brightness / 100) * 0.6 : 0.2 }}>
                 <Lightbulb size={24} className={isOn ? "glow-icon" : ""} />
@@ -302,18 +286,16 @@ export function StreetlightVisualizer({
 // --- GATE VISUALIZER ---
 export function GateVisualizer({ 
   device, 
-  mode, 
-  onSimulate 
+  mode
 }: { 
   device: EventRow; 
-  mode: "demo" | "live";
-  onSimulate?: (deviceId: string) => void;
+  mode: "live";
 }) {
   const data = (device?.data || {}) as any;
   const isOpen = Boolean(data.open);
-  const access = data.access || "granted";
-  const direction = data.direction || "in";
-  const cardRef = data.cardRef || "CARD-••88";
+  const access = data.access;
+  const direction = data.direction;
+  const cardRef = data.cardRef || "—";
 
   const [activeTab, setActiveTab] = useState<"visual" | "cards" | "logs">("visual");
   const [cards, setCards] = useState<any[]>([]);
@@ -324,18 +306,21 @@ export function GateVisualizer({
   const [newRole, setNewRole] = useState("Student");
   const [newStatus, setNewStatus] = useState("allow");
   const [saveMsg, setSaveMsg] = useState("");
+  const [readError, setReadError] = useState("");
 
   const loadRfidData = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/rfid");
+      if (!res.ok) throw new Error("ไม่สามารถโหลดข้อมูลบัตรและประวัติได้");
+      setReadError("");
       if (res.ok) {
         const json = await res.json();
         setCards(json.cards || []);
         setLogs(json.logs || []);
       }
     } catch {
-      // ignore error
+      setReadError("ไม่สามารถโหลดข้อมูลบัตรและประวัติได้ กรุณาลองใหม่");
     } finally {
       setLoading(false);
     }
@@ -371,6 +356,7 @@ export function GateVisualizer({
 
   return (
     <div className="visualizer-card gate-viz">
+      {readError && <div role="alert" className="error-bar">{readError}</div>}
       <div className="viz-header">
         <div>
           <span className="viz-tag"><DoorOpen size={14} /> BARRIER GATE & RFID SCANNER</span>
@@ -406,7 +392,7 @@ export function GateVisualizer({
                 cursor: "pointer",
               }}
             >
-              บัตร RFID ({cards.length || 4})
+              บัตร RFID ({cards.length})
             </button>
             <button
               onClick={() => { setActiveTab("logs"); loadRfidData(); }}
@@ -433,7 +419,7 @@ export function GateVisualizer({
       {activeTab === "visual" && (
         <>
           <div className="gate-display-area">
-            {/* Animated Gate Barrier Simulation */}
+            {/* Gate telemetry display */}
             <div className="gate-barrier-stage">
               <div className="gate-pole" />
               <div className={`gate-arm ${isOpen ? "raised" : "lowered"}`}>
@@ -453,20 +439,14 @@ export function GateVisualizer({
                 <div className="card-brand">ACT SMART CAMPUS PASS</div>
                 <div className="card-number">{cardRef}</div>
                 <div className="card-holder">
-                  <span>ทิศทาง: <strong>{direction === "in" ? "ขาเข้า (IN)" : "ขาออก (OUT)"}</strong></span>
-                  <span className={`access-tag ${access}`}>{access === "granted" ? "✓ อนุญาต (Granted)" : "✕ ปฏิเสธ (Denied)"}</span>
+                  <span>ทิศทาง: <strong>{direction === "in" ? "ขาเข้า (IN)" : direction === "out" ? "ขาออก (OUT)" : "—"}</strong></span>
+                  <span className={`access-tag ${access}`}>{access === "granted" ? "✓ อนุญาต (Granted)" : access === "denied" ? "✕ ปฏิเสธ (Denied)" : "ยังไม่มีรายการ"}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {mode === "demo" && onSimulate && (
-            <div className="viz-actions">
-              <button className="sim-btn" onClick={() => onSimulate(device.deviceId)}>
-                <UserCheck size={15} /> จำลองการทาบบัตร RFID (Simulate Card Tap)
-              </button>
-            </div>
-          )}
+
         </>
       )}
 
@@ -650,17 +630,17 @@ export function GateVisualizer({
 // --- ENVIRONMENT VISUALIZER ---
 export function EnvironmentVisualizer({ 
   device, 
-  mode, 
-  onSimulate 
+  mode
 }: { 
   device: EventRow; 
-  mode: "demo" | "live";
-  onSimulate?: (deviceId: string) => void;
+  mode: "live";
 }) {
   const data = (device?.data || {}) as any;
-  const pm25 = typeof data.pm25 === "number" ? data.pm25 : 25;
-  const temp = typeof data.temperature === "number" ? data.temperature : 30.2;
-  const humidity = typeof data.humidity === "number" ? data.humidity : 65;
+  const pm25 = typeof data.pm25 === "number" ? data.pm25 : NaN;
+  const temp = typeof data.temperature === "number" ? data.temperature : NaN;
+  const humidity = typeof data.humidity === "number" ? data.humidity : NaN;
+
+  if (![pm25, temp, humidity].every(Number.isFinite)) return <div className="empty-state">ยังไม่มีค่าตรวจวัดที่ครบถ้วน</div>;
 
   // Air Quality Level (Thai PCD Criteria)
   let aqiCategory = { label: "ดีมาก (Excellent)", color: "#10b981", class: "good", desc: "คุณภาพอากาศดีมาก เหมาะสำหรับกิจกรรมกลางแจ้ง" };
@@ -723,13 +703,7 @@ export function EnvironmentVisualizer({
         </div>
       </div>
 
-      {mode === "demo" && onSimulate && (
-        <div className="viz-actions">
-          <button className="sim-btn" onClick={() => onSimulate(device.deviceId)}>
-            <RefreshCw size={15} /> สุ่มค่าสภาพอากาศใหม่ (Simulate Weather Shift)
-          </button>
-        </div>
-      )}
+
     </div>
   );
 }
