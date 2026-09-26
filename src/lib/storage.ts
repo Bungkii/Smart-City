@@ -1,13 +1,59 @@
+import * as postgres from "./postgres";
 import * as sqlite from "./db";
 import * as d1 from "./d1";
-import type { Source, SystemId, Telemetry } from "./model";
+import type { EventRow, Source, SystemId, Telemetry } from "./model";
 
-const remote = process.env.DB_DRIVER === "d1";
-export async function getMode() { return remote ? d1.getMode() : sqlite.getMode(); }
-export async function setMode(mode: Source) { return remote ? d1.setMode(mode) : sqlite.setMode(mode); }
-export async function insertEvent(event: Telemetry, source: Source, receivedAt?: string) { return remote ? d1.insertEvent(event, source, receivedAt) : sqlite.insertEvent(event, source, receivedAt); }
-export async function latest(source: Source) { return remote ? d1.latest(source) : sqlite.latest(source); }
-export async function history(system: SystemId, source: Source, limit?: number) { return remote ? d1.history(system, source, limit) : sqlite.history(system, source, limit); }
-export async function audit(command: { system: string; deviceId: string; command: string; reason: string }, actor: string, result: string, detail?: string) { return remote ? d1.audit(command, actor, result, detail) : sqlite.audit(command, actor, result, detail); }
-export async function auditHistory() { return remote ? d1.auditHistory() : sqlite.auditHistory(); }
-export async function syncFromSupabase() { if (!remote) await sqlite.syncFromSupabase(); }
+const driver = process.env.DB_DRIVER || "postgres";
+
+export async function getMode(): Promise<Source> {
+  if (driver === "d1") return d1.getMode();
+  if (driver === "sqlite") return sqlite.getMode();
+  return postgres.getMode();
+}
+
+export async function setMode(mode: Source): Promise<void> {
+  if (driver === "d1") return d1.setMode(mode);
+  if (driver === "sqlite") return sqlite.setMode(mode);
+  return postgres.setMode(mode);
+}
+
+export async function insertEvent(event: Telemetry, source: Source, receivedAt?: string): Promise<number> {
+  if (driver === "d1") return d1.insertEvent(event, source, receivedAt);
+  if (driver === "sqlite") return Number(sqlite.insertEvent(event, source, receivedAt));
+  return postgres.insertEvent(event, source, receivedAt);
+}
+
+export async function latest(source: Source): Promise<EventRow[]> {
+  if (driver === "d1") return d1.latest(source);
+  if (driver === "sqlite") return sqlite.latest(source);
+  return postgres.latest(source);
+}
+
+export async function history(system: SystemId, source: Source, limit?: number): Promise<EventRow[]> {
+  if (driver === "d1") return d1.history(system, source, limit);
+  if (driver === "sqlite") return sqlite.history(system, source, limit);
+  return postgres.history(system, source, limit);
+}
+
+export async function audit(
+  command: { system: string; deviceId: string; command: string; reason: string },
+  actor: string,
+  result: string,
+  detail?: string
+): Promise<void> {
+  if (driver === "d1") return d1.audit(command, actor, result, detail);
+  if (driver === "sqlite") return sqlite.audit(command, actor, result, detail);
+  return postgres.audit(command, actor, result, detail);
+}
+
+export async function auditHistory(): Promise<any[]> {
+  if (driver === "d1") return d1.auditHistory();
+  if (driver === "sqlite") return sqlite.auditHistory();
+  return postgres.auditHistory();
+}
+
+export async function syncFromSupabase(): Promise<void> {
+  if (driver !== "d1") {
+    await sqlite.syncFromSupabase();
+  }
+}
