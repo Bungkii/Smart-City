@@ -17,34 +17,22 @@
 // ==============================================================================
 // 1. SUPABASE & WI-FI CONFIGURATION
 // ==============================================================================
-// ⚙️ โหมดการส่งข้อมูล: "supabase", "dashboard", หรือ "both"
 const String CLOUD_MODE   = "supabase"; 
-
-// ⚙️ ตั้งค่า Supabase Project URL และ Anon Key
 const String SUPABASE_URL = "https://kqkggjsjwbkodqyeddwj.supabase.co/rest/v1";
 const String SUPABASE_KEY = "sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc";
-
-// ⚙️ ตั้งค่า URL ส่งตรงเข้า Dashboard API (/api/ingest)
-const String DASHBOARD_INGEST_URL   = "http://192.168.1.100:3000/api/ingest";
-const String DASHBOARD_INGEST_TOKEN = "act_smartcity_ingest_secret_token_2026";
-
-// Fallback Wi-Fi สำหรับ Arduino UNO R4 WiFi
 const char* FALLBACK_SSID = "ACT-SmartCity-2.4G";
 const char* FALLBACK_PASS = "ACT12345678";
 
 // ==============================================================================
 // 2. PIN DEFINITIONS (4-WAY INTERSECTION)
 // ==============================================================================
-// 1. เซนเซอร์ Ultrasonic (ฝั่ง เหนือ N และ ใต้ S)
-#define TRIG_PIN  2   // ขา Trig ต่อขนานร่วมกัน
-#define ECHO_N    3   // Echo เหนือ (North)
-#define ECHO_S    A4  // Echo ใต้ (South)
+#define TRIG_PIN  2   
+#define ECHO_N    3   
+#define ECHO_S    A4  
 
-// 2. เซนเซอร์ PIR (ฝั่ง ตะวันออก E และ ตะวันตก W)
-#define PIR_E     A3  // PIR ตะวันออก (East)
-#define PIR_W     13  // PIR ตะวันตก (West)
+#define PIR_E     A3  
+#define PIR_W     13  
 
-// 3. ไฟจราจร 4 ฝั่ง (Red, Yellow, Green)
 #define N_RED 4  
 #define N_YEL 5  
 #define N_GRN 6
@@ -61,16 +49,15 @@ const char* FALLBACK_PASS = "ACT12345678";
 #define W_YEL A1 
 #define W_GRN A2
 
-// 4. ปุ่ม Reset Wi-Fi (ปุ่ม BOOT GPIO 0 บน ESP32 หรือขา A5)
-#define RESET_WIFI_PIN 0 
+#define RESET_WIFI_PIN 0 // ปุ่ม BOOT (GPIO 0) สำหรับล้าง Wi-Fi
 
 // ==============================================================================
-// 3. TIMING & STATE MACHINE CONFIGURATION
+// 3. TIMING & STATE MACHINE
 // ==============================================================================
-const float DETECT_DIST_CM      = 8.0;   // ระยะ Ultrasonic ตรวจจับรถจอดรอ (ซม.)
-const unsigned long NORMAL_GREEN_TIME   = 4000; // ไฟเขียวปกติ 4 วินาที
-const unsigned long EXTENDED_GREEN_TIME = 8000; // ไฟเขียวยืดเมื่อพบรถ 8 วินาที
-const unsigned long YELLOW_TIME         = 1500; // ไฟเหลืองเตือน 1.5 วินาที
+const float DETECT_DIST_CM      = 8.0;   
+const unsigned long NORMAL_GREEN_TIME   = 4000; 
+const unsigned long EXTENDED_GREEN_TIME = 8000; 
+const unsigned long YELLOW_TIME         = 1500; 
 
 enum TrafficState {
   STATE_N_GREEN, STATE_N_YELLOW,
@@ -90,8 +77,6 @@ WiFiManager wm;
 // ==============================================================================
 // 4. HELPER FUNCTIONS
 // ==============================================================================
-
-// ฟังก์ชันอ่านระยะทาง Ultrasonic
 float getDistance(int echoPin) {
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
@@ -99,12 +84,11 @@ float getDistance(int echoPin) {
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
 
-  long duration = pulseIn(echoPin, HIGH, 6000); // Timeout 6ms (~1m)
+  long duration = pulseIn(echoPin, HIGH, 6000);
   if (duration == 0) return 999.0;
   return (float)duration * 0.0343 / 2.0;
 }
 
-// ฟังก์ชันสั่งสถานะหลอดไฟทั้ง 4 ฝั่ง
 void setAllLights(bool nG, bool nY, bool nR,
                  bool eG, bool eY, bool eR,
                  bool sG, bool sY, bool sR,
@@ -115,9 +99,6 @@ void setAllLights(bool nG, bool nY, bool nR,
   digitalWrite(W_GRN, wG); digitalWrite(W_YEL, wY); digitalWrite(W_RED, wR);
 }
 
-// ------------------------------------------------------------------------------
-// ส่งข้อมูลสถานะสัญญาณไฟจราจร 4 ทิศทาง เข้า Supabase Cloud / Dashboard
-// ------------------------------------------------------------------------------
 void sendTrafficTelemetry(String activeDirection, String nSignal, String eSignal, String sSignal, String wSignal, int waitSec, String modeType, String noteMsg) {
   if (WiFi.status() != WL_CONNECTED) return;
 
@@ -126,7 +107,6 @@ void sendTrafficTelemetry(String activeDirection, String nSignal, String eSignal
   secureClient.setInsecure();
   secureClient.setTimeout(4000);
 
-  // 1. ส่งเข้า Supabase REST API
   if (CLOUD_MODE == "supabase" || CLOUD_MODE == "both") {
     HTTPClient http;
     http.begin(secureClient, SUPABASE_URL + "/events");
@@ -162,11 +142,9 @@ void sendTrafficTelemetry(String activeDirection, String nSignal, String eSignal
     String jsonBody;
     serializeJson(doc, jsonBody);
     int code = http.POST(jsonBody);
-    Serial.printf("[SUPABASE TRAFFIC] Code: %d | Active: %s (N:%s, E:%s, S:%s, W:%s)\n", 
-                  code, activeDirection.c_str(), nSignal.c_str(), eSignal.c_str(), sSignal.c_str(), wSignal.c_str());
+    Serial.printf("[SUPABASE TRAFFIC] Code: %d | Active: %s\n", code, activeDirection.c_str());
     http.end();
   }
-
 #elif defined(ARDUINO_UNOR4_WIFI)
   WiFiSSLClient sslClient;
   HttpClient http = HttpClient(sslClient, "kqkggjsjwbkodqyeddwj.supabase.co", 443);
@@ -217,7 +195,6 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\n[TRAFFIC 4-WAY SYSTEM] Starting...");
 
-  // ตั้งค่าพินเซนเซอร์
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_N, INPUT);
   pinMode(ECHO_S, INPUT);
@@ -225,14 +202,12 @@ void setup() {
   pinMode(PIR_W, INPUT);
   pinMode(RESET_WIFI_PIN, INPUT_PULLUP);
 
-  // ตั้งค่าพิน LED ทั้งหมด
   int ledPins[] = {N_RED, N_YEL, N_GRN, E_RED, E_YEL, E_GRN, 
                    S_RED, S_YEL, S_GRN, W_RED, W_YEL, W_GRN};
   for (int p : ledPins) {
     pinMode(p, OUTPUT);
   }
 
-  // เริ่มต้น: เหนือ (N) ไฟเขียว / ทิศอื่น ไฟแดง
   setAllLights(HIGH, LOW, LOW,   LOW, LOW, HIGH,   LOW, LOW, HIGH,   LOW, LOW, HIGH);
   lastStateTime = millis();
 
@@ -245,7 +220,6 @@ void setup() {
     delay(1000);
   }
 
-  // เชื่อมต่อ Wi-Fi ผ่าน WiFiManager (ESP32) หรือ WiFiS3 (UNO R4)
 #if defined(ESP32)
   Serial.println("[Wi-Fi] Launching WiFiManager Portal: ACT-Traffic-Light-Setup");
   wm.setConfigPortalTimeout(180);
@@ -257,8 +231,6 @@ void setup() {
     sendTrafficTelemetry("North (เหนือ)", "green", "red", "red", "red", 4, "adaptive", "ระบบไฟจราจร 4 ทิศทางพร้อมทำงาน");
   }
 #elif defined(ARDUINO_UNOR4_WIFI)
-  Serial.print("[Wi-Fi] Connecting to: ");
-  Serial.println(FALLBACK_SSID);
   WiFi.begin(FALLBACK_SSID, FALLBACK_PASS);
   int retry = 0;
   while (WiFi.status() != WL_CONNECTED && retry < 15) {
@@ -267,12 +239,9 @@ void setup() {
     retry++;
   }
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n[Wi-Fi] Connected! IP: " + WiFi.localIP().toString());
     sendTrafficTelemetry("North (เหนือ)", "green", "red", "red", "red", 4, "adaptive", "ระบบไฟจราจร 4 ทิศทางพร้อมทำงาน");
   }
 #endif
-
-  Serial.println("[TRAFFIC SYSTEM] Ready!");
 }
 
 // ==============================================================================
@@ -281,7 +250,6 @@ void setup() {
 void loop() {
   unsigned long currentMillis = millis();
 
-  // ตรวจสอบการกดปุ่ม Reset Wi-Fi ระหว่างทำงาน (กดค้าง 3 วินาทีเพื่อลบ Wi-Fi)
 #if defined(ESP32)
   if (digitalRead(RESET_WIFI_PIN) == LOW) {
     delay(3000);
@@ -294,17 +262,13 @@ void loop() {
 #endif
 
   switch (currentState) {
-
-    // ----------------------------------------
-    // 1. ฝั่งเหนือ (North - N) [Ultrasonic 1]
-    // ----------------------------------------
+    // 1. ฝั่งเหนือ (N)
     case STATE_N_GREEN:
       if (getDistance(ECHO_N) <= DETECT_DIST_CM && currentGreenDuration != EXTENDED_GREEN_TIME) {
         currentGreenDuration = EXTENDED_GREEN_TIME;
         Serial.println("[TRAFFIC] North (Ultrasonic): รถจอดรอ -> ยืดไฟเขียว 8s");
         sendTrafficTelemetry("North (เหนือ)", "green", "red", "red", "red", 8, "adaptive", "พบรถฝั่งเหนือ ยืดเวลาไฟเขียว");
       }
-
       if (currentMillis - lastStateTime >= currentGreenDuration) {
         currentState = STATE_N_YELLOW;
         setAllLights(LOW, HIGH, LOW,  LOW, LOW, HIGH,  LOW, LOW, HIGH,  LOW, LOW, HIGH);
@@ -323,16 +287,13 @@ void loop() {
       }
       break;
 
-    // ----------------------------------------
-    // 2. ฝั่งตะวันออก (East - E) [PIR 1]
-    // ----------------------------------------
+    // 2. ฝั่งตะวันออก (E)
     case STATE_E_GREEN:
       if (digitalRead(PIR_E) == HIGH && currentGreenDuration != EXTENDED_GREEN_TIME) {
         currentGreenDuration = EXTENDED_GREEN_TIME;
         Serial.println("[TRAFFIC] East (PIR): พบการเคลื่อนไหว -> ยืดไฟเขียว 8s");
         sendTrafficTelemetry("East (ตะวันออก)", "red", "green", "red", "red", 8, "adaptive", "พบรถฝั่งตะวันออก ยืดเวลาไฟเขียว");
       }
-
       if (currentMillis - lastStateTime >= currentGreenDuration) {
         currentState = STATE_E_YELLOW;
         setAllLights(LOW, LOW, HIGH,  LOW, HIGH, LOW,  LOW, LOW, HIGH,  LOW, LOW, HIGH);
@@ -351,16 +312,13 @@ void loop() {
       }
       break;
 
-    // ----------------------------------------
-    // 3. ฝั่งใต้ (South - S) [Ultrasonic 2]
-    // ----------------------------------------
+    // 3. ฝั่งใต้ (S)
     case STATE_S_GREEN:
       if (getDistance(ECHO_S) <= DETECT_DIST_CM && currentGreenDuration != EXTENDED_GREEN_TIME) {
         currentGreenDuration = EXTENDED_GREEN_TIME;
         Serial.println("[TRAFFIC] South (Ultrasonic): รถจอดรอ -> ยืดไฟเขียว 8s");
         sendTrafficTelemetry("South (ใต้)", "red", "red", "green", "red", 8, "adaptive", "พบรถฝั่งใต้ ยืดเวลาไฟเขียว");
       }
-
       if (currentMillis - lastStateTime >= currentGreenDuration) {
         currentState = STATE_S_YELLOW;
         setAllLights(LOW, LOW, HIGH,  LOW, LOW, HIGH,  LOW, HIGH, LOW,  LOW, LOW, HIGH);
@@ -379,16 +337,13 @@ void loop() {
       }
       break;
 
-    // ----------------------------------------
-    // 4. ฝั่งตะวันตก (West - W) [PIR 2]
-    // ----------------------------------------
+    // 4. ฝั่งตะวันตก (W)
     case STATE_W_GREEN:
       if (digitalRead(PIR_W) == HIGH && currentGreenDuration != EXTENDED_GREEN_TIME) {
         currentGreenDuration = EXTENDED_GREEN_TIME;
         Serial.println("[TRAFFIC] West (PIR): พบการเคลื่อนไหว -> ยืดไฟเขียว 8s");
         sendTrafficTelemetry("West (ตะวันตก)", "red", "red", "red", "green", 8, "adaptive", "พบรถฝั่งตะวันตก ยืดเวลาไฟเขียว");
       }
-
       if (currentMillis - lastStateTime >= currentGreenDuration) {
         currentState = STATE_W_YELLOW;
         setAllLights(LOW, LOW, HIGH,  LOW, LOW, HIGH,  LOW, LOW, HIGH,  LOW, HIGH, LOW);
