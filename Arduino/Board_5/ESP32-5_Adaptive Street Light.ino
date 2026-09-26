@@ -15,9 +15,9 @@
 // ==============================================================================
 // 1. SUPABASE & WI-FI CONFIGURATION
 // ==============================================================================
-// ⚙️ ตั้งค่า Wi-Fi สำหรับบอร์ด (UNO R4 WiFi / ESP32)
-const char* WIFI_SSID     = "YOUR_WIFI_SSID";
-const char* WIFI_PASS     = "YOUR_WIFI_PASSWORD";
+// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด (ตั้งชื่อ Hotspot มือถือตามนี้ แล้วเปิดแชร์เน็ต บอร์ดทั้ง 5 จะติดพร้อมกันทันที)
+const char* WIFI_SSID     = "ACT-SmartCity-2.4G";
+const char* WIFI_PASS     = "ACT12345678";
 
 // ⚙️ โหมดการส่งข้อมูล: "supabase", "dashboard", หรือ "both"
 const String CLOUD_MODE   = "supabase"; 

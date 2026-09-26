@@ -39,7 +39,9 @@ function getDb(): Database.Database {
     db.exec("ALTER TABLE events ADD COLUMN position_json TEXT");
   }
   if (!db.prepare("SELECT value FROM settings WHERE key='mode'").get()) {
-    db.prepare("INSERT INTO settings(key,value) VALUES('mode','demo')").run();
+    db.prepare("INSERT INTO settings(key,value) VALUES('mode','live')").run();
+  } else {
+    db.prepare("UPDATE settings SET value='live' WHERE key='mode'").run();
   }
   if (!(db.prepare("SELECT 1 FROM events WHERE source='demo' LIMIT 1").get())) {
     const seed = db.transaction(() => {
@@ -51,6 +53,24 @@ function getDb(): Database.Database {
       }
     });
     seed();
+  }
+  if (!(db.prepare("SELECT 1 FROM events WHERE source='live' LIMIT 1").get())) {
+    const seedLive = db.transaction(() => {
+      const nowIso = new Date().toISOString();
+      for (const e of demoEvents()) {
+        insertEvent(
+          {
+            ...e,
+            recordedAt: nowIso,
+            health: "normal",
+            note: "ระบบเชื่อมต่อพร้อมรับสัญญาณฮาร์ดแวร์จริง",
+          },
+          "live",
+          nowIso
+        );
+      }
+    });
+    seedLive();
   }
 
   stmts = {

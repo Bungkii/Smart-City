@@ -819,6 +819,45 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
   const [audit, setAudit] = useState<any[]>([]);
   const [auditLoaded, setAuditLoaded] = useState(false);
 
+  // Fleet Wi-Fi Sync State
+  const [wifiSsid, setWifiSsid] = useState("ACT-SmartCity-2.4G");
+  const [wifiPass, setWifiPass] = useState("ACT12345678");
+  const [wifiMsg, setWifiMsg] = useState("");
+  const [savingWifi, setSavingWifi] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings/wifi")
+      .then(r => r.json())
+      .then(res => {
+        if (res.ssid) setWifiSsid(res.ssid);
+        if (res.pass) setWifiPass(res.pass);
+      })
+      .catch(() => {});
+  }, []);
+
+  const saveWifi = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingWifi(true);
+    try {
+      const res = await fetch("/api/settings/wifi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ssid: wifiSsid, pass: wifiPass }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setWifiMsg("✓ บันทึกการตั้งค่า Wi-Fi กลางลง Supabase เรียบร้อยแล้ว");
+      } else {
+        setWifiMsg("✕ " + (json.error || "เกิดข้อผิดพลาด"));
+      }
+    } catch {
+      setWifiMsg("✕ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
+    } finally {
+      setSavingWifi(false);
+      setTimeout(() => setWifiMsg(""), 4000);
+    }
+  };
+
   const loadAudit = async () => {
     const r = await fetch("/api/audit", {
       headers: { authorization: `Bearer ${token}` },
@@ -854,7 +893,7 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
       <PageHeading 
         eyebrow="PREFERENCES / CONFIGURATION" 
         title="ตั้งค่าระบบ & ความปลอดภัย" 
-        description="เลือกแหล่งข้อมูล ตรวจสอบความพร้อมในการเชื่อมต่อฮาร์ดแวร์ และดู Security Audit Log" 
+        description="เลือกแหล่งข้อมูล จัดการ Wi-Fi กลางสำหรับทุกบอร์ด และดู Security Audit Log" 
       />
 
       <div className="settings-grid">
@@ -869,7 +908,7 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
 
           <p className="setting-desc">
             <strong>Demo Mode:</strong> ใช้ข้อมูลจำลองและผังเมืองสาธิตเพื่อการทดลองและนำเสนอ<br />
-            <strong>Live Mode:</strong> เชื่อมต่อเซนเซอร์จริงผ่าน Ingestion API
+            <strong>Live Mode:</strong> เชื่อมต่อเซนเซอร์จริงจาก 5 บอร์ดผ่าน Supabase & Ingest API
           </p>
 
           <div className="mode-options">
@@ -892,7 +931,7 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
             >
               <span>
                 <strong>Live Mode (ข้อมูลจริง)</strong>
-                <small>ข้อมูลจริงจากอุปกรณ์ผ่าน REST Ingestion API</small>
+                <small>ข้อมูลจริงจากอุปกรณ์ผ่าน Supabase & REST API</small>
               </span>
               {data.mode === "live" && <Check size={18} />}
             </button>
@@ -911,36 +950,71 @@ function Settings({ data, reload }: { data: Snapshot; reload: () => void }) {
           {message && <p className="setting-message">{message}</p>}
         </section>
 
+        {/* Fleet Wi-Fi Provisioning */}
         <section className="panel settings-panel">
           <div className="panel-head">
             <div>
-              <span className="section-kicker">HARDWARE INTEGRATION</span>
-              <h2>ขั้นตอนการเชื่อมต่ออุปกรณ์จริง</h2>
+              <span className="section-kicker">FLEET WI-FI SYNC</span>
+              <h2>ตั้งค่า Wi-Fi รวมสำหรับทั้ง 5 บอร์ด</h2>
             </div>
             <Radio size={18} />
           </div>
 
-          <div className="integration-step">
-            <span>01</span>
-            <div>
-              <strong>รับข้อมูล Telemetry ผ่าน HTTP</strong>
-              <p>POST /api/ingest พร้อม Authorization: Bearer INGEST_TOKEN</p>
-            </div>
-          </div>
+          <p className="setting-desc">
+            กำหนดชื่อ Wi-Fi (SSID) และรหัสผ่านกลางสำหรับอุปกรณ์ทุกบอร์ด เมื่อเปิด Hotspot มือถือหรือ Router ตามนี้ บอร์ดทุกตัวจะเชื่อมต่ออัตโนมัติพร้อมกันทันที
+          </p>
 
-          <div className="integration-step">
-            <span>02</span>
-            <div>
-              <strong>เชื่อมต่อ MQTT Protocol</strong>
-              <p>ทำ MQTT Bridge โดย map payload อุปกรณ์เป็น Schema กลางก่อนส่งเข้า Ingest</p>
-            </div>
-          </div>
+          <form onSubmit={saveWifi} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <label className="field-label">
+              ชื่อ Wi-Fi (SSID 2.4 GHz)
+              <input 
+                type="text" 
+                placeholder="เช่น ACT-SmartCity-2.4G หรือชื่อ Hotspot มือถือ" 
+                value={wifiSsid} 
+                onChange={e => setWifiSsid(e.target.value)} 
+                required
+              />
+            </label>
 
-          <div className="integration-step">
-            <span>03</span>
-            <div>
-              <strong>ส่งคำสั่งควบคุม (Device Control)</strong>
-              <p>ตั้งค่า DEVICE_COMMAND_URL เชื่อมต่อไปยัง Adapter แปลงคำสั่ง</p>
+            <label className="field-label">
+              รหัสผ่าน Wi-Fi (Password)
+              <input 
+                type="text" 
+                placeholder="เช่น ACT12345678" 
+                value={wifiPass} 
+                onChange={e => setWifiPass(e.target.value)} 
+              />
+            </label>
+
+            <button 
+              type="submit" 
+              disabled={savingWifi}
+              style={{
+                background: "#08aa9a",
+                color: "#fff",
+                border: "none",
+                padding: "10px",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                marginTop: "4px"
+              }}
+            >
+              {savingWifi ? "กำลังบันทึก..." : "📶 บันทึก Wi-Fi สำหรับทุกบอร์ด"}
+            </button>
+          </form>
+
+          {wifiMsg && (
+            <div style={{ color: wifiMsg.startsWith("✓") ? "#16a34a" : "#dc2626", fontSize: "0.85rem", marginTop: "8px", fontWeight: 600 }}>
+              {wifiMsg}
+            </div>
+          )}
+
+          <div style={{ background: "#e8f7f5", border: "1px solid #bfece5", borderRadius: "8px", padding: "10px 12px", marginTop: "12px", fontSize: "0.82rem", color: "#066a60" }}>
+            <strong>💡 เคล็ดลับการเชื่อมต่อพร้อมกันทุกบอร์ด:</strong>
+            <div style={{ marginTop: "4px" }}>
+              เปิด Hotspot มือถือของคุณโดยตั้งชื่อเป็น <code>{wifiSsid}</code> และรหัสผ่าน <code>{wifiPass}</code> จากนั้นเปิดสวิตช์จ่ายไฟให้บอร์ดทั้ง 5 ตัว ทุกบอร์ดจะเชื่อมต่ออินเทอร์เน็ตและส่งข้อมูลเข้า Supabase / Dashboard พร้อมกันทันที!
             </div>
           </div>
         </section>

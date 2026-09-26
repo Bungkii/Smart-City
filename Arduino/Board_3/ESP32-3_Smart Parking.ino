@@ -10,6 +10,10 @@
 // ==============================================================================
 // 1. SUPABASE & CLOUD CONFIGURATION
 // ==============================================================================
+// ⚙️ Wi-Fi กลางสำหรับทั้ง 5 บอร์ด (ตั้งชื่อ Hotspot มือถือตามนี้ แล้วเปิดแชร์เน็ต บอร์ดทั้ง 5 จะติดพร้อมกันทันที)
+const char* WIFI_SSID     = "ACT-SmartCity-2.4G";
+const char* WIFI_PASS     = "ACT12345678";
+
 // ⚙️ โหมดการส่งข้อมูล: "supabase", "dashboard", หรือ "both"
 const String CLOUD_MODE = "supabase"; 
 
@@ -219,9 +223,22 @@ void setup() {
   pinMode(TRIG_OUT, OUTPUT);
   pinMode(ECHO_OUT, INPUT);
 
-  WiFiManager wm;
-  if (!wm.autoConnect("SmartCity-Parking-AP")) {
-    ESP.restart();
+  // ลองเชื่อมต่อ Wi-Fi กลางอัตโนมัติ
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  int wifiRetry = 0;
+  while (WiFi.status() != WL_CONNECTED && wifiRetry < 16) {
+    delay(400);
+    Serial.print(".");
+    wifiRetry++;
+  }
+
+  // หากไม่พบ Wi-Fi กลาง ให้เปิดระบบ Captive Portal AP
+  if (WiFi.status() != WL_CONNECTED) {
+    showOLEDMessage("WIFI: AP MODE", "192.168.4.1");
+    WiFiManager wm;
+    wm.setConfigPortalTimeout(60);
+    wm.autoConnect("SmartCity-Parking-AP");
   }
 
   showOLEDMessage("CONNECTED!", "READY TO DETECT");
