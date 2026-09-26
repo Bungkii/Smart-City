@@ -100,6 +100,31 @@ Build a credible dashboard using real device data only. The user supplied an ind
   - **`Button`**: Replaced native HTML `<button>` and interactive triggers with HeroUI `Button` (`variant="primary" | "outline" | "ghost"`, `size="sm"`, `onPress`, `isDisabled`, `fullWidth`) for toolbar tools, CSV export, wall mode, control submissions, Wi-Fi sync, and Gate RFID visualizer tab switches.
   - **`Chip`**: Replaced status badges with HeroUI `Chip` (`variant="soft"`, `color="success" | "warning" | "danger" | "accent" | "default"`) for connection status, health pills, device metadata tags, RFID roles (Student, Teacher, Staff, VIP), scan direction (IN, OUT), authorization results (Granted, Denied), and Thai PCD air quality badges.
 - All checks verified: `node tests/data-integrity.test.cjs` ✓, `npm run typecheck` ✓, `npm run build` (12/12 static/dynamic routes compiled) ✓.
+## Follow-up: RFID UID Auto-Capture & Remote Control for All 5 Boards — 2026-09-26
 
-
+- User request: "พร้อมมีให้เพิ่มบัตร แสกนบัตรเป็น UID ลงไป หรือควบคุมทุกboardผ่านระบบนี้ได้หมด"
+- **RFID Card Scanning & UID Auto-Capture**:
+  - `GateVisualizer` (`src/components/SystemVisualizers.tsx`):
+    - Added 1-click auto-capture button (`⚡ ดึง UID นี้มากรอกทันที`) whenever a card is tapped on the physical gate reader (`cardRef` from live telemetry or latest scan logs).
+    - Added quick "+ เพิ่ม / จัดการสิทธิ์บัตร UID" button directly under the live RFID card visualizer preview.
+    - Added "+ เพิ่มบัตรนี้" / "✏️ แก้ไขบัตร" action buttons on every row of the real-time Gate Scan Logs table (`gate_logs`).
+    - Added 1-click status toggling (Allow / Banned) and card deletion with confirmation.
+  - `src/app/api/rfid/route.ts`:
+    - Added `DELETE` endpoint handler to remove RFID cards by `card_id` query parameter from Supabase table `rfid_cards`.
+- **Command & Control for ALL 5 Smart City Boards**:
+  - `src/lib/model.ts`:
+    - Expanded Zod `commandSchema` discriminated union to support all 5 hardware systems:
+      - `gate`: `open`, `close`, `hold_open`, `lock`
+      - `traffic`: `adaptive`, `fixed`, `manual`, `force_ns_green`, `force_ew_green`, `force_all_red`, `incident_clear`
+      - `streetlight`: `auto`, `manual`, `on`, `off`, `eco_mode`, `dim_50`, `full_100`
+      - `parking`: `reset_bay`, `reserve_bay`, `calibrate`
+      - `environment`: `calibrate`, `alert_test`, `fan_on`, `fan_off`
+  - `src/components/Dashboard.tsx`:
+    - Enabled `ControlPanel` for all 5 subsystems without restriction.
+    - Configured comprehensive Thai labels, system icons, and command descriptions for each board.
+    - Integrated operator token validation and error handling.
+- **Validation**:
+  - `node tests/data-integrity.test.cjs` ✓ PASS
+  - `npm run typecheck` ✓ PASS
+  - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
 

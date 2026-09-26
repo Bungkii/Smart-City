@@ -1,11 +1,12 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CarFront, TrafficCone, Lightbulb, DoorOpen, Gauge, 
   ShieldCheck, AlertTriangle, CheckCircle2, Zap, Clock, 
   Sparkles, RefreshCw, Send, Radio, UserCheck, Flame, 
-  Wind, Droplets, Thermometer, ChevronRight, Activity
+  Wind, Droplets, Thermometer, ChevronRight, Activity,
+  Trash2, Edit3, PlusCircle, CreditCard, Scan
 } from "lucide-react";
 import { Button, Chip, Input } from "@heroui/react";
 import { type EventRow, type SystemId, deviceHealth } from "@/lib/model";
@@ -354,6 +355,19 @@ export function GateVisualizer({
     }
   };
 
+  useEffect(() => {
+    loadRfidData();
+  }, []);
+
+  const latestScannedUid = (cardRef && cardRef !== "—") ? cardRef : (logs[0]?.card_id || "");
+
+  const handleFillUid = (uid: string, name = "", role = "Student") => {
+    setNewCardId(uid);
+    if (name && name !== "บุคคลภายนอก") setNewName(name);
+    if (role && role !== "Guest") setNewRole(role);
+    setActiveTab("cards");
+  };
+
   const handleSaveCard = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCardId || !newName) return;
@@ -362,25 +376,70 @@ export function GateVisualizer({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          card_id: newCardId,
-          name: newName,
+          card_id: newCardId.trim().toUpperCase(),
+          name: newName.trim(),
           role: newRole,
           status: newStatus,
         }),
       });
       if (res.ok) {
-        setSaveMsg("✓ บันทึกข้อมูลบัตรลง Supabase สำเร็จ!");
+        setSaveMsg(`✓ บันทึกข้อมูลบัตร ${newCardId.trim().toUpperCase()} ลง Supabase สำเร็จ!`);
         setNewCardId("");
         setNewName("");
         loadRfidData();
-        setTimeout(() => setSaveMsg(""), 3000);
+        setTimeout(() => setSaveMsg(""), 4000);
       } else {
-        setSaveMsg("✕ เกิดข้อผิดพลาดในการบันทึก");
+        const errJson = await res.json().catch(() => ({}));
+        setSaveMsg("✕ เกิดข้อผิดพลาดในการบันทึก: " + (errJson.error || ""));
       }
     } catch {
       setSaveMsg("✕ ไม่สามารถเชื่อมต่อกับ Supabase ได้");
     }
   };
+
+  const handleDeleteCard = async (cardId: string) => {
+    if (!confirm(`ต้องการลบบัตร UID: ${cardId} ออกจากฐานข้อมูลหรือไม่?`)) return;
+    try {
+      const res = await fetch(`/api/rfid?card_id=${encodeURIComponent(cardId)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setSaveMsg(`✓ ลบบัตร ${cardId} ออกจากระบบเรียบร้อย`);
+        loadRfidData();
+        setTimeout(() => setSaveMsg(""), 3000);
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        setSaveMsg("✕ ลบไม่สำเร็จ: " + (errJson.error || ""));
+      }
+    } catch {
+      setSaveMsg("✕ เกิดข้อผิดพลาดในการเชื่อมต่อ");
+    }
+  };
+
+  const handleToggleStatus = async (card: any) => {
+    const nextStatus = card.status === "allow" ? "banned" : "allow";
+    try {
+      const res = await fetch("/api/rfid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          card_id: card.card_id,
+          name: card.name,
+          role: card.role,
+          status: nextStatus,
+        }),
+      });
+      if (res.ok) {
+        setSaveMsg(`✓ เปลี่ยนสถานะบัตร ${card.card_id} เป็น "${nextStatus === "allow" ? "อนุญาต" : "ระงับ"}" เรียบร้อย`);
+        loadRfidData();
+        setTimeout(() => setSaveMsg(""), 3000);
+      }
+    } catch {
+      setSaveMsg("✕ ไม่สามารถเปลี่ยนสถานะบัตรได้");
+    }
+  };
+
+  const isUidRegistered = (uid: string) => cards.some(c => String(c.card_id).toUpperCase() === String(uid).toUpperCase());
 
   return (
     <motion.div 
@@ -403,7 +462,7 @@ export function GateVisualizer({
               onPress={() => setActiveTab("visual")}
               className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3"
             >
-              ภาพจำลอง
+              ภาพจำลอง & แตะบัตร
             </Button>
             <Button
               size="sm"
@@ -411,7 +470,7 @@ export function GateVisualizer({
               onPress={() => { setActiveTab("cards"); loadRfidData(); }}
               className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3"
             >
-              บัตร RFID ({cards.length})
+              จัดการบัตร RFID ({cards.length})
             </Button>
             <Button
               size="sm"
@@ -474,6 +533,19 @@ export function GateVisualizer({
                     </Chip>
                   </div>
                 </div>
+
+                {cardRef && cardRef !== "—" && (
+                  <div style={{ marginTop: "10px", display: "flex", gap: "8px", justifyContent: "center" }}>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      className="font-[IBM_Plex_Sans_Thai] text-xs gap-1.5 shadow-sm"
+                      onPress={() => handleFillUid(cardRef)}
+                    >
+                      <Scan size={14} /> + เพิ่ม / จัดการสิทธิ์บัตร UID ({cardRef})
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
@@ -486,12 +558,17 @@ export function GateVisualizer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            style={{ padding: "1rem 0" }}
+            style={{ padding: "0.75rem 0" }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
-                ฐานข้อมูลบัตร RFID บน Supabase (Table: rfid_cards)
-              </h4>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
+                  ฐานข้อมูลบัตร RFID (Supabase: rfid_cards)
+                </h4>
+                <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                  ลงทะเบียนบัตรใหม่ แก้ไขสิทธิ์ หรือดึง UID ที่สแกนจากหัวอ่านมาบันทึกได้ทันที
+                </p>
+              </div>
               <Button
                 size="sm"
                 variant="outline"
@@ -503,26 +580,65 @@ export function GateVisualizer({
               </Button>
             </div>
 
+            {/* Quick Auto-Capture Banner */}
+            {latestScannedUid && !newCardId && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  background: "linear-gradient(135deg, #e8f7f5 0%, #d5f2ed 100%)",
+                  border: "1px solid #a3e5dc",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  marginBottom: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "8px"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.82rem", color: "#065f56" }}>
+                  <Sparkles size={15} color="#08aa9a" />
+                  <span>
+                    ตรวจพบ UID จากหัวอ่านล่าสุด: <strong style={{ fontFamily: "monospace", fontSize: "0.9rem", color: "#0b2338" }}>{latestScannedUid}</strong>
+                    {isUidRegistered(latestScannedUid) ? " (ลงทะเบียนแล้ว)" : " (ยังไม่ได้ลงทะเบียน)"}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3 bg-[#08aa9a]"
+                  onPress={() => handleFillUid(latestScannedUid)}
+                >
+                  ⚡ ดึง UID นี้มากรอกทันที
+                </Button>
+              </motion.div>
+            )}
+
             {/* Add / Edit Form */}
-            <form onSubmit={handleSaveCard} style={{ display: "grid", gridTemplateColumns: "1.2fr 2fr 1fr 1fr auto", gap: "8px", background: "#f4f8f9", padding: "10px", borderRadius: "8px", marginBottom: "1rem", alignItems: "center" }}>
-              <Input
-                placeholder="UID บัตร (เช่น 4A6F12C3)"
-                value={newCardId}
-                onChange={(e) => setNewCardId((e.target as HTMLInputElement).value)}
-                required
-                className="font-[IBM_Plex_Sans_Thai]"
-              />
-              <Input
-                placeholder="ชื่อ-นามสกุล / สังกัด"
-                value={newName}
-                onChange={(e) => setNewName((e.target as HTMLInputElement).value)}
-                required
-                className="font-[IBM_Plex_Sans_Thai]"
-              />
+            <form onSubmit={handleSaveCard} style={{ display: "grid", gridTemplateColumns: "1.3fr 1.8fr 1fr 1fr auto", gap: "8px", background: "#f4f8f9", padding: "12px", borderRadius: "8px", marginBottom: "1rem", alignItems: "center", border: "1px solid #e1ebed" }}>
+              <div>
+                <Input
+                  placeholder="UID บัตร (เช่น 4A6F12C3)"
+                  value={newCardId}
+                  onChange={(e) => setNewCardId((e.target as HTMLInputElement).value)}
+                  required
+                  className="font-[IBM_Plex_Sans_Thai]"
+                />
+              </div>
+              <div>
+                <Input
+                  placeholder="ชื่อ-นามสกุล / สังกัด"
+                  value={newName}
+                  onChange={(e) => setNewName((e.target as HTMLInputElement).value)}
+                  required
+                  className="font-[IBM_Plex_Sans_Thai]"
+                />
+              </div>
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #c2d6dc", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif" }}
+                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #c2d6dc", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif", background: "#fff" }}
               >
                 <option value="Student">Student (นักเรียน)</option>
                 <option value="Teacher">Teacher (ครู)</option>
@@ -533,7 +649,7 @@ export function GateVisualizer({
               <select
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
-                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #c2d6dc", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif" }}
+                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #c2d6dc", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif", background: "#fff" }}
               >
                 <option value="allow">Allow (อนุญาต)</option>
                 <option value="banned">Banned (ระงับ)</option>
@@ -542,51 +658,98 @@ export function GateVisualizer({
                 type="submit"
                 variant="primary"
                 size="sm"
-                className="font-[IBM_Plex_Sans_Thai]"
+                className="font-[IBM_Plex_Sans_Thai] font-semibold"
               >
                 + บันทึกบัตร
               </Button>
             </form>
 
             {saveMsg && (
-              <div style={{ color: saveMsg.startsWith("✓") ? "#16a34a" : "#dc2626", fontSize: "0.82rem", marginBottom: "8px", fontWeight: 600 }}>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                style={{ color: saveMsg.startsWith("✓") ? "#16a34a" : "#dc2626", fontSize: "0.84rem", marginBottom: "10px", fontWeight: 600, background: saveMsg.startsWith("✓") ? "#f0fdf4" : "#fef2f2", padding: "6px 12px", borderRadius: "6px" }}
+              >
                 {saveMsg}
-              </div>
+              </motion.div>
             )}
 
             {/* Card Table */}
-            <div style={{ maxHeight: "220px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
+            <div style={{ maxHeight: "260px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e1ebed", textAlign: "left", color: "#546e7a" }}>
-                    <th style={{ padding: "8px 12px" }}>Card UID</th>
-                    <th style={{ padding: "8px 12px" }}>ชื่อผู้ถือบัตร</th>
-                    <th style={{ padding: "8px 12px" }}>ประเภท (Role)</th>
-                    <th style={{ padding: "8px 12px" }}>สถานะ</th>
+                    <th style={{ padding: "9px 12px" }}>Card UID</th>
+                    <th style={{ padding: "9px 12px" }}>ชื่อผู้ถือบัตร</th>
+                    <th style={{ padding: "9px 12px" }}>ประเภท (Role)</th>
+                    <th style={{ padding: "9px 12px" }}>สถานะการผ่าน</th>
+                    <th style={{ padding: "9px 12px", textAlign: "right" }}>จัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cards.map((c, i) => (
                     <tr key={c.card_id || i} style={{ borderBottom: "1px solid #f0f4f6" }}>
-                      <td style={{ padding: "8px 12px", fontWeight: 700, color: "#0b2338" }}>{c.card_id}</td>
-                      <td style={{ padding: "8px 12px", color: "#1e293b" }}>{c.name}</td>
+                      <td style={{ padding: "8px 12px", fontWeight: 700, color: "#0b2338", fontFamily: "monospace" }}>{c.card_id}</td>
+                      <td style={{ padding: "8px 12px", color: "#1e293b", fontWeight: 500 }}>{c.name}</td>
                       <td style={{ padding: "8px 12px" }}>
                         <Chip size="sm" variant="soft" color="accent" className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs">
                           {c.role}
                         </Chip>
                       </td>
                       <td style={{ padding: "8px 12px" }}>
-                        <Chip
+                        <Button
                           size="sm"
-                          variant="soft"
-                          color={c.status === "allow" ? "success" : "danger"}
-                          className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs"
+                          variant="ghost"
+                          onPress={() => handleToggleStatus(c)}
+                          className="p-0 h-auto cursor-pointer"
+                          aria-label="สลับสถานะ อนุญาต / ระงับ"
                         >
-                          {c.status === "allow" ? "✓ อนุญาต" : "✕ ระงับ"}
-                        </Chip>
+                          <Chip
+                            size="sm"
+                            variant="soft"
+                            color={c.status === "allow" ? "success" : "danger"}
+                            className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs cursor-pointer hover:opacity-80"
+                          >
+                            {c.status === "allow" ? "✓ อนุญาต (คลิกเพื่อระงับ)" : "✕ ระงับ (คลิกเพื่อเปิด)"}
+                          </Chip>
+                        </Button>
+                      </td>
+                      <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: "4px" }}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs font-[IBM_Plex_Sans_Thai] text-slate-600 hover:text-slate-900"
+                            onPress={() => {
+                              setNewCardId(c.card_id);
+                              setNewName(c.name);
+                              setNewRole(c.role);
+                              setNewStatus(c.status);
+                            }}
+                            aria-label="แก้ไขข้อมูลบัตร"
+                          >
+                            <Edit3 size={13} />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs font-[IBM_Plex_Sans_Thai] text-red-500 hover:text-red-700"
+                            onPress={() => handleDeleteCard(c.card_id)}
+                            aria-label="ลบบัตรนี้"
+                          >
+                            <Trash2 size={13} />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
+                  {cards.length === 0 && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>
+                        ยังไม่มีข้อมูลบัตรในระบบ — สามารถกรอก UID ด้านบนหรือสแกนบัตรที่หัวอ่านเพื่อเพิ่มได้ทันที
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -600,12 +763,17 @@ export function GateVisualizer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            style={{ padding: "1rem 0" }}
+            style={{ padding: "0.75rem 0" }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
-                ประวัติการสแกนผ่านด่าน Real-time บน Supabase (Table: gate_logs)
-              </h4>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
+                  ประวัติการสแกนผ่านด่าน Real-time (Supabase: gate_logs)
+                </h4>
+                <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                  สามารถกด "+ เพิ่มเป็นบัตรในระบบ" จากรายการที่แตะเข้ามาได้ทันที 1 คลิก
+                </p>
+              </div>
               <Button
                 size="sm"
                 variant="outline"
@@ -617,46 +785,71 @@ export function GateVisualizer({
               </Button>
             </div>
 
-            <div style={{ maxHeight: "240px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
+            <div style={{ maxHeight: "260px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e1ebed", textAlign: "left", color: "#546e7a" }}>
-                    <th style={{ padding: "8px 12px" }}>เวลาที่แตะ</th>
-                    <th style={{ padding: "8px 12px" }}>Card UID</th>
-                    <th style={{ padding: "8px 12px" }}>ผู้ถือบัตร / สังกัด</th>
-                    <th style={{ padding: "8px 12px" }}>ทิศทาง</th>
-                    <th style={{ padding: "8px 12px" }}>ผลการตรวจสิทธิ์</th>
+                    <th style={{ padding: "9px 12px" }}>เวลาที่แตะ</th>
+                    <th style={{ padding: "9px 12px" }}>Card UID</th>
+                    <th style={{ padding: "9px 12px" }}>ผู้ถือบัตร / สังกัด</th>
+                    <th style={{ padding: "9px 12px" }}>ทิศทาง</th>
+                    <th style={{ padding: "9px 12px" }}>ผลการตรวจสิทธิ์</th>
+                    <th style={{ padding: "9px 12px", textAlign: "right" }}>การดำเนินการ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.length > 0 ? (
-                    logs.map((lg, i) => (
-                      <tr key={lg.id || i} style={{ borderBottom: "1px solid #f0f4f6" }}>
-                        <td style={{ padding: "8px 12px", color: "#64748b" }}>
-                          {lg.scanned_at ? new Date(lg.scanned_at).toLocaleTimeString("th-TH") : "-"}
-                        </td>
-                        <td style={{ padding: "8px 12px", fontWeight: 700 }}>{lg.card_id}</td>
-                        <td style={{ padding: "8px 12px" }}>{lg.name || "บุคคลภายนอก"} ({lg.role || "Guest"})</td>
-                        <td style={{ padding: "8px 12px" }}>
-                          <Chip size="sm" variant="soft" color="default" className="font-[IBM_Plex_Sans_Thai] font-bold text-xs">
-                            {lg.action}
-                          </Chip>
-                        </td>
-                        <td style={{ padding: "8px 12px" }}>
-                          <Chip
-                            size="sm"
-                            variant="soft"
-                            color={lg.status === "allow" ? "success" : "danger"}
-                            className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs"
-                          >
-                            {lg.status === "allow" ? "✓ อนุญาต (Granted)" : "✕ ปฏิเสธ (Denied)"}
-                          </Chip>
-                        </td>
-                      </tr>
-                    ))
+                    logs.map((lg, i) => {
+                      const registered = isUidRegistered(lg.card_id);
+                      return (
+                        <tr key={lg.id || i} style={{ borderBottom: "1px solid #f0f4f6" }}>
+                          <td style={{ padding: "8px 12px", color: "#64748b" }}>
+                            {lg.scanned_at ? new Date(lg.scanned_at).toLocaleTimeString("th-TH") : "-"}
+                          </td>
+                          <td style={{ padding: "8px 12px", fontWeight: 700, fontFamily: "monospace" }}>{lg.card_id}</td>
+                          <td style={{ padding: "8px 12px" }}>{lg.name || "บุคคลภายนอก"} ({lg.role || "Guest"})</td>
+                          <td style={{ padding: "8px 12px" }}>
+                            <Chip size="sm" variant="soft" color="default" className="font-[IBM_Plex_Sans_Thai] font-bold text-xs">
+                              {lg.action}
+                            </Chip>
+                          </td>
+                          <td style={{ padding: "8px 12px" }}>
+                            <Chip
+                              size="sm"
+                              variant="soft"
+                              color={lg.status === "allow" ? "success" : "danger"}
+                              className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs"
+                            >
+                              {lg.status === "allow" ? "✓ อนุญาต (Granted)" : "✕ ปฏิเสธ (Denied)"}
+                            </Chip>
+                          </td>
+                          <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                            {registered ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-xs font-[IBM_Plex_Sans_Thai] text-slate-600"
+                                onPress={() => handleFillUid(lg.card_id, lg.name, lg.role)}
+                              >
+                                ✏️ แก้ไขบัตร
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                className="h-6 px-2 text-xs font-[IBM_Plex_Sans_Thai] bg-[#08aa9a]"
+                                onPress={() => handleFillUid(lg.card_id, lg.name, lg.role)}
+                              >
+                                <PlusCircle size={12} /> + เพิ่มบัตรนี้
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={5} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>
+                      <td colSpan={6} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>
                         ยังไม่มีประวัติการสแกนบัตร (เมื่อมีการทาบบัตรที่บอร์ด ข้อมูลจะปรากฏที่นี่ทันที)
                       </td>
                     </tr>

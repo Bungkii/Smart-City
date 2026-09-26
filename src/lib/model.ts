@@ -43,9 +43,11 @@ export const telemetrySchema = z.discriminatedUnion("system", [
 export type Telemetry = z.infer<typeof telemetrySchema>;
 export type EventRow = Telemetry & { id: number; source: Source; receivedAt: string };
 export const commandSchema = z.discriminatedUnion("system", [
-  z.object({ system: z.literal("gate"), deviceId: z.string().min(1).max(64), command: z.enum(["open", "close"]), reason: z.string().min(3).max(200) }),
-  z.object({ system: z.literal("traffic"), deviceId: z.string().min(1).max(64), command: z.enum(["adaptive", "fixed", "manual"]), reason: z.string().min(3).max(200) }),
-  z.object({ system: z.literal("streetlight"), deviceId: z.string().min(1).max(64), command: z.enum(["auto", "manual", "on", "off"]), reason: z.string().min(3).max(200) })
+  z.object({ system: z.literal("gate"), deviceId: z.string().min(1).max(64), command: z.enum(["open", "close", "hold_open", "lock"]), reason: z.string().min(3).max(200) }),
+  z.object({ system: z.literal("traffic"), deviceId: z.string().min(1).max(64), command: z.enum(["adaptive", "fixed", "manual", "force_ns_green", "force_ew_green", "force_all_red", "incident_clear"]), reason: z.string().min(3).max(200) }),
+  z.object({ system: z.literal("streetlight"), deviceId: z.string().min(1).max(64), command: z.enum(["auto", "manual", "on", "off", "eco_mode", "dim_50", "full_100"]), reason: z.string().min(3).max(200) }),
+  z.object({ system: z.literal("parking"), deviceId: z.string().min(1).max(64), command: z.enum(["reset_bay", "reserve_bay", "calibrate"]), reason: z.string().min(3).max(200) }),
+  z.object({ system: z.literal("environment"), deviceId: z.string().min(1).max(64), command: z.enum(["calibrate", "alert_test", "fan_on", "fan_off"]), reason: z.string().min(3).max(200) })
 ]);
 
 export function deviceHealth(event: EventRow, now = Date.now()): Health {

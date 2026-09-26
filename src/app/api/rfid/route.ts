@@ -77,3 +77,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!url || !key) {
+    return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const card_id = searchParams.get("card_id");
+
+    if (!card_id) {
+      return NextResponse.json({ error: "card_id query parameter is required" }, { status: 400 });
+    }
+
+    const cleanCardId = String(card_id).trim().toUpperCase();
+
+    const res = await fetch(`${url}/rest/v1/rfid_cards?card_id=eq.${encodeURIComponent(cleanCardId)}`, {
+      method: "DELETE",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return NextResponse.json({ error: errText }, { status: res.status });
+    }
+
+    return NextResponse.json({ success: true, message: `Card ${cleanCardId} deleted successfully` });
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 });
+  }
+}
+

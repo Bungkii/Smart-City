@@ -56,12 +56,13 @@ npm run dev
 | `GET /api/dashboard` | ข้อมูลอุปกรณ์ล่าสุด สถานะ ประวัติ และเวลาเซิร์ฟเวอร์ |
 | `POST /api/ingest` | รับ telemetry ที่ตรวจ schema แล้ว; ต้องใช้ `INGEST_TOKEN` |
 | `GET /api/rfid` | อ่านบัตรและประวัติสแกนใน response เดียว |
-| `POST /api/rfid` | เพิ่มหรือแก้ไขบัตร RFID |
+| `POST /api/rfid` | เพิ่มหรือแก้ไขบัตร RFID (สแกน UID อัตโนมัติ หรือกรอกด้วยตนเอง) |
+| `DELETE /api/rfid` | ลบบัตร RFID ออกจากระบบด้วย `card_id` |
 | `GET /api/settings` | รายงานการตั้งค่าการเชื่อมต่อ |
 | `PATCH /api/settings` | รองรับเฉพาะ `{ "mode": "live" }`; ต้องใช้ `SETTINGS_TOKEN` |
 | `GET /api/settings/wifi` | อ่านค่า Wi-Fi ที่บันทึกไว้ |
 | `POST /api/settings/wifi` | บันทึกค่า Wi-Fi; จะไม่รายงานสำเร็จหากฐานข้อมูลปฏิเสธ |
-| `POST /api/control` | ส่งคำสั่งผ่าน adapter สำหรับอุปกรณ์ออนไลน์; ต้องยืนยันผู้สั่ง |
+| `POST /api/control` | ส่งคำสั่งผ่าน adapter สำหรับอุปกรณ์ออนไลน์ทั้ง 5 บอร์ด; ต้องยืนยันผู้สั่ง |
 | `GET /api/audit` | อ่านประวัติคำสั่งด้วย `SETTINGS_TOKEN` |
 
 API จำลองเหตุการณ์และหน้าทดสอบ SSR เดิมถูกนำออกแล้ว

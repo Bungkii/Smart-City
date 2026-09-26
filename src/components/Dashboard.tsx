@@ -591,9 +591,7 @@ function SystemDetail({
                   </div>
                 </div>
 
-                {["gate", "traffic", "streetlight"].includes(id) && (
-                  <ControlPanel device={selectedDevice} mode={data.mode} />
-                )}
+                <ControlPanel device={selectedDevice} mode={data.mode} />
               </motion.div>
             </AnimatePresence>
           ) : (
@@ -641,25 +639,64 @@ function SystemDetail({
   );
 }
 
-function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
-  const options = device.system === "gate"
-    ? ["open", "close"]
-    : device.system === "traffic"
-      ? ["adaptive", "fixed", "manual"]
-      : ["auto", "manual", "on", "off"];
+const systemCommandMap: Record<SystemId, { value: string; label: string; description: string }[]> = {
+  gate: [
+    { value: "open", label: "🟢 เปิดไม้กั้น (Open Barrier)", description: "ยกแขนกั้นขึ้นให้ยานพาหนะผ่าน" },
+    { value: "close", label: "🔴 ปิดไม้กั้น (Close Barrier)", description: "ลดแขนกั้นลงปิดกั้นช่องทาง" },
+    { value: "hold_open", label: "⚠️ เปิดค้างฉุกเฉิน (Hold Open)", description: "ยกค้างตลอดเวลาสำหรับกรณีฉุกเฉิน" },
+    { value: "lock", label: "🔒 ล็อคไม้กั้นห้ามผ่าน (Lock Down)", description: "ล็อคไม้กั้นไม่ให้เปิดจนกว่าจะปลดล็อค" },
+  ],
+  traffic: [
+    { value: "adaptive", label: "🤖 โหมดปรับตามเซนเซอร์อัตโนมัติ (Adaptive Mode)", description: "ปรับรอบไฟตามปริมาณรถจริงจาก Ultrasonic/PIR" },
+    { value: "fixed", label: "⏱️ โหมดจับเวลาคงที่ (Fixed Timer)", description: "สลับสัญญาณไฟตามรอบเวลาคงที่" },
+    { value: "manual", label: "🖐️ โหมดควบคุมด้วยตนเอง (Manual Override)", description: "ควบคุมสลับไฟด้วยการสั่งการจากศูนย์" },
+    { value: "force_ns_green", label: "⬆️ บังคับไฟเขียวทิศเหนือ-ใต้ (Force N-S Green)", description: "เปิดทางด่วนให้ทิศ N-S ผ่านตลอด" },
+    { value: "force_ew_green", label: "➡️ บังคับไฟเขียวทิศตะวันออก-ตก (Force E-W Green)", description: "เปิดทางด่วนให้ทิศ E-W ผ่านตลอด" },
+    { value: "force_all_red", label: "🚨 บังคับไฟแดงทุกทิศทางฉุกเฉิน (Emergency All-Red)", description: "หยุดรถทุกฝั่งเมื่อเกิดเหตุฉุกเฉิน" },
+    { value: "incident_clear", label: "✅ เคลียร์สถานะอุบัติเหตุ (Clear Incident)", description: "รีเซ็ตสถานะแจ้งเตือนอุบัติเหตุกลับสู่สภาวะปกติ" },
+  ],
+  streetlight: [
+    { value: "auto", label: "☀️ โหมดอัตโนมัติ LDR (Auto Light Sensor)", description: "เปิด-ปิดและปรับความสว่างตามแสงแดดธรรมชาติ" },
+    { value: "manual", label: "🖐️ โหมดควบคุมด้วยตนเอง (Manual Override)", description: "ตั้งค่าเปิด-ปิดไฟตามคำสั่งตรงจากศูนย์" },
+    { value: "on", label: "💡 เปิดไฟส่องสว่าง (Turn On)", description: "เปิดไฟหลอดส่องสว่างทันที" },
+    { value: "off", label: "🌑 ปิดไฟส่องสว่าง (Turn Off)", description: "ปิดไฟหลอดส่องสว่าง" },
+    { value: "eco_mode", label: "🌱 โหมดประหยัดพลังงาน Eco (Eco Dimming)", description: "หรี่ไฟเหลือ 30% เมื่อไม่มีคนเดินผ่าน" },
+    { value: "dim_50", label: "🌓 หรี่ความสว่าง 50% (Dim to 50%)", description: "ตั้งระดับความสว่างระดับกลาง 50%" },
+    { value: "full_100", label: "🌟 ความสว่างเต็มพิกัด 100% (Full Brightness)", description: "เพิ่มความสว่างสูงสุด 100%" },
+  ],
+  parking: [
+    { value: "reset_bay", label: "🔄 รีเซ็ตสถานะช่องจอดทั้งหมด (Reset Bay State)", description: "สั่งรีเซ็ตเซนเซอร์ช่องจอดและอ่านค่าใหม่" },
+    { value: "reserve_bay", label: "🏷️ สำรองช่องจอดพิเศษ VIP (Reserve Bay)", description: "ล็อคช่องจอดสำหรับแขกพิเศษหรือผู้บริหาร" },
+    { value: "calibrate", label: "📐 ปรับเทียบเซนเซอร์ระยะ Ultrasonic (Calibrate)", description: "ตั้งค่าระยะตรวจจับรถยนต์ของช่องจอดใหม่" },
+  ],
+  environment: [
+    { value: "calibrate", label: "🎯 ปรับเทียบเซนเซอร์ฝุ่น & อุณหภูมิ (Calibrate)", description: "ทำการ Zero-Calibration เซนเซอร์วัดคุณภาพอากาศ" },
+    { value: "alert_test", label: "🔔 ทดสอบระบบสัญญาณเตือนภัยฝุ่น (Alarm Test)", description: "ส่งสัญญาณทดสอบ Buzzer/ไฟเตือนเมื่อค่า PM2.5 เกินเกณฑ์" },
+    { value: "fan_on", label: "🌀 เปิดพัดลมระบาย/ฟอกอากาศ (Air Purifier Fan ON)", description: "เปิดระบบระบายและฟอกอากาศในพื้นที่" },
+    { value: "fan_off", label: "⏹️ ปิดพัดลมระบายอากาศ (Air Purifier Fan OFF)", description: "ปิดระบบฟอกอากาศ" },
+  ],
+};
 
-  const [command, setCommand] = useState(options[0]);
+function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
+  const options = systemCommandMap[device.system] || [];
+  const [command, setCommand] = useState(options[0]?.value || "");
   const [reason, setReason] = useState("");
   const [token, setToken] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setCommand(options[0]);
+    if (options[0]) {
+      setCommand(options[0].value);
+    }
     setMessage("");
-  }, [device.deviceId]);
+  }, [device.deviceId, device.system]);
+
+  const selectedOption = options.find(o => o.value === command);
 
   const send = async () => {
-    if (!confirm(`ยืนยันส่งคำสั่ง ${command} ไปยัง ${device.name}?`)) return;
+    if (!confirm(`ยืนยันส่งคำสั่ง "${selectedOption?.label || command}" ไปยังอุปกรณ์ "${device.name}" (${device.deviceId})?`)) return;
+    setLoading(true);
     try {
       const response = await fetch("/api/control", {
         method: "POST",
@@ -675,45 +712,93 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
         })
       });
       const result = await response.json();
-      setMessage(response.ok ? "ส่งคำสั่งแล้ว และบันทึกประวัติแล้ว" : result.error || "ส่งคำสั่งไม่สำเร็จ");
+      setMessage(response.ok ? "✓ ส่งคำสั่งไปยังบอร์ดฮาร์ดแวร์แล้ว และบันทึกลง Audit Log เรียบร้อย" : "✕ " + (result.error || "ส่งคำสั่งไม่สำเร็จ"));
     } catch (e) {
-      setMessage("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+      setMessage("✕ เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="control-box">
       <div className="control-heading">
-        <ShieldCheck size={16} /> ส่งคำสั่งควบคุมอุปกรณ์ (Device Control)
+        <ShieldCheck size={16} /> ส่งคำสั่งควบคุมอุปกรณ์ (Hardware Command Center)
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <select value={command} onChange={e => setCommand(e.target.value)} style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #dce5ed", fontFamily: "'IBM Plex Sans Thai', sans-serif" }}>
-          {options.map(x => <option key={x} value={x}>{x}</option>)}
-        </select>
-        <Input
-          placeholder="เหตุผลในการสั่ง (อย่างน้อย 3 ตัวอักษร)"
-          value={reason}
-          onChange={e => setReason((e.target as HTMLInputElement).value)}
-          className="font-[IBM_Plex_Sans_Thai]"
-        />
-        <Input
-          placeholder="Control Token (จาก .env.local)"
-          type="password"
-          value={token}
-          onChange={e => setToken((e.target as HTMLInputElement).value)}
-          className="font-[IBM_Plex_Sans_Thai]"
-        />
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div>
+          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
+            เลือกคำสั่งควบคุมสำหรับบอร์ด {device.name}:
+          </label>
+          <select 
+            value={command} 
+            onChange={e => setCommand(e.target.value)} 
+            style={{ 
+              width: "100%", 
+              padding: "9px 12px", 
+              borderRadius: "8px", 
+              border: "1px solid #cbd5e1", 
+              fontFamily: "'IBM Plex Sans Thai', sans-serif", 
+              fontSize: "0.85rem",
+              background: "#fff",
+              color: "#0f172a"
+            }}
+          >
+            {options.map(x => (
+              <option key={x.value} value={x.value}>
+                {x.label}
+              </option>
+            ))}
+          </select>
+          {selectedOption?.description && (
+            <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#64748b" }}>
+              คำอธิบาย: {selectedOption.description}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <Input
+            placeholder="ระบุเหตุผลในการสั่งการ (อย่างน้อย 3 ตัวอักษร)"
+            value={reason}
+            onChange={e => setReason((e.target as HTMLInputElement).value)}
+            className="font-[IBM_Plex_Sans_Thai]"
+          />
+        </div>
+
+        <div>
+          <Input
+            placeholder="Operator Token (จาก .env.local)"
+            type="password"
+            value={token}
+            onChange={e => setToken((e.target as HTMLInputElement).value)}
+            className="font-[IBM_Plex_Sans_Thai]"
+          />
+        </div>
+
         <Button
           variant="primary"
           size="sm"
-          isDisabled={!token || reason.length < 3}
+          isDisabled={loading || !token || reason.trim().length < 3}
           onPress={send}
-          className="font-[IBM_Plex_Sans_Thai]"
+          className="font-[IBM_Plex_Sans_Thai] font-semibold"
           fullWidth
         >
-          ยืนยันและส่งคำสั่งควบคุม
+          {loading ? "กำลังส่งคำสั่ง..." : "🚀 ยืนยันและส่งคำสั่งควบคุมบอร์ด"}
         </Button>
-        {message && <small style={{ color: message.includes("สำเร็จ") || message.includes("แล้ว") ? "#16a34a" : "#dc2626" }}>{message}</small>}
+
+        {message && (
+          <div style={{ 
+            color: message.startsWith("✓") ? "#16a34a" : "#dc2626", 
+            background: message.startsWith("✓") ? "#f0fdf4" : "#fef2f2",
+            padding: "6px 10px", 
+            borderRadius: "6px", 
+            fontSize: "0.8rem", 
+            fontWeight: 600 
+          }}>
+            {message}
+          </div>
+        )}
       </div>
     </div>
   );
