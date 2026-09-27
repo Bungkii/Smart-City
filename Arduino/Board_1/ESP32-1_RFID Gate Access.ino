@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <HTTPClient.h>
+#include "SmartCitySecrets.h"
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <SPI.h>
@@ -10,18 +11,18 @@
 #include "time.h"
 
 // ==============================================================================
-// 1. SUPABASE CLOUD CONFIGURATION (บันทึกและจำการตั้งค่าลง SQL)
+// 1. SUPABASE CLOUD CONFIGURATION
 // ==============================================================================
 // ⚙️ โหมดการส่งข้อมูล: "supabase", "dashboard", หรือ "both"
 const String CLOUD_MODE = "supabase"; 
 
 // ⚙️ ตั้งค่า Supabase Project URL และ Anon Key
-const String SUPABASE_URL = "https://kqkggjsjwbkodqyeddwj.supabase.co/rest/v1";
-const String SUPABASE_KEY = "sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc";
+const String SUPABASE_URL = SMARTCITY_SUPABASE_URL;
+const String SUPABASE_KEY = SMARTCITY_SUPABASE_KEY;
 
 // ⚙️ ตั้งค่า URL ส่งตรงเข้า Dashboard API (/api/ingest)
-const String DASHBOARD_INGEST_URL   = "http://192.168.1.100:3000/api/ingest";
-const String DASHBOARD_INGEST_TOKEN = "act_smartcity_ingest_secret_token_2026";
+const String DASHBOARD_INGEST_URL   = SMARTCITY_DASHBOARD_INGEST_URL;
+const String DASHBOARD_INGEST_TOKEN = SMARTCITY_DASHBOARD_INGEST_TOKEN;
 
 // NTP Server สำหรับเวลามาตรฐาน
 const char* ntpServer     = "time1.nimt.or.th";
@@ -78,10 +79,10 @@ String getLocalTimeString() {
 
 // คืนค่าเวลามาตรฐานสากล ISO 8601 ("YYYY-MM-DDTHH:MM:SSZ") สำหรับส่งเข้า Cloud
 String getIsoTimeString() {
+  time_t now = time(nullptr);
+  if (now < 1700000000) return "";
   struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    return "2026-09-26T12:00:00Z";
-  }
+  gmtime_r(&now, &timeinfo);
   char isoStr[25];
   strftime(isoStr, sizeof(isoStr), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
   return String(isoStr);
@@ -95,37 +96,6 @@ void beepBuzzer(int count) {
     if (i < count - 1) delay(100);
   }
   digitalWrite(BUZZER_PIN, BUZZER_OFF);
-}
-
-// ------------------------------------------------------------------------------
-// 4. บันทึกและจำค่า Wi-Fi ที่ตั้งค่าผ่าน WiFiManager ลง Supabase SQL (ตาราง settings)
-// ------------------------------------------------------------------------------
-void syncWiFiConfigToSupabase(String ssid, String pass) {
-  if (WiFi.status() != WL_CONNECTED) return;
-
-  WiFiClientSecure secureClient;
-  secureClient.setInsecure();
-  secureClient.setTimeout(4000);
-
-  HTTPClient http;
-  http.begin(secureClient, SUPABASE_URL + "/settings");
-  http.addHeader("apikey", SUPABASE_KEY);
-  http.addHeader("Authorization", "Bearer " + SUPABASE_KEY);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Prefer", "resolution=merge-duplicates,return=minimal");
-
-  // 1. บันทึก wifi_ssid ลง SQL
-  String bodySsid = "{\"key\":\"wifi_ssid\",\"value\":\"" + ssid + "\",\"updated_at\":\"" + getIsoTimeString() + "\"}";
-  int code1 = http.POST(bodySsid);
-
-  // 2. บันทึก wifi_pass ลง SQL
-  if (pass.length() > 0) {
-    String bodyPass = "{\"key\":\"wifi_pass\",\"value\":\"" + pass + "\",\"updated_at\":\"" + getIsoTimeString() + "\"}";
-    http.POST(bodyPass);
-  }
-  
-  http.end();
-  Serial.printf("[SUPABASE SQL] Synced Wi-Fi '%s' to settings table (HTTP: %d)\n", ssid.c_str(), code1);
 }
 
 // ------------------------------------------------------------------------------
@@ -147,21 +117,25 @@ String verifyCardWithSupabase(String cardUID, String &nameOut, String &roleOut) 
   http.addHeader("Authorization", "Bearer " + SUPABASE_KEY);
 
   int httpCode = http.GET();
-  String resultStatus = "not_found";
-  nameOut = "Unregistered";
-  roleOut = "Guest";
+  String resultStatus = "verification_failed";
+  nameOut = "";
+  roleOut = "";
 
   if (httpCode == HTTP_CODE_OK || httpCode == 200) {
     String payload = http.getString();
-    Serial.println("[SUPABASE CARD QUERY] " + payload);
-
     DynamicJsonDocument doc(512);
     DeserializationError error = deserializeJson(doc, payload);
-    if (!error && doc.is<JsonArray>() && doc.size() > 0) {
-      JsonObject card = doc[0];
-      resultStatus = card["status"].as<String>(); // "allow" หรือ "banned"
-      nameOut      = card["name"].as<String>();
-      roleOut      = card["role"].as<String>();
+    if (!error && doc.is<JsonArray>()) {
+      if (doc.size() == 0) resultStatus = "not_found";
+      else {
+        JsonObject card = doc[0];
+        String status = card["status"].as<String>();
+        if (status == "allow" || status == "banned") {
+          resultStatus = status;
+          nameOut = card["name"].as<String>();
+          roleOut = card["role"].as<String>();
+        }
+      }
     }
   } else {
     Serial.printf("[SUPABASE CARD ERROR] HTTP Code: %d\n", httpCode);
@@ -191,7 +165,7 @@ void logGateAccessToSupabase(String cardUID, String name, String role, String st
   doc["role"]       = role;
   doc["status"]     = status;
   doc["action"]     = action;
-  doc["scanned_at"] = getIsoTimeString();
+  // gate_logs.scanned_at uses the database clock.
 
   String jsonBody;
   serializeJson(doc, jsonBody);
@@ -225,15 +199,11 @@ void sendGateTelemetry(bool isOpen, String direction, String access, String card
     doc["source"]      = "live";
     doc["system"]      = "gate";
     doc["device_id"]   = "GT-1";
-    doc["name"]        = "ประตูทางเข้าหลัก (Main Gate)";
-    doc["location"]    = "อาคารเซนต์คาเบรียล";
-    doc["recorded_at"] = getIsoTimeString();
+    doc["name"]        = "เครื่องอ่าน RFID GT-1";
+    doc["location"]    = "ตำแหน่งยังไม่ยืนยัน";
+    // Database NOW() supplies the observation time; never substitute a fixed date.
     doc["health"]      = "normal";
     doc["note"]        = note;
-
-    JsonObject pos = doc.createNestedObject("position_json");
-    pos["lat"] = 13.7574;
-    pos["lng"] = 100.5029;
 
     JsonObject data = doc.createNestedObject("data_json");
     data["open"] = isOpen;
@@ -256,6 +226,8 @@ void sendGateTelemetry(bool isOpen, String direction, String access, String card
 
   // 2. ส่งเข้า Next.js Dashboard API (/api/ingest)
   if (CLOUD_MODE == "dashboard" || CLOUD_MODE == "both") {
+    String observedAt = getIsoTimeString();
+    if (observedAt.isEmpty()) return; // Ingest requires a verified UTC time.
     HTTPClient http;
     if (DASHBOARD_INGEST_URL.startsWith("https")) {
       http.begin(secureClient, DASHBOARD_INGEST_URL);
@@ -268,15 +240,11 @@ void sendGateTelemetry(bool isOpen, String direction, String access, String card
     DynamicJsonDocument doc(512);
     doc["system"]      = "gate";
     doc["deviceId"]    = "GT-1";
-    doc["name"]        = "ประตูทางเข้าหลัก (Main Gate)";
-    doc["location"]    = "อาคารเซนต์คาเบรียล";
-    doc["recordedAt"]  = getIsoTimeString();
+    doc["name"]        = "เครื่องอ่าน RFID GT-1";
+    doc["location"]    = "ตำแหน่งยังไม่ยืนยัน";
+    doc["recordedAt"]  = observedAt;
     doc["health"]      = "normal";
     doc["note"]        = note;
-
-    JsonObject pos = doc.createNestedObject("position");
-    pos["lat"] = 13.7574;
-    pos["lng"] = 100.5029;
 
     JsonObject data = doc.createNestedObject("data");
     data["open"] = isOpen;
@@ -407,7 +375,6 @@ void setup() {
   }
 
   // เมื่อเชื่อมต่อ Wi-Fi สำเร็จ -> บันทึกและจำค่าลง Supabase SQL (ตาราง settings) อัตโนมัติ
-  syncWiFiConfigToSupabase(WiFi.SSID(), WiFi.psk());
 
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -486,13 +453,13 @@ void loop() {
     String cardRole = "";
     String authStatus = verifyCardWithSupabase(cardUID, cardName, cardRole);
     
-    Serial.println("[SUPABASE] Status: " + authStatus + " | Name: " + cardName + " | Role: " + cardRole);
+    Serial.println("[SUPABASE] Verification status: " + authStatus);
 
-    if (authStatus == "wifi_lost") {
+    if (authStatus == "wifi_lost" || authStatus == "verification_failed") {
       // Fail closed: a disconnected reader cannot verify that a card is allowed.
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("NETWORK OFFLINE  ");
+      lcd.print(authStatus == "wifi_lost" ? "NETWORK OFFLINE  " : "VERIFY ERROR     ");
       lcd.setCursor(0, 1);
       lcd.print("ACCESS DENIED   ");
       beepBuzzer(3);

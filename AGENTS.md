@@ -32,6 +32,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - `src/app/monitor.css`: overview layout and responsive styles. `operations.css` adjusts shared dashboard surfaces.
 - `src/lib/data-integrity.ts`: known legacy telemetry and RFID sample exclusions.
 - `node tests/data-integrity.test.cjs`, `npx next typegen`, `npm run typecheck`, `npm run build`.
+- For environment schema changes, also run `node tests/environment-schema.test.cjs`.
 - Verify desktop/mobile empty-data states without seeding a database. Do not send hardware control commands merely to test layout.
 - Update `CONTEXT.md` for continuity; keep the user-facing README free of real keys and tokens.
 
@@ -63,3 +64,10 @@ The user supplied a monitoring-wall reference, then explicitly chose the origina
 - Create and edit are separate actions. New cards start banned, UID is immutable during edit, duplicate creates fail, and deletion requires confirmation. Never invent a scanned UID or a holder identity from logs.
 - `supabase/migrations/20260927_rfid_access.sql` restricts publishable-key access to card SELECT and gate-log INSERT for current Board 1 firmware. It must be applied to existing Supabase databases manually; no existing records are deleted. The current firmware still exposes card data through its direct read path, so do not claim the system is fully hardened.
 - Board 1 source fails closed when Wi-Fi is lost; this only affects hardware after reflashing. Do not test by actuating the gate. Registry GET currently loads up to 500 cards and 50 logs; UI search is limited to loaded cards.
+
+## Firmware data integrity — 2026-09-27
+
+- All five board sketches were reviewed for fabricated timestamps, positions, credentials and sensor claims. Supabase insert paths rely on database time and omit unverified coordinates. Direct dashboard ingest paths require a synchronized UTC clock.
+- Never derive PM2.5 from MQ-2 smoke readings, substitute fallback DHT measurements, or describe entry/exit trigger counts as verified parking occupancy. Board 3 does not publish occupancy until actual bay instrumentation and a reliable baseline are available.
+- `SmartCitySecrets.h` files are local and ignored; copy each board's example and fill deployment values before compiling. Never commit Wi-Fi passwords, ingest tokens or service-role keys. Existing exposed values in Git history require rotation.
+- Board 1 must deny entry when card verification fails for any reason. Existing ESP32 `setInsecure()` calls still need a trusted certificate design; do not claim field readiness without compilation, flashing and hardware tests.

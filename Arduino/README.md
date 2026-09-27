@@ -1,53 +1,25 @@
-# 🏙️ Assumption College Thonburi (ACT) — Smart City IoT Architecture (5 Boards)
+# ACT Smart City — firmware ทั้ง 5 บอร์ด
 
-แบบจำลองเมืองอัจฉริยะ (Smart City Digital Twin) สถาปัตยกรรมกระจายศูนย์ 5 บอร์ด เชื่อมต่อคลาวด์ **Supabase Cloud Database** และ **Next.js Web Dashboard** แบบ Real-time 100% (ย้ายจากระบบ Google Sheets เดิมโดยสมบูรณ์)
+โค้ดใน `Board_1` ถึง `Board_5` ต้องกำหนดค่าจริงและแฟลชลงอุปกรณ์ก่อนจึงจะส่งข้อมูลได้ การแก้ source ใน repository ไม่เปลี่ยนเฟิร์มแวร์ที่ติดตั้งอยู่แล้ว อ่านผังสายจาก `WIRE.md` และยืนยันรุ่นบอร์ด/ขาที่ต่อจริงก่อนแฟลช
 
----
+## ตั้งค่าก่อนคอมไพล์
 
-## 📌 Architecture & Subsystems (5 บอร์ดระบบย่อย)
+ในแต่ละโฟลเดอร์ที่มี `SmartCitySecrets.example.h` ให้คัดลอกเป็น `SmartCitySecrets.h` ในโฟลเดอร์เดียวกัน แล้วใส่ Supabase URL, publishable key, dashboard ingest URL/token หรือ Wi-Fi ตามตัวแปรที่ไฟล์นั้นระบุ `SmartCitySecrets.h` ถูก Git ignore ไว้ ห้ามใส่ service-role key ลงในบอร์ด และควรเปลี่ยน ingest token กับรหัส Wi-Fi ที่เคยอยู่ใน Git history ก่อนใช้งานจริง
 
-### 1. 💳 Board 1: RFID Gate Access & Entry Control (ESP32)
-* **Supabase Cloud Authentication:** เมื่อสแกนบัตร RFID RC522 ระบบจะยิงตรงไปค้นหาในตาราง `rfid_cards` บน Supabase ผ่าน REST API (`GET /rest/v1/rfid_cards?card_id=eq.<UID>`) ทันที (Latency < 100ms)
-* **Access Control & Action:**
-  * **Allow:** ยกไม้กั้น (LED/Servo) 3 วินาที พร้อมส่ง Log เข้าตาราง `gate_logs` และ `events` บน Supabase
-  * **Banned:** ปฏิเสธการเข้า เสียง Buzzer แจ้งเตือน และบันทึก Log บัตรถูกระงับ
-  * **Not Registered:** แจ้งเตือนบัตรไม่ระบุตัวตนบนจอ LCD 16x2
-* **Captive Portal Wi-Fi:** กดปุ่ม `BOOT` เพื่อปล่อย Wi-Fi AP `SmartCity-Gate-AP` (IP `192.168.4.1`) สำหรับตั้งค่า Wi-Fi
+บอร์ด ESP32 ใช้ WiFiManager สำหรับตั้งค่าเครือข่าย บอร์ด UNO R4 ใช้ Wi-Fi จาก header ข้างต้น ค่า TLS ของ ESP32 ยังใช้ `setInsecure()` ใน sketch เดิม จึงยังต้องเปลี่ยนเป็นการตรวจสอบใบรับรองที่เชื่อถือได้ก่อนใช้ในเครือข่ายที่ไม่ควบคุม
 
-### 2. 🚦 Board 2: Adaptive Intersection Traffic Light (ESP32 / UNO R4 WiFi)
-* ควบคุมไฟจราจรสี่แยก 2 ทิศทาง (North-South & East-West) ด้วย State Machine
-* ปรับเวลาสัญญาณไฟอัตโนมัติตามความหนาแน่น และซิงก์สถานะไฟจราจรขึ้นตาราง `events` บน Supabase
+## ความหมายข้อมูลจากแต่ละบอร์ด
 
-### 3. 🅿️ Board 3: Smart Parking Management (ESP32)
-* Ultrasonic ตรวจจับรถเข้า-ออก (IN / OUT) พร้อมคำนวณจำนวนช่องจอดว่าง
-* แสดงผลบนจอ OLED SSD1306 (128x64) และส่งข้อมูลที่จอดรถขึ้น Supabase / Dashboard
+| บอร์ด | ข้อมูลที่ส่งหรือแสดง | ข้อจำกัด |
+| --- | --- | --- |
+| 1 ประตู RFID | ตรวจสิทธิ์จาก `rfid_cards`, เขียน `gate_logs` และสถานะประตู | Wi-Fi หรือการตรวจสิทธิ์ล้มเหลวจะไม่เปิดประตู; ต้องแฟลช source นี้ก่อนมีผล |
+| 2 ไฟจราจร | ส่งสถานะไฟจาก state machine ไป `events` | ตำแหน่งจริงไม่ได้กำหนด; ESP32 ยังต้องปรับ TLS |
+| 3 ทางเข้า/ออกที่จอดรถ | OLED/Serial แสดงจำนวน trigger ทางเข้าและทางออกตั้งแต่บูต | เซ็นเซอร์ 2 จุดไม่ยืนยันว่าช่องใดว่างหรือความจุทั้งหมด จึงไม่ส่ง occupancy ไป Dashboard; ตัวนับรีเซ็ตเมื่อบูต |
+| 4 สิ่งแวดล้อม | ส่งอุณหภูมิ/ความชื้น DHT11 และเตือนเมื่อ MQ-2 เกินเกณฑ์ | MQ-2 ไม่ใช่เซ็นเซอร์ PM2.5; ช่อง PM2.5 เว้นว่างจนติดตั้งเซ็นเซอร์ที่วัดได้จริง; DHT อ่านไม่ได้จะไม่ส่งค่าทดแทน |
+| 5 ไฟถนน | ส่งสถานะ LED/PWM ตาม LDR/PIR | ไม่ส่งพิกัดหรือเวลาแบบคงที่; ESP32 ยังต้องปรับ TLS |
 
-### 4. 🍃 Board 4: Smart Environment Station (ESP32)
-* วัดอุณหภูมิและความชื้น (DHT11) พร้อมระดับควัน/แก๊ส (MQ-2)
-* คำนวณค่าประมาณ PM2.5 / ดัชนีคุณภาพอากาศ (AQI) ส่งขึ้น Cloud ทุก 10 วินาที
+ข้อมูล `events.recorded_at` และ `gate_logs.scanned_at` ของทาง Supabase ใช้เวลาจากฐานข้อมูล หากส่งผ่าน Dashboard ingest โดยตรง บอร์ด ESP32 จะส่งได้เมื่อซิงก์ UTC แล้วเท่านั้น ไม่ใส่วันเวลาปลอม พิกัดที่เคยเขียนไว้ใน source ถูกนำออก และชื่อสถานที่ใน telemetry ระบุว่า “ตำแหน่งยังไม่ยืนยัน”; ให้เพิ่มเฉพาะหลังสำรวจตำแหน่งจริง
 
-### 5. 💡 Board 5: Adaptive Street Light System (ESP32)
-* ตรวจวัดระดับแสงธรรมชาติ (LDR) และความเคลื่อนไหว (PIR Sensor)
-* ปรับระดับความสว่างไฟถนนแบบ Smooth PWM (Dimming) และคำนวณสถิติการประหยัดพลังงาน kWh ส่งขึ้น Supabase
+บอร์ด 1, 3 และ 4 ไม่บันทึก SSID/รหัส Wi-Fi ลงตาราง `settings` อีกแล้ว ข้อมูลเดิมในฐานข้อมูลไม่ได้ถูกลบหรือแก้ไข ต้องจัดการข้อมูลเก่าตามนโยบายของผู้ดูแลแยกต่างหาก
 
----
-
-## 🗄️ Supabase Cloud Database Tables
-
-| ตาราง (Table) | หน้าที่ | รายละเอียดคอลัมน์ |
-| :--- | :--- | :--- |
-| **`rfid_cards`** | ข้อมูลบัตร RFID (แทนแท็บ Database ใน Google Sheets) | `card_id`, `name`, `role`, `status` (`allow`/`banned`) |
-| **`gate_logs`** | ประวัติการทาบบัตร (แทนแท็บ Logs ใน Google Sheets) | `id`, `card_id`, `name`, `role`, `status`, `action`, `scanned_at` |
-| **`events`** | ข้อมูล Telemetry ของทั้ง 5 ระบบย่อย | `source`, `system`, `device_id`, `health`, `data_json`, `position_json` |
-| **`settings`** | การตั้งค่าระบบ | `key` (`mode`), `value` (`demo`/`live`) |
-| **`command_audit`**| ประวัติคำสั่งควบคุมจาก Dashboard | `actor`, `system`, `device_id`, `command`, `result` |
-
----
-
-## ⚙️ การตั้งค่า Supabase ในโค้ด Arduino (.ino)
-
-ทุกบอร์ดใช้การตั้งค่า Supabase URL และ Key เดียวกัน:
-```cpp
-const String SUPABASE_URL = "https://kqkggjsjwbkodqyeddwj.supabase.co/rest/v1";
-const String SUPABASE_KEY = "sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc";
-```
+ไม่มีการคอมไพล์/แฟลชหรือตรวจบนฮาร์ดแวร์จริงในงานแก้โค้ดครั้งนี้ ต้องทดสอบแต่ละบอร์ดด้วยอุปกรณ์จริงก่อนใช้งานหน้างาน

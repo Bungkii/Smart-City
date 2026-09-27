@@ -13,6 +13,7 @@
   #include <WiFiClientSecure.h>
 #endif
 #include <ArduinoJson.h>
+#include "SmartCitySecrets.h"
 
 // ==============================================================================
 // 1. SUPABASE & WI-FI CONFIGURATION
@@ -21,16 +22,16 @@
 const String CLOUD_MODE   = "supabase"; 
 
 // ⚙️ ตั้งค่า Supabase Project URL และ Anon Key
-const String SUPABASE_URL = "https://kqkggjsjwbkodqyeddwj.supabase.co/rest/v1";
-const String SUPABASE_KEY = "sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc";
+const String SUPABASE_URL = SMARTCITY_SUPABASE_URL;
+const String SUPABASE_KEY = SMARTCITY_SUPABASE_KEY;
 
 // ⚙️ หรือตั้งค่า URL ส่งตรงเข้า Dashboard API (/api/ingest)
-const String DASHBOARD_INGEST_URL   = "http://192.168.1.100:3000/api/ingest";
-const String DASHBOARD_INGEST_TOKEN = "act_smartcity_ingest_secret_token_2026";
+const String DASHBOARD_INGEST_URL   = SMARTCITY_DASHBOARD_INGEST_URL;
+const String DASHBOARD_INGEST_TOKEN = SMARTCITY_DASHBOARD_INGEST_TOKEN;
 
 // Fallback Wi-Fi สำหรับ Arduino UNO R4
-const char* FALLBACK_SSID = "ACT-SmartCity-2.4G";
-const char* FALLBACK_PASS = "ACT12345678";
+const char* FALLBACK_SSID = SMARTCITY_WIFI_SSID;
+const char* FALLBACK_PASS = SMARTCITY_WIFI_PASSWORD;
 
 // ==============================================================================
 // 2. PIN DEFINITIONS (UNO R4 / ESP32)
@@ -95,15 +96,10 @@ void sendStreetlightTelemetry(bool isOn, int brightnessPercent, String modeType,
     doc["source"]      = "live";
     doc["system"]      = "streetlight";
     doc["device_id"]   = "SL-1";
-    doc["name"]        = "ไฟถนนอัจฉริยะ 01 (Main Avenue Light)";
-    doc["location"]    = "ถนนสายหลัก";
-    doc["recorded_at"] = "2026-09-26T12:00:00Z";
+    doc["name"]        = "บอร์ดไฟถนน SL-1";
+    doc["location"]    = "ตำแหน่งยังไม่ยืนยัน";
     doc["health"]      = "normal";
     doc["note"]        = noteMsg;
-
-    JsonObject pos = doc.createNestedObject("position_json");
-    pos["lat"] = 13.7562;
-    pos["lng"] = 100.5035;
 
     JsonObject data = doc.createNestedObject("data_json");
     data["on"]         = isOn;
@@ -120,15 +116,14 @@ void sendStreetlightTelemetry(bool isOn, int brightnessPercent, String modeType,
 
 #elif defined(ARDUINO_UNOR4_WIFI)
   WiFiSSLClient sslClient;
-  HttpClient http = HttpClient(sslClient, "kqkggjsjwbkodqyeddwj.supabase.co", 443);
+  HttpClient http = HttpClient(sslClient, SMARTCITY_SUPABASE_HOST, 443);
 
   DynamicJsonDocument doc(512);
   doc["source"]      = "live";
   doc["system"]      = "streetlight";
   doc["device_id"]   = "SL-1";
-  doc["name"]        = "ไฟถนนอัจฉริยะ 01";
-  doc["location"]    = "ถนนสายหลัก";
-  doc["recorded_at"] = "2026-09-26T12:00:00Z";
+  doc["name"]        = "บอร์ดไฟถนน SL-1";
+  doc["location"]    = "ตำแหน่งยังไม่ยืนยัน";
   doc["health"]      = "normal";
   doc["note"]        = noteMsg;
 

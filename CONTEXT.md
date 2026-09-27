@@ -2,6 +2,16 @@
 
 Updated: 2026-09-27
 
+## Follow-up: five-board firmware integrity pass — 2026-09-27
+
+- User explicitly authorized editing Arduino Board 1–5 for the new system. Firmware no longer publishes fixed September 2026 timestamps or invented coordinates. Supabase events use the database timestamp; ESP32 dashboard-ingest paths require synchronized UTC.
+- Board 1 treats database failures and parse failures as verification unavailable and keeps the gate closed, separately from a genuinely unregistered card. It no longer prints full card records to Serial. Boards 1, 3 and 4 no longer upload Wi-Fi credentials to `settings`.
+- Board 2 reports all-red as red rather than yellow. Board 3 no longer claims eight available spaces or a made-up A-01 bay; it only displays entrance/exit sensor triggers since boot and sends no occupancy until real bay sensing and a restart-safe baseline exist.
+- Board 4 no longer substitutes DHT values or estimates PM2.5 from MQ-2. Environment telemetry can omit PM2.5; the dashboard preserves temperature/humidity and shows PM2.5 unavailable. Board 5 no longer emits fixed date/coordinate data.
+- Board-local `SmartCitySecrets.example.h` templates and Git ignore replace embedded deployment credentials in source. Previous credentials in Git history must be rotated. ESP32 sketches still use insecure TLS and firmware has not been compiled/flashed or physically tested.
+- `Arduino/README.md` now explains setup and each board's actual data limits. The database was not modified; legacy records remain.
+- Added a runtime schema test proving temperature/humidity events remain valid without PM2.5 and rejecting a nonnumeric PM value.
+
 ## Follow-up: operational RFID card registry — 2026-09-27
 
 - User asked for a serious real card-enrolment workflow with no mock screen. Gate detail now opens the registry even before gate telemetry, with an explicit empty/unavailable gate state instead of an invented closed state or decorative sample pass.

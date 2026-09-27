@@ -2,25 +2,37 @@
 #include <WiFiManager.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
+#include <time.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "DHT.h"
+#include "SmartCitySecrets.h"
 
 // ==============================================================================
-// 1. SUPABASE & CLOUD CONFIGURATION (บันทึก Wi-Fi ลง SQL)
+// 1. SUPABASE & CLOUD CONFIGURATION
 // ==============================================================================
 // ⚙️ โหมดการส่งข้อมูล: "supabase", "dashboard", หรือ "both"
 const String CLOUD_MODE = "supabase"; 
 
 // ⚙️ ตั้งค่า Supabase Project URL และ Anon Key
-const String SUPABASE_URL = "https://kqkggjsjwbkodqyeddwj.supabase.co/rest/v1";
-const String SUPABASE_KEY = "sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc";
+const String SUPABASE_URL = SMARTCITY_SUPABASE_URL;
+const String SUPABASE_KEY = SMARTCITY_SUPABASE_KEY;
 
 // ⚙️ หรือตั้งค่า URL ส่งตรงเข้า Dashboard API (/api/ingest)
-const String DASHBOARD_INGEST_URL   = "http://192.168.1.100:3000/api/ingest";
-const String DASHBOARD_INGEST_TOKEN = "act_smartcity_ingest_secret_token_2026";
+const String DASHBOARD_INGEST_URL   = SMARTCITY_DASHBOARD_INGEST_URL;
+const String DASHBOARD_INGEST_TOKEN = SMARTCITY_DASHBOARD_INGEST_TOKEN;
+
+String verifiedUtcTime() {
+  time_t now = time(nullptr);
+  if (now < 1700000000) return "";
+  struct tm utc;
+  gmtime_r(&now, &utc);
+  char value[25];
+  strftime(value, sizeof(value), "%Y-%m-%dT%H:%M:%SZ", &utc);
+  return String(value);
+}
 
 // ==============================================================================
 // 2. CONFIGURATION & PINS
@@ -48,36 +60,10 @@ unsigned long lastCloudTime = 0;
 const unsigned long READ_INTERVAL  = 2000;  // อ่านค่าเซนเซอร์ทุก 2 วินาที
 const unsigned long CLOUD_INTERVAL = 10000; // ส่งค่าขึ้น Cloud ทุก 10 วินาที
 
-// บันทึกและจำค่า Wi-Fi ลง Supabase SQL (ตาราง settings)
-void syncWiFiConfigToSupabase(String ssid, String pass) {
-  if (WiFi.status() != WL_CONNECTED) return;
-
-  WiFiClientSecure secureClient;
-  secureClient.setInsecure();
-  secureClient.setTimeout(4000);
-
-  HTTPClient http;
-  http.begin(secureClient, SUPABASE_URL + "/settings");
-  http.addHeader("apikey", SUPABASE_KEY);
-  http.addHeader("Authorization", "Bearer " + SUPABASE_KEY);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Prefer", "resolution=merge-duplicates,return=minimal");
-
-  String bodySsid = "{\"key\":\"wifi_ssid\",\"value\":\"" + ssid + "\",\"updated_at\":\"2026-09-26T12:00:00Z\"}";
-  http.POST(bodySsid);
-
-  if (pass.length() > 0) {
-    String bodyPass = "{\"key\":\"wifi_pass\",\"value\":\"" + pass + "\",\"updated_at\":\"2026-09-26T12:00:00Z\"}";
-    http.POST(bodyPass);
-  }
-  http.end();
-  Serial.printf("[SUPABASE SQL] Synced Wi-Fi '%s' to settings table\n", ssid.c_str());
-}
-
 // ------------------------------------------------------------------------------
 // ส่งข้อมูลตรวจวัดสภาพอากาศเข้า Supabase / Dashboard API
 // ------------------------------------------------------------------------------
-void sendEnvironmentTelemetry(float tempC, float humidity, float pm25Est, String noteMsg) {
+void sendEnvironmentTelemetry(float tempC, float humidity, bool smokeWarning, String noteMsg) {
   if (WiFi.status() != WL_CONNECTED) return;
 
   WiFiClientSecure secureClient;
@@ -99,20 +85,16 @@ void sendEnvironmentTelemetry(float tempC, float humidity, float pm25Est, String
     doc["source"]      = "live";
     doc["system"]      = "environment";
     doc["device_id"]   = "EN-1";
-    doc["name"]        = "สถานีวัดสภาพอากาศ (Station Central)";
-    doc["location"]    = "ลานอเนกประสงค์กลางแจ้ง";
-    doc["recorded_at"] = "2026-09-26T12:00:00Z";
-    doc["health"]      = (pm25Est > 75.0) ? "warning" : "normal";
+    doc["name"]        = "สถานีสิ่งแวดล้อม EN-1";
+    doc["location"]    = "ตำแหน่งยังไม่ยืนยัน";
+    // Supabase recorded_at defaults to the database clock; this board has no verified UTC clock.
+    doc["health"]      = smokeWarning ? "warning" : "normal";
     doc["note"]        = noteMsg;
-
-    JsonObject pos = doc.createNestedObject("position_json");
-    pos["lat"] = 13.7551;
-    pos["lng"] = 100.5014;
 
     JsonObject data = doc.createNestedObject("data_json");
     data["temperature"] = tempC;
     data["humidity"]    = humidity;
-    data["pm25"]        = pm25Est;
+    // MQ-2 measures smoke/gas, not particulate matter. Leave PM2.5 absent.
 
     String jsonBody;
     serializeJson(doc, jsonBody);
@@ -123,6 +105,8 @@ void sendEnvironmentTelemetry(float tempC, float humidity, float pm25Est, String
 
   // 2. ส่งเข้า Next.js Dashboard API (/api/ingest)
   if (CLOUD_MODE == "dashboard" || CLOUD_MODE == "both") {
+    String observedAt = verifiedUtcTime();
+    if (observedAt.isEmpty()) return;
     HTTPClient http;
     if (DASHBOARD_INGEST_URL.startsWith("https")) {
       http.begin(secureClient, DASHBOARD_INGEST_URL);
@@ -135,20 +119,15 @@ void sendEnvironmentTelemetry(float tempC, float humidity, float pm25Est, String
     DynamicJsonDocument doc(512);
     doc["system"]      = "environment";
     doc["deviceId"]    = "EN-1";
-    doc["name"]        = "สถานีวัดสภาพอากาศ (Station Central)";
-    doc["location"]    = "ลานอเนกประสงค์กลางแจ้ง";
-    doc["recordedAt"]  = "2026-09-26T12:00:00Z";
-    doc["health"]      = (pm25Est > 75.0) ? "warning" : "normal";
+    doc["name"]        = "สถานีสิ่งแวดล้อม EN-1";
+    doc["location"]    = "ตำแหน่งยังไม่ยืนยัน";
+    doc["recordedAt"]  = observedAt;
+    doc["health"]      = smokeWarning ? "warning" : "normal";
     doc["note"]        = noteMsg;
-
-    JsonObject pos = doc.createNestedObject("position");
-    pos["lat"] = 13.7551;
-    pos["lng"] = 100.5014;
 
     JsonObject data = doc.createNestedObject("data");
     data["temperature"] = tempC;
     data["humidity"]    = humidity;
-    data["pm25"]        = pm25Est;
 
     String jsonBody;
     serializeJson(doc, jsonBody);
@@ -158,7 +137,7 @@ void sendEnvironmentTelemetry(float tempC, float humidity, float pm25Est, String
   }
 }
 
-void updateOLED(float temp, float hum, int smokeRaw, float pm25) {
+void updateOLED(float temp, float hum, int smokeRaw) {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
@@ -180,7 +159,7 @@ void updateOLED(float temp, float hum, int smokeRaw, float pm25) {
   display.printf("Smoke: %d", smokeRaw);
 
   display.setCursor(0, 52);
-  display.printf("PM2.5: %.1f ug", pm25);
+  display.print("PM2.5: --");
 
   if (smokeRaw > SMOKE_THRESHOLD) {
     display.fillRect(80, 48, 48, 16, SSD1306_WHITE);
@@ -220,9 +199,8 @@ void setup() {
   if (!wm.autoConnect("SmartCity-Environment-AP")) {
     ESP.restart();
   }
+  configTime(0, 0, "pool.ntp.org");
 
-  // ซิงก์ Wi-Fi ลง Supabase SQL
-  syncWiFiConfigToSupabase(WiFi.SSID(), WiFi.psk());
 
   display.clearDisplay();
   display.setCursor(10, 25);
@@ -250,23 +228,18 @@ void loop() {
     // ตรวจสอบค่าที่อ่านได้
     if (isnan(temp) || isnan(hum)) {
       Serial.println("[ERROR] Failed to read from DHT sensor!");
-      temp = 30.0;
-      hum  = 65.0;
+      return;
     }
 
-    // คำนวณค่าประมาณ PM2.5 จากระดับควันและสภาพอากาศ (ug/m3)
-    float pm25Est = (smoke / 4095.0) * 120.0 + (hum * 0.1);
+    Serial.printf("[ENV SENSE] Temp: %.1f C | Hum: %.1f %% | MQ-2 raw: %d | PM2.5 unavailable\n", temp, hum, smoke);
 
-    Serial.printf("[ENV SENSE] Temp: %.1f C | Hum: %.1f %% | Smoke: %d | PM2.5: %.1f ug/m3\n", 
-                  temp, hum, smoke, pm25Est);
-
-    updateOLED(temp, hum, smoke, pm25Est);
+    updateOLED(temp, hum, smoke);
 
     // ส่งข้อมูลขึ้น Cloud ทุกๆ 10 วินาที
     if (now - lastCloudTime >= CLOUD_INTERVAL) {
       lastCloudTime = now;
-      String note = (smoke > SMOKE_THRESHOLD) ? "ตรวจพบควันหรือก๊าซเกินเกณฑ์มาตรฐาน!" : "คุณภาพอากาศปกติ";
-      sendEnvironmentTelemetry(temp, hum, pm25Est, note);
+      String note = (smoke > SMOKE_THRESHOLD) ? "MQ-2 ตรวจพบควันหรือก๊าซเกินเกณฑ์ที่ตั้งไว้" : "อ่านอุณหภูมิ ความชื้น และ MQ-2 แล้ว; ไม่มีเซ็นเซอร์ PM2.5";
+      sendEnvironmentTelemetry(temp, hum, smoke > SMOKE_THRESHOLD, note);
     }
   }
 }

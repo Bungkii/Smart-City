@@ -153,7 +153,7 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
   const online = data.devices.filter(d => deviceHealth(d) !== "offline").length;
   const warning = data.devices.filter(d => deviceHealth(d) === "warning").length;
   const offline = data.devices.length - online;
-  const points = useMemo(() => (data.history.environment ?? []).filter(e => e.deviceId === selectedStation && e.system === "environment").slice().reverse().map(e => ({ time: clock(e.recordedAt), value: e.system === "environment" ? e.data.pm25 : undefined })), [data.history, selectedStation]);
+  const points = useMemo(() => (data.history.environment ?? []).filter(e => e.deviceId === selectedStation && e.system === "environment" && typeof e.data.pm25 === "number").slice().reverse().map(e => ({ time: clock(e.recordedAt), value: e.system === "environment" ? e.data.pm25 : undefined })), [data.history, selectedStation]);
   const recent = useMemo(() => Object.values(data.history).flat().sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt)).slice(0, 6), [data.history]);
   const latest = data.devices.map(d => d.receivedAt).sort().at(-1);
 

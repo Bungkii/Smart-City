@@ -13,15 +13,16 @@
   #include <WiFiClientSecure.h>
 #endif
 #include <ArduinoJson.h>
+#include "SmartCitySecrets.h"
 
 // ==============================================================================
 // 1. SUPABASE & WI-FI CONFIGURATION
 // ==============================================================================
 const String CLOUD_MODE   = "supabase"; 
-const String SUPABASE_URL = "https://kqkggjsjwbkodqyeddwj.supabase.co/rest/v1";
-const String SUPABASE_KEY = "sb_publishable_lszD_-UWYQ6hhL9cvEyCIA_c3ZHXSCc";
-const char* FALLBACK_SSID = "ACT-SmartCity-2.4G";
-const char* FALLBACK_PASS = "ACT12345678";
+const String SUPABASE_URL = SMARTCITY_SUPABASE_URL;
+const String SUPABASE_KEY = SMARTCITY_SUPABASE_KEY;
+const char* FALLBACK_SSID = SMARTCITY_WIFI_SSID;
+const char* FALLBACK_PASS = SMARTCITY_WIFI_PASSWORD;
 
 // ==============================================================================
 // 2. PIN DEFINITIONS (4-WAY INTERSECTION)
@@ -119,18 +120,13 @@ void sendTrafficTelemetry(String activeDirection, String nSignal, String eSignal
     doc["source"]      = "live";
     doc["system"]      = "traffic";
     doc["device_id"]   = "TR-1";
-    doc["name"]        = "สี่แยกกลางอัสสัมชัญ (Central 4-Way Junction)";
-    doc["location"]    = "สี่แยกสายหลัก อาคารเรียน A";
-    doc["recorded_at"] = "2026-09-26T12:00:00Z";
+    doc["name"]        = "บอร์ดไฟจราจร TR-1";
+    doc["location"]    = "ตำแหน่งยังไม่ยืนยัน";
     doc["health"]      = "normal";
     doc["note"]        = noteMsg;
 
-    JsonObject pos = doc.createNestedObject("position_json");
-    pos["lat"] = 13.7558;
-    pos["lng"] = 100.5024;
-
     JsonObject data = doc.createNestedObject("data_json");
-    data["signal"]          = (nSignal == "green" || eSignal == "green" || sSignal == "green" || wSignal == "green") ? "green" : "yellow";
+    data["signal"]          = (nSignal == "green" || eSignal == "green" || sSignal == "green" || wSignal == "green") ? "green" : (nSignal == "yellow" || eSignal == "yellow" || sSignal == "yellow" || wSignal == "yellow") ? "yellow" : "red";
     data["activeDirection"] = activeDirection;
     data["nSignal"]         = nSignal;
     data["eSignal"]         = eSignal;
@@ -147,20 +143,19 @@ void sendTrafficTelemetry(String activeDirection, String nSignal, String eSignal
   }
 #elif defined(ARDUINO_UNOR4_WIFI)
   WiFiSSLClient sslClient;
-  HttpClient http = HttpClient(sslClient, "kqkggjsjwbkodqyeddwj.supabase.co", 443);
+  HttpClient http = HttpClient(sslClient, SMARTCITY_SUPABASE_HOST, 443);
 
   DynamicJsonDocument doc(512);
   doc["source"]      = "live";
   doc["system"]      = "traffic";
   doc["device_id"]   = "TR-1";
-  doc["name"]        = "สี่แยกกลางอัสสัมชัญ (Central 4-Way Junction)";
-  doc["location"]    = "สี่แยกสายหลัก";
-  doc["recorded_at"] = "2026-09-26T12:00:00Z";
+  doc["name"]        = "บอร์ดไฟจราจร TR-1";
+  doc["location"]    = "ตำแหน่งยังไม่ยืนยัน";
   doc["health"]      = "normal";
   doc["note"]        = noteMsg;
 
   JsonObject data = doc.createNestedObject("data_json");
-  data["signal"]          = (nSignal == "green" || eSignal == "green" || sSignal == "green" || wSignal == "green") ? "green" : "yellow";
+  data["signal"]          = (nSignal == "green" || eSignal == "green" || sSignal == "green" || wSignal == "green") ? "green" : (nSignal == "yellow" || eSignal == "yellow" || sSignal == "yellow" || wSignal == "yellow") ? "yellow" : "red";
   data["activeDirection"] = activeDirection;
   data["nSignal"]         = nSignal;
   data["eSignal"]         = eSignal;

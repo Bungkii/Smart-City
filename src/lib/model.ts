@@ -38,7 +38,7 @@ export const telemetrySchema = z.discriminatedUnion("system", [
   }).strict() }),
   base.extend({ system: z.literal("streetlight"), data: z.object({ on: z.boolean(), brightness: z.number().min(0).max(100), mode: z.enum(["auto", "manual"]), fault: z.string().max(200).nullable() }).strict() }),
   base.extend({ system: z.literal("gate"), data: z.object({ open: z.boolean(), direction: z.enum(["in", "out"]).nullable(), access: z.enum(["granted", "denied"]).nullable(), cardRef: z.string().max(64).nullable() }).strict() }),
-  base.extend({ system: z.literal("environment"), data: z.object({ pm25: z.number().min(0).max(2000), temperature: z.number().min(-50).max(80), humidity: z.number().min(0).max(100) }).strict() })
+  base.extend({ system: z.literal("environment"), data: z.object({ pm25: z.number().min(0).max(2000).optional(), temperature: z.number().min(-50).max(80), humidity: z.number().min(0).max(100) }).strict() })
 ]);
 export type Telemetry = z.infer<typeof telemetrySchema>;
 export type EventRow = Telemetry & { id: number; source: Source; receivedAt: string };

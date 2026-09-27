@@ -929,11 +929,13 @@ export function EnvironmentVisualizer({
   const temp = typeof data.temperature === "number" ? data.temperature : NaN;
   const humidity = typeof data.humidity === "number" ? data.humidity : NaN;
 
-  if (![pm25, temp, humidity].every(Number.isFinite)) return <div className="empty-state">ยังไม่มีค่าตรวจวัดที่ครบถ้วน</div>;
+  if (![temp, humidity].every(Number.isFinite)) return <div className="empty-state">ยังไม่มีค่าอุณหภูมิและความชื้นที่ตรวจวัดได้</div>;
 
   // Air Quality Level (Thai PCD Criteria)
   let aqiCategory = { label: "ดีมาก (Excellent)", color: "#10b981", class: "good", desc: "คุณภาพอากาศดีมาก เหมาะสำหรับกิจกรรมกลางแจ้ง" };
-  if (pm25 > 75) {
+  if (!Number.isFinite(pm25)) {
+    aqiCategory = { label: "ไม่มีข้อมูล PM2.5", color: "#94a3b8", class: "unknown", desc: "สถานีนี้ยังไม่มีเซ็นเซอร์ PM2.5 ที่วัดได้จริง" };
+  } else if (pm25 > 75) {
     aqiCategory = { label: "มีผลกระทบต่อสุขภาพ (Hazardous)", color: "#ef4444", class: "hazard", desc: "มีผลกระทบต่อสุขภาพ ควรสวมหน้ากาก N95 และเลี่ยงกิจกรรมกลางแจ้ง" };
   } else if (pm25 > 37.5) {
     aqiCategory = { label: "เริ่มมีผลกระทบ (Unhealthy)", color: "#f59e0b", class: "warning", desc: "เริ่มมีผลกระทบต่อสุขภาพ ผู้มีโรคประจำตัวควรระวัง" };
@@ -956,7 +958,7 @@ export function EnvironmentVisualizer({
         <Chip
           size="sm"
           variant="soft"
-          color={aqiCategory.class === "good" ? "success" : aqiCategory.class === "warning" || aqiCategory.class === "moderate" ? "warning" : "danger"}
+          color={aqiCategory.class === "unknown" ? "default" : aqiCategory.class === "good" ? "success" : aqiCategory.class === "warning" || aqiCategory.class === "moderate" ? "warning" : "danger"}
           className="font-[IBM_Plex_Sans_Thai] font-bold"
         >
           {aqiCategory.label}
@@ -967,7 +969,7 @@ export function EnvironmentVisualizer({
         {/* Main PM2.5 Radial Card */}
         <div className="pm25-hero-card" style={{ borderColor: `${aqiCategory.color}40` }}>
           <div className="pm25-gauge-circle" style={{ background: "#0b2338" }}>
-            <span className="pm25-val" style={{ color: aqiCategory.color }}>{pm25}</span>
+            <span className="pm25-val" style={{ color: aqiCategory.color }}>{Number.isFinite(pm25) ? pm25 : "—"}</span>
             <span className="pm25-unit">µg/m³</span>
             <small>PM2.5</small>
           </div>
@@ -996,7 +998,7 @@ export function EnvironmentVisualizer({
             <Wind size={20} className="pill-icon cyan" />
             <div>
               <span className="pill-label">ดัชนีสภาพอากาศ</span>
-              <strong>{temp > 33 ? "ร้อนอบอ้าว" : temp < 26 ? "เย็นสบาย" : "เหมาะสม"}</strong>
+              <strong>อุณหภูมิและความชื้นจากเซ็นเซอร์</strong>
             </div>
           </motion.div>
         </div>

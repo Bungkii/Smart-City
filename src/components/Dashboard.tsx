@@ -412,7 +412,7 @@ function stateText(e: EventRow): string {
     case "traffic": return `ไฟ${d.signal === "red" ? "แดง" : d.signal === "green" ? "เขียว" : "เหลือง"} · รอ ${d.waitSeconds} วินาที`;
     case "streetlight": return `${d.on ? "เปิดใช้งาน" : "ปิด"} · ความสว่าง ${d.brightness}%`;
     case "gate": return d.open ? "ไม้กั้นเปิดอยู่ (Open)" : "ไม้กั้นปิด (Closed)";
-    case "environment": return `PM2.5 ${d.pm25} µg/m³ · ${d.temperature}°C`;
+    case "environment": return `PM2.5 ${typeof d.pm25 === "number" ? d.pm25 : "—"} µg/m³ · ${d.temperature}°C`;
   }
 }
 
