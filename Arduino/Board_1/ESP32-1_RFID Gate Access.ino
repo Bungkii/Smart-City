@@ -489,12 +489,18 @@ void loop() {
     Serial.println("[SUPABASE] Status: " + authStatus + " | Name: " + cardName + " | Role: " + cardRole);
 
     if (authStatus == "wifi_lost") {
-       authStatus = "allow"; 
-       cardRole = "Offline Pass";
-       cardName = "Guest";
+      // Fail closed: a disconnected reader cannot verify that a card is allowed.
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("NETWORK OFFLINE  ");
+      lcd.setCursor(0, 1);
+      lcd.print("ACCESS DENIED   ");
+      beepBuzzer(3);
+      delay(2500);
+      lcd.clear();
+      updateTopLineWelcome();
     }
-
-    if (authStatus == "banned") {
+    else if (authStatus == "banned") {
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("CARD BANNED!    ");

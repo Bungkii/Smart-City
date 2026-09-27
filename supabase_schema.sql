@@ -69,9 +69,6 @@ CREATE TABLE IF NOT EXISTS public.rfid_cards (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- เพิ่มข้อมูลบัตรเริ่มต้นสำหรับทดสอบ (สามารถเพิ่มหรือแก้ไข UID บัตรจริงได้)
-
-
 -- 6. Gate Access Logs Table (ย้ายจาก Google Sheets Logs มาไว้บน Supabase Cloud)
 CREATE TABLE IF NOT EXISTS public.gate_logs (
     id BIGSERIAL PRIMARY KEY,
@@ -118,8 +115,17 @@ CREATE POLICY "Allow public insert command_audit" ON public.command_audit FOR IN
 
 DROP POLICY IF EXISTS "Allow public all rfid_cards" ON public.rfid_cards;
 DROP POLICY IF EXISTS "Allow public all gate_logs" ON public.gate_logs;
-CREATE POLICY "Allow public all rfid_cards" ON public.rfid_cards FOR ALL USING (true);
-CREATE POLICY "Allow public all gate_logs" ON public.gate_logs FOR ALL USING (true);
+DROP POLICY IF EXISTS "Device read rfid_cards" ON public.rfid_cards;
+DROP POLICY IF EXISTS "Device insert gate_logs" ON public.gate_logs;
+REVOKE ALL ON TABLE public.rfid_cards FROM anon, authenticated;
+REVOKE ALL ON TABLE public.gate_logs FROM anon, authenticated;
+GRANT SELECT ON TABLE public.rfid_cards TO anon, authenticated;
+GRANT INSERT ON TABLE public.gate_logs TO anon, authenticated;
+GRANT USAGE ON SEQUENCE public.gate_logs_id_seq TO anon, authenticated;
+-- Board 1 currently reads rfid_cards directly with a publishable key. It does not need write access.
+CREATE POLICY "Device read rfid_cards" ON public.rfid_cards FOR SELECT TO anon, authenticated USING (true);
+-- Board 1 posts access results; dashboard reads logs with a server-only service key.
+CREATE POLICY "Device insert gate_logs" ON public.gate_logs FOR INSERT TO anon, authenticated WITH CHECK (true);
 
 -- 10. Enable Realtime for Events, RFID Cards, Gate Logs, and Settings (แบบ Safe Re-run)
 DO $$

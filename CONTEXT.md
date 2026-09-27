@@ -2,6 +2,14 @@
 
 Updated: 2026-09-27
 
+## Follow-up: operational RFID card registry — 2026-09-27
+
+- User asked for a serious real card-enrolment workflow with no mock screen. Gate detail now opens the registry even before gate telemetry, with an explicit empty/unavailable gate state instead of an invented closed state or decorative sample pass.
+- Registry read, create, edit and delete go through `/api/rfid` with `RFID_ADMIN_TOKEN`; server-only `SUPABASE_SERVICE_ROLE_KEY` performs database operations. Create no longer upserts; duplicate UID returns 409. Edit keeps UID fixed. New cards default to banned. Save/delete responses and reloaded records are reported distinctly.
+- `supabase/migrations/20260927_rfid_access.sql` and the installer schema restrict public database operations to card SELECT and gate-log INSERT required by current Board 1 firmware. No database rows were deleted. Existing deployment still needs the migration and server secrets configured manually.
+- Board 1 source now denies access when Wi-Fi is unavailable; hardware needs reflashing. Existing direct publishable-key card read, log write, firmware credentials and insecure TLS remain production-security limitations. Wi-Fi settings authorization remains separate. Registry currently loads 500 latest cards and 50 logs; page search only covers those loaded records.
+- `.env.example` uses placeholders instead of real-looking keys and documents the two new server secrets. Validation and Git status for this task are recorded by the final turn result; no real Supabase or hardware operation was attempted.
+
 ## Follow-up: Apple-inspired design and full HeroUI controls — 2026-09-27
 
 - User requested an Apple-inspired design with HeroUI throughout. Reworked `src/app/premium.css` toward quiet white surfaces, soft blue weather emphasis, larger hierarchy, rounded cards and controls, and restrained shadows. The ACT logo, IBM Plex Sans Thai, navy sidebar and real-data-only rules remain.

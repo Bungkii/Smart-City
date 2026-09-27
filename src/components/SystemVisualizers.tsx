@@ -307,87 +307,140 @@ export function StreetlightVisualizer({
 }
 
 // --- GATE VISUALIZER ---
+type RfidCard = { card_id: string; name: string; role: string; status: "allow" | "banned"; created_at?: string; updated_at?: string };
+type GateLog = { id: number; card_id: string; name: string | null; role: string | null; status: string; action: string; scanned_at: string };
+
 export function GateVisualizer({ 
   device, 
   mode
 }: { 
-  device: EventRow; 
+  device?: EventRow;
   mode: "live";
 }) {
   const data = (device?.data || {}) as any;
-  const isOpen = Boolean(data.open);
-  const access = data.access;
-  const direction = data.direction;
-  const cardRef = data.cardRef || "—";
+  const gateFresh = Boolean(device && deviceHealth(device) !== "offline");
+  const isOpen = gateFresh ? Boolean(data.open) : null;
+  const access = gateFresh ? data.access : undefined;
+  const direction = gateFresh ? data.direction : undefined;
+  const cardRef = gateFresh ? data.cardRef || "—" : "—";
 
-  const [activeTab, setActiveTab] = useState<"visual" | "cards" | "logs">("visual");
-  const [cards, setCards] = useState<any[]>([]);
-  const [logs, setLogs] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"visual" | "cards" | "logs">("cards");
+  const [cards, setCards] = useState<RfidCard[]>([]);
+  const [logs, setLogs] = useState<GateLog[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [adminToken, setAdminToken] = useState("");
+  const [authorized, setAuthorized] = useState(false);
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [cardQuery, setCardQuery] = useState("");
   const [newCardId, setNewCardId] = useState("");
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState("Student");
-  const [newStatus, setNewStatus] = useState("allow");
+  const [newStatus, setNewStatus] = useState("banned");
   const [saveMsg, setSaveMsg] = useState("");
   const [readError, setReadError] = useState("");
   const [pendingDeleteCardId, setPendingDeleteCardId] = useState<string | null>(null);
   const [deletingCard, setDeletingCard] = useState(false);
 
-  const loadRfidData = async () => {
+  const loadRfidData = async (token = adminToken) => {
+    if (!token.trim()) {
+      setReadError("กรอก RFID Admin Token เพื่ออ่านและจัดการทะเบียนบัตร");
+      return false;
+    }
     setLoading(true);
     try {
-      const res = await fetch("/api/rfid");
-      if (!res.ok) throw new Error("ไม่สามารถโหลดข้อมูลบัตรและประวัติได้");
+      const res = await fetch("/api/rfid", { headers: { Authorization: `Bearer ${token.trim()}` }, cache: "no-store" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "ไม่สามารถโหลดข้อมูลบัตรและประวัติได้");
       setReadError("");
-      const json = await res.json();
+      setAuthorized(true);
       setCards(json.cards || []);
       setLogs(json.logs || []);
-    } catch {
-      setReadError("ไม่สามารถโหลดข้อมูลบัตรและประวัติได้ กรุณาลองใหม่");
+      setHasMoreCards(Boolean(json.hasMoreCards));
+      return true;
+    } catch (error) {
+      setAuthorized(false);
+      setCards([]);
+      setLogs([]);
+      setReadError(error instanceof Error ? error.message : "ไม่สามารถโหลดข้อมูลบัตรและประวัติได้");
+      return false;
     } finally {
       setLoading(false);
     }
   };
+  const [hasMoreCards, setHasMoreCards] = useState(false);
 
-  useEffect(() => {
-    loadRfidData();
-  }, []);
+  const lockRegistry = () => {
+    setAdminToken("");
+    setAuthorized(false);
+    setCards([]);
+    setLogs([]);
+    setReadError("");
+    setSaveMsg("");
+    setEditingCardId(null);
+  };
 
   const latestScannedUid = (cardRef && cardRef !== "—") ? cardRef : (logs[0]?.card_id || "");
 
-  const handleFillUid = (uid: string, name = "", role = "Student") => {
-    setNewCardId(uid);
-    if (name && name !== "บุคคลภายนอก") setNewName(name);
-    if (role && role !== "Guest") setNewRole(role);
+  const handleFillUid = (uid: string) => {
+    const existing = cards.find(card => card.card_id === uid);
+    if (existing) {
+      setEditingCardId(existing.card_id);
+      setNewCardId(existing.card_id);
+      setNewName(existing.name);
+      setNewRole(existing.role);
+      setNewStatus(existing.status);
+    } else {
+      setEditingCardId(null);
+      setNewCardId(uid);
+      setNewName("");
+      setNewRole("Student");
+      setNewStatus("banned");
+    }
     setActiveTab("cards");
   };
 
   const handleSaveCard = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCardId || !newName) return;
+    if (!authorized || saving) return;
+    const uid = newCardId.trim().toUpperCase();
+    if (!/^(?:[0-9A-F]{8}|[0-9A-F]{14}|[0-9A-F]{20})$/.test(uid)) {
+      setSaveMsg("✕ UID ต้องเป็นเลขฐานสิบหก 8, 14 หรือ 20 ตัวอักษรตามค่าที่อ่านจากบัตรจริง");
+      return;
+    }
+    if (newName.trim().length < 2) {
+      setSaveMsg("✕ ระบุชื่อผู้ถือบัตรอย่างน้อย 2 ตัวอักษร");
+      return;
+    }
+    setSaving(true);
+    setSaveMsg("");
     try {
-      const res = await fetch("/api/rfid", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(editingCardId ? `/api/rfid?card_id=${encodeURIComponent(editingCardId)}` : "/api/rfid", {
+        method: editingCardId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken.trim()}` },
         body: JSON.stringify({
-          card_id: newCardId.trim().toUpperCase(),
+          ...(!editingCardId ? { card_id: uid } : {}),
           name: newName.trim(),
           role: newRole,
           status: newStatus,
         }),
       });
       if (res.ok) {
-        setSaveMsg(`✓ บันทึกข้อมูลบัตร ${newCardId.trim().toUpperCase()} ลง Supabase สำเร็จ!`);
+        const action = editingCardId ? "แก้ไข" : "เพิ่ม";
         setNewCardId("");
         setNewName("");
-        loadRfidData();
-        setTimeout(() => setSaveMsg(""), 4000);
+        setNewStatus("banned");
+        setEditingCardId(null);
+        const reloaded = await loadRfidData();
+        setSaveMsg(`✓ ${action}บัตร ${uid} ในฐานข้อมูลแล้ว${reloaded ? "" : " แต่โหลดทะเบียนล่าสุดไม่สำเร็จ"}`);
       } else {
         const errJson = await res.json().catch(() => ({}));
-        setSaveMsg("✕ เกิดข้อผิดพลาดในการบันทึก: " + (errJson.error || ""));
+        setSaveMsg("✕ " + (errJson.error || "บันทึกบัตรไม่สำเร็จ"));
       }
     } catch {
-      setSaveMsg("✕ ไม่สามารถเชื่อมต่อกับ Supabase ได้");
+      setSaveMsg("✕ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ ยังไม่ยืนยันว่าบันทึกบัตรแล้ว");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -395,12 +448,17 @@ export function GateVisualizer({
     setDeletingCard(true);
     try {
       const res = await fetch(`/api/rfid?card_id=${encodeURIComponent(cardId)}`, {
-        method: "DELETE",
+        method: "DELETE", headers: { Authorization: `Bearer ${adminToken.trim()}` },
       });
       if (res.ok) {
-        setSaveMsg(`✓ ลบบัตร ${cardId} ออกจากระบบเรียบร้อย`);
-        loadRfidData();
-        setTimeout(() => setSaveMsg(""), 3000);
+        if (editingCardId === cardId) {
+          setEditingCardId(null);
+          setNewCardId("");
+          setNewName("");
+          setNewStatus("banned");
+        }
+        const reloaded = await loadRfidData();
+        setSaveMsg(`✓ ลบบัตร ${cardId} จากฐานข้อมูลแล้ว${reloaded ? "" : " แต่โหลดทะเบียนล่าสุดไม่สำเร็จ"}`);
       } else {
         const errJson = await res.json().catch(() => ({}));
         setSaveMsg("✕ ลบไม่สำเร็จ: " + (errJson.error || ""));
@@ -413,30 +471,8 @@ export function GateVisualizer({
     }
   };
 
-  const handleToggleStatus = async (card: any) => {
-    const nextStatus = card.status === "allow" ? "banned" : "allow";
-    try {
-      const res = await fetch("/api/rfid", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          card_id: card.card_id,
-          name: card.name,
-          role: card.role,
-          status: nextStatus,
-        }),
-      });
-      if (res.ok) {
-        setSaveMsg(`✓ เปลี่ยนสถานะบัตร ${card.card_id} เป็น "${nextStatus === "allow" ? "อนุญาต" : "ระงับ"}" เรียบร้อย`);
-        loadRfidData();
-        setTimeout(() => setSaveMsg(""), 3000);
-      }
-    } catch {
-      setSaveMsg("✕ ไม่สามารถเปลี่ยนสถานะบัตรได้");
-    }
-  };
-
   const isUidRegistered = (uid: string) => cards.some(c => String(c.card_id).toUpperCase() === String(uid).toUpperCase());
+  const filteredCards = cards.filter(card => `${card.card_id} ${card.name} ${card.role}`.toLocaleLowerCase().includes(cardQuery.trim().toLocaleLowerCase()));
 
   return (
     <motion.div 
@@ -445,11 +481,10 @@ export function GateVisualizer({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
     >
-      {readError && <div role="alert" className="error-bar">{readError}</div>}
       <div className="viz-header">
         <div>
-          <span className="viz-tag"><DoorOpen size={14} /> ระบบไม้กั้น & บัตรผ่าน RFID</span>
-          <h3>สถานะไม้กั้นและเครื่องอ่านบัตร</h3>
+          <span className="viz-tag"><DoorOpen size={14} /> RFID ACCESS CONTROL</span>
+          <h3>ทะเบียนบัตรและสิทธิ์เข้าออก</h3>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <div className="viz-tab-toggle" style={{ display: "inline-flex", background: "#f0f4f6", padding: "3px", borderRadius: "9px", gap: "3px" }}>
@@ -459,35 +494,51 @@ export function GateVisualizer({
               onPress={() => setActiveTab("visual")}
               className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3"
             >
-              ภาพจำลอง & แตะบัตร
+              สถานะประตู
             </Button>
             <Button
               size="sm"
               variant={activeTab === "cards" ? "primary" : "ghost"}
-              onPress={() => { setActiveTab("cards"); loadRfidData(); }}
+              onPress={() => { setActiveTab("cards"); if (authorized) void loadRfidData(); }}
               className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3"
             >
-              ทะเบียนบัตร ({cards.length})
+              ทะเบียนบัตร ({authorized ? cards.length : "—"})
             </Button>
             <Button
               size="sm"
               variant={activeTab === "logs" ? "primary" : "ghost"}
-              onPress={() => { setActiveTab("logs"); loadRfidData(); }}
+              onPress={() => { setActiveTab("logs"); if (authorized) void loadRfidData(); }}
               className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3"
             >
-              ประวัติการแตะ ({logs.length})
+              ประวัติการแตะ ({authorized ? logs.length : "—"})
             </Button>
           </div>
           <Chip
             size="sm"
-            color={isOpen ? "success" : "default"}
+            color={isOpen === null ? "warning" : isOpen ? "success" : "default"}
             variant="soft"
             className="font-[IBM_Plex_Sans_Thai] font-bold"
           >
-            {isOpen ? "ไม้กั้นเปิด (OPEN)" : "ไม้กั้นปิด (CLOSED)"}
+            {isOpen === null ? device ? "ข้อมูลประตูล้าสมัย" : "ยังไม่มีข้อมูลประตู" : isOpen ? "ไม้กั้นเปิด (OPEN)" : "ไม้กั้นปิด (CLOSED)"}
           </Chip>
         </div>
       </div>
+
+      <div className="rfid-access-bar">
+        <div>
+          <strong>{authorized ? "ยืนยันสิทธิ์ผู้ดูแลแล้ว" : "ยืนยันสิทธิ์ก่อนจัดการบัตร"}</strong>
+          <span>{authorized ? "ข้อมูลบัตรและประวัติดึงจากฐานข้อมูลจริง · token อยู่ในหน่วยความจำของหน้านี้เท่านั้น" : "ใช้ RFID Admin Token ที่ตั้งค่าไว้บนเซิร์ฟเวอร์ ไม่มีการแสดงบัตรตัวอย่าง"}</span>
+        </div>
+        {authorized ? (
+          <Button size="sm" variant="outline" onPress={lockRegistry}>ออกจากทะเบียนบัตร</Button>
+        ) : (
+          <div className="rfid-access-actions">
+            <Input type="password" aria-label="RFID Admin Token" placeholder="RFID Admin Token" value={adminToken} onChange={event => setAdminToken((event.target as HTMLInputElement).value)} />
+            <Button size="sm" variant="primary" isDisabled={loading || !adminToken.trim()} onPress={() => void loadRfidData()}>{loading ? "กำลังตรวจสิทธิ์" : "เปิดทะเบียนบัตร"}</Button>
+          </div>
+        )}
+      </div>
+      {readError && <div role="alert" className="error-bar rfid-feedback">{readError}</div>}
 
       <AnimatePresence mode="wait">
         {activeTab === "visual" && (
@@ -502,33 +553,24 @@ export function GateVisualizer({
               {/* Gate telemetry display */}
               <div className="gate-barrier-stage">
                 <div className="gate-pole" />
-                <div className={`gate-arm ${isOpen ? "raised" : "lowered"}`}>
+                <div className={`gate-arm ${isOpen === null ? "unknown" : isOpen ? "raised" : "lowered"}`}>
                   <span className="arm-stripes" />
                 </div>
-                <div className={`rfid-terminal-scanner ${access === "granted" ? "granted" : "denied"}`}>
+                <div className={`rfid-terminal-scanner ${access === "granted" ? "granted" : access === "denied" ? "denied" : "unknown"}`}>
                   <div className="scanner-led" />
                   <Radio size={16} />
                   <small>RFID READER</small>
                 </div>
               </div>
 
-              {/* Live Card Tap Reader Detail */}
+              {/* Last confirmed device reading */}
               <div className="gate-reader-info">
-                <div className="rfid-card-preview">
-                  <div className="card-chip" />
-                  <div className="card-brand">ACT SMART CAMPUS PASS</div>
-                  <div className="card-number">{cardRef}</div>
-                  <div className="card-holder">
-                    <span>ทิศทาง: <strong>{direction === "in" ? "ขาเข้า (IN)" : direction === "out" ? "ขาออก (OUT)" : "—"}</strong></span>
-                    <Chip
-                      size="sm"
-                      color={access === "granted" ? "success" : access === "denied" ? "danger" : "default"}
-                      variant="soft"
-                      className="font-[IBM_Plex_Sans_Thai]"
-                    >
-                      {access === "granted" ? "อนุญาต (Granted)" : access === "denied" ? "ปฏิเสธ (Denied)" : "ยังไม่มีรายการ"}
-                    </Chip>
-                  </div>
+                <div className="rfid-scan-summary">
+                  <span>ข้อมูลล่าสุดจากเครื่องอ่าน</span>
+                  <strong>{cardRef}</strong>
+                  <div><span>ทิศทาง</span><b>{direction === "in" ? "ขาเข้า" : direction === "out" ? "ขาออก" : "—"}</b></div>
+                  <div><span>ผลการตรวจสิทธิ์</span><b>{access === "granted" ? "อนุญาต" : access === "denied" ? "ปฏิเสธ" : "—"}</b></div>
+                  <small>{gateFresh && device ? `รับข้อมูล ${new Date(device.receivedAt).toLocaleString("th-TH")}` : device ? "อุปกรณ์ขาดการติดต่อ ไม่แสดงข้อมูลเก่าเป็นสถานะปัจจุบัน" : "ยังไม่มีข้อมูลจากเครื่องอ่านบัตร"}</small>
                 </div>
 
                 {cardRef && cardRef !== "—" && (
@@ -563,19 +605,25 @@ export function GateVisualizer({
                   ทะเบียนบัตร RFID ในระบบ
                 </h4>
                 <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                  ลงทะเบียนบัตรใหม่ แก้ไขสิทธิ์ หรือดึง UID ที่สแกนจากหัวอ่านมาบันทึก
+                  เพิ่มบัตรจริงทีละใบ แก้ไขข้อมูลเดิมโดยไม่เปลี่ยน UID และตรวจสถานะก่อนให้สิทธิ์ผ่านประตู
                 </p>
               </div>
               <Button
                 size="sm"
                 variant="outline"
-                isDisabled={loading}
-                onPress={loadRfidData}
+                isDisabled={loading || !authorized}
+                onPress={() => void loadRfidData()}
                 className="font-[IBM_Plex_Sans_Thai] gap-1"
               >
                 <RefreshCw size={12} className={loading ? "spin" : ""} /> รีเฟรช
               </Button>
             </div>
+
+            {!authorized ? (
+              <div className="rfid-locked">ยืนยันสิทธิ์ผู้ดูแลด้านบนเพื่อเปิดทะเบียนบัตรและเพิ่มบัตรเข้าระบบ</div>
+            ) : (
+              <>
+            {hasMoreCards && <div role="status" className="rfid-feedback">แสดงบัตร 500 รายการล่าสุด ยังมีบัตรเพิ่มเติมในฐานข้อมูล</div>}
 
             {/* Quick Auto-Capture Banner */}
             {latestScannedUid && !newCardId && (
@@ -597,7 +645,7 @@ export function GateVisualizer({
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.82rem", color: "#0f766e" }}>
                   <Radio size={15} color="#0d9488" />
                   <span>
-                    UID ล่าสุดที่ตรวจพบ: <strong style={{ fontSize: "0.9rem", color: "#0b2338" }}>{latestScannedUid}</strong>
+                    UID จาก{cardRef !== "—" ? "เครื่องอ่านล่าสุด" : "ประวัติการสแกน"}: <strong style={{ fontSize: "0.9rem", color: "#0b2338" }}>{latestScannedUid}</strong>
                     {isUidRegistered(latestScannedUid) ? " (ลงทะเบียนแล้ว)" : " (ยังไม่ได้ลงทะเบียน)"}
                   </span>
                 </div>
@@ -607,60 +655,62 @@ export function GateVisualizer({
                   className="font-[IBM_Plex_Sans_Thai] text-xs h-7 px-3 bg-[#0d9488]"
                   onPress={() => handleFillUid(latestScannedUid)}
                 >
-                  ดึง UID นี้มากรอก
+                  ใช้ UID นี้
                 </Button>
               </motion.div>
             )}
 
             {/* Add / Edit Form */}
-            <form onSubmit={handleSaveCard} style={{ display: "grid", gridTemplateColumns: "1.3fr 1.8fr 1fr 1fr auto", gap: "8px", background: "#f8fafc", padding: "12px", borderRadius: "8px", marginBottom: "1rem", alignItems: "center", border: "1px solid #e2e8f0" }}>
-              <div>
+            <form onSubmit={handleSaveCard} className="rfid-card-form">
+              <div className="rfid-form-heading">
+                <div><strong>{editingCardId ? `แก้ไขบัตร ${editingCardId}` : "เพิ่มบัตรเข้าระบบ"}</strong><span>บันทึกลงฐานข้อมูลจริง ตรวจ UID และข้อมูลผู้ถือบัตรก่อนให้สิทธิ์</span></div>
+                {editingCardId && <Button size="sm" variant="ghost" onPress={() => { setEditingCardId(null); setNewCardId(""); setNewName(""); setNewRole("Student"); setNewStatus("banned"); }}>ยกเลิกการแก้ไข</Button>}
+              </div>
+              <div className="rfid-form-field">
+                <span>UID บัตรจริง</span>
                 <Input
-                  placeholder="UID บัตร"
+                  aria-label="UID บัตรจริง"
+                  placeholder="เลขฐานสิบหกจากเครื่องอ่าน"
                   value={newCardId}
-                  onChange={(e) => setNewCardId((e.target as HTMLInputElement).value)}
+                  onChange={(e) => setNewCardId((e.target as HTMLInputElement).value.replace(/\s/g, "").toUpperCase())}
                   required
+                  maxLength={20}
+                  disabled={Boolean(editingCardId) || saving}
                   className="font-[IBM_Plex_Sans_Thai]"
                 />
               </div>
-              <div>
+              <div className="rfid-form-field">
+                <span>ชื่อผู้ถือบัตร / สังกัด</span>
                 <Input
+                  aria-label="ชื่อผู้ถือบัตรหรือสังกัด"
                   placeholder="ชื่อ-นามสกุล / สังกัด"
                   value={newName}
                   onChange={(e) => setNewName((e.target as HTMLInputElement).value)}
                   required
+                  maxLength={120}
+                  disabled={saving}
                   className="font-[IBM_Plex_Sans_Thai]"
                 />
               </div>
-              <AccessibleSelect
-                label="บทบาทผู้ถือบัตร"
-                value={newRole}
-                onChange={setNewRole}
-                options={[
-                  { value: "Student", label: "Student (นักเรียน)" },
-                  { value: "Teacher", label: "Teacher (ครู)" },
-                  { value: "Staff", label: "Staff (บุคลากร)" },
-                  { value: "VIP", label: "VIP (ผู้บริหาร)" },
-                  { value: "Guest", label: "Guest (บุคคลภายนอก)" },
-                ]}
-              />
-              <AccessibleSelect
-                label="สถานะบัตร"
-                value={newStatus}
-                onChange={setNewStatus}
-                options={[
-                  { value: "allow", label: "Allow (อนุญาต)" },
-                  { value: "banned", label: "Banned (ระงับ)" },
-                ]}
-              />
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                className="font-[IBM_Plex_Sans_Thai] font-semibold"
-              >
-                บันทึกข้อมูล
-              </Button>
+              <div className="rfid-form-field"><span>ประเภทผู้ถือบัตร</span>
+                <AccessibleSelect label="ประเภทผู้ถือบัตร" value={newRole} onChange={setNewRole} disabled={saving} options={[
+                  { value: "Student", label: "นักเรียน" }, { value: "Teacher", label: "ครู" },
+                  { value: "Staff", label: "บุคลากร" }, { value: "VIP", label: "ผู้บริหาร" },
+                  { value: "Guest", label: "บุคคลภายนอก" },
+                ]} />
+              </div>
+              <div className="rfid-form-field"><span>สิทธิ์ผ่านประตู</span>
+                <AccessibleSelect label="สิทธิ์ผ่านประตู" value={newStatus} onChange={setNewStatus} disabled={saving} options={[
+                  { value: "banned", label: "ระงับ · ยังไม่อนุญาต" },
+                  { value: "allow", label: "อนุญาตผ่านประตู" },
+                ]} />
+              </div>
+              <div className="rfid-form-submit">
+                <small>บัตรใหม่เริ่มที่สถานะระงับจนกว่าจะเลือกอนุญาต</small>
+                <Button type="submit" variant="primary" size="sm" isDisabled={saving || !newCardId.trim() || newName.trim().length < 2}>
+                  {saving ? "กำลังบันทึก..." : editingCardId ? "บันทึกการแก้ไข" : "เพิ่มบัตรเข้าระบบ"}
+                </Button>
+              </div>
             </form>
 
             {saveMsg && (
@@ -673,9 +723,14 @@ export function GateVisualizer({
               </motion.div>
             )}
 
+            <div className="rfid-list-toolbar">
+              <div><strong>บัตรในทะเบียน</strong><span>{filteredCards.length} จาก {cards.length} รายการที่โหลดแล้ว</span></div>
+              <Input aria-label="ค้นหาบัตรด้วย UID ชื่อ หรือประเภท" placeholder="ค้นหา UID / ชื่อ / ประเภท" value={cardQuery} onChange={event => setCardQuery((event.target as HTMLInputElement).value)} />
+            </div>
+
             {/* Card Table */}
-            <div style={{ maxHeight: "260px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+            <div className="rfid-table-scroll">
+              <table style={{ width: "100%", minWidth: "680px", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e1ebed", textAlign: "left", color: "#546e7a" }}>
                     <th style={{ padding: "9px 12px" }}>Card UID</th>
@@ -686,7 +741,7 @@ export function GateVisualizer({
                   </tr>
                 </thead>
                 <tbody>
-                  {cards.map((c, i) => (
+                  {filteredCards.map((c, i) => (
                     <tr key={c.card_id || i} style={{ borderBottom: "1px solid #f0f4f6" }}>
                       <td style={{ padding: "8px 12px", fontWeight: 700, color: "#0b2338" }}>{c.card_id}</td>
                       <td style={{ padding: "8px 12px", color: "#1e293b", fontWeight: 500 }}>{c.name}</td>
@@ -696,22 +751,9 @@ export function GateVisualizer({
                         </Chip>
                       </td>
                       <td style={{ padding: "8px 12px" }}>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onPress={() => handleToggleStatus(c)}
-                          className="p-0 h-auto cursor-pointer"
-                          aria-label="สลับสถานะ อนุญาต / ระงับ"
-                        >
-                          <Chip
-                            size="sm"
-                            variant="soft"
-                            color={c.status === "allow" ? "success" : "danger"}
-                            className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs cursor-pointer hover:opacity-80"
-                          >
-                            {c.status === "allow" ? "อนุญาต (คลิกเพื่อระงับ)" : "ระงับ (คลิกเพื่อเปิด)"}
-                          </Chip>
-                        </Button>
+                        <Chip size="sm" variant="soft" color={c.status === "allow" ? "success" : "danger"} className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs">
+                          {c.status === "allow" ? "อนุญาต" : "ระงับ"}
+                        </Chip>
                       </td>
                       <td style={{ padding: "8px 12px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", gap: "4px" }}>
@@ -720,10 +762,7 @@ export function GateVisualizer({
                             variant="ghost"
                             className="h-7 px-2 text-xs font-[IBM_Plex_Sans_Thai] text-slate-600 hover:text-slate-900"
                             onPress={() => {
-                              setNewCardId(c.card_id);
-                              setNewName(c.name);
-                              setNewRole(c.role);
-                              setNewStatus(c.status);
+                              handleFillUid(c.card_id);
                             }}
                             aria-label="แก้ไขข้อมูลบัตร"
                           >
@@ -742,16 +781,18 @@ export function GateVisualizer({
                       </td>
                     </tr>
                   ))}
-                  {cards.length === 0 && (
+                  {filteredCards.length === 0 && (
                     <tr>
                       <td colSpan={5} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>
-                        ยังไม่มีข้อมูลบัตรในระบบ — กรอก UID ด้านบนหรือสแกนบัตรที่หัวอ่านเพื่อเพิ่ม
+                        {cards.length ? "ไม่พบบัตรตามคำค้นในรายการที่โหลด" : "ยังไม่มีบัตรในระบบ — กรอก UID จากบัตรจริงเพื่อเพิ่ม"}
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+              </>
+            )}
           </motion.div>
         )}
 
@@ -767,25 +808,25 @@ export function GateVisualizer({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
               <div>
                 <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0b2338", fontWeight: 700 }}>
-                  ประวัติการแตะบัตร Real-time
+                  ประวัติการแตะบัตรล่าสุด
                 </h4>
                 <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                  สามารถกดปุ่ม "เพิ่มบัตร" เพื่อนำ UID ที่บันทึกไว้เข้าสู่ระบบ
+                  รายการจากฐานข้อมูลจริง 50 รายการล่าสุด ใช้ UID เพื่อเริ่มลงทะเบียนได้
                 </p>
               </div>
               <Button
                 size="sm"
                 variant="outline"
-                isDisabled={loading}
-                onPress={loadRfidData}
+                isDisabled={loading || !authorized}
+                onPress={() => void loadRfidData()}
                 className="font-[IBM_Plex_Sans_Thai] gap-1"
               >
                 <RefreshCw size={12} className={loading ? "spin" : ""} /> รีเฟรช
               </Button>
             </div>
 
-            <div style={{ maxHeight: "260px", overflowY: "auto", border: "1px solid #e1ebed", borderRadius: "8px" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+            {!authorized ? <div className="rfid-locked">ยืนยันสิทธิ์ผู้ดูแลด้านบนเพื่อดูประวัติการแตะบัตร</div> : <div className="rfid-table-scroll">
+              <table style={{ width: "100%", minWidth: "760px", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e1ebed", textAlign: "left", color: "#546e7a" }}>
                     <th style={{ padding: "9px 12px" }}>เวลาที่แตะ</th>
@@ -828,7 +869,7 @@ export function GateVisualizer({
                                 size="sm"
                                 variant="ghost"
                                 className="h-6 px-2 text-xs font-[IBM_Plex_Sans_Thai] text-slate-600"
-                                onPress={() => handleFillUid(lg.card_id, lg.name, lg.role)}
+                                onPress={() => handleFillUid(lg.card_id)}
                               >
                                 แก้ไข
                               </Button>
@@ -837,7 +878,7 @@ export function GateVisualizer({
                                 size="sm"
                                 variant="primary"
                                 className="h-6 px-2 text-xs font-[IBM_Plex_Sans_Thai] bg-[#08aa9a]"
-                                onPress={() => handleFillUid(lg.card_id, lg.name, lg.role)}
+                                onPress={() => handleFillUid(lg.card_id)}
                               >
                                 <PlusCircle size={12} /> เพิ่มบัตร
                               </Button>
@@ -855,7 +896,7 @@ export function GateVisualizer({
                   )}
                 </tbody>
               </table>
-            </div>
+            </div>}
           </motion.div>
         )}
       </AnimatePresence>

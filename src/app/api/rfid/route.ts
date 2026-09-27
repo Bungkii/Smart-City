@@ -1,117 +1,127 @@
+import { hasToken } from "@/lib/auth";
 import { isRegisteredCard } from "@/lib/data-integrity";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-export async function GET() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const uidSchema = z.string().trim().toUpperCase().regex(/^(?:[0-9A-F]{8}|[0-9A-F]{14}|[0-9A-F]{20})$/, "UID ต้องเป็นเลขฐานสิบหก 8, 14 หรือ 20 ตัวอักษร");
+const cardSchema = z.object({
+  card_id: uidSchema,
+  name: z.string().trim().min(2).max(120),
+  role: z.enum(["Student", "Teacher", "Staff", "VIP", "Guest"]),
+  status: z.enum(["allow", "banned"]),
+}).strict();
+const editSchema = cardSchema.omit({ card_id: true });
 
-  if (!url || !key) return NextResponse.json({ error: "RFID database is not configured" }, { status: 503 });
+type Card = z.infer<typeof cardSchema> & { created_at?: string; updated_at?: string };
+type GateLog = { id: number; card_id: string; name: string | null; role: string | null; status: string; action: string; scanned_at: string };
 
+const privateHeaders = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" };
+const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: privateHeaders });
+
+function connection(request: Request) {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const adminToken = process.env.RFID_ADMIN_TOKEN;
+  if (!url || !key || !adminToken) return { error: json({ error: "ยังไม่ได้ตั้งค่า SUPABASE_SERVICE_ROLE_KEY หรือ RFID_ADMIN_TOKEN สำหรับทะเบียนบัตร" }, 503) };
+  if (!hasToken(request, adminToken)) return { error: json({ error: "ต้องยืนยันสิทธิ์ผู้ดูแลทะเบียนบัตร" }, 401) };
+  return { url: url.replace(/\/$/, ""), key };
+}
+
+function headers(key: string, prefer?: string): HeadersInit {
+  return {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    "Content-Type": "application/json",
+    ...(prefer ? { Prefer: prefer } : {}),
+  };
+}
+
+async function readBody(request: Request): Promise<unknown> {
+  try { return await request.json(); } catch { return null; }
+}
+
+export async function GET(request: Request) {
+  const config = connection(request);
+  if (config.error) return config.error;
+  const { url, key } = config;
   try {
     const [cardsRes, logsRes] = await Promise.all([
-      fetch(`${url}/rest/v1/rfid_cards?select=*&order=updated_at.desc`, {
-        headers: { apikey: key, Authorization: `Bearer ${key}` },
-        cache: "no-store",
-      }),
-      fetch(`${url}/rest/v1/gate_logs?select=*&order=scanned_at.desc&limit=30`, {
-        headers: { apikey: key, Authorization: `Bearer ${key}` },
-        cache: "no-store",
-      }),
+      fetch(`${url}/rest/v1/rfid_cards?select=card_id,name,role,status,created_at,updated_at&order=updated_at.desc&limit=501`, { headers: headers(key), cache: "no-store", signal: AbortSignal.timeout(8000) }),
+      fetch(`${url}/rest/v1/gate_logs?select=id,card_id,name,role,status,action,scanned_at&order=scanned_at.desc&limit=50`, { headers: headers(key), cache: "no-store", signal: AbortSignal.timeout(8000) }),
     ]);
-
-    if (!cardsRes.ok || !logsRes.ok) throw new Error("RFID database unavailable");
-    const cards = (await cardsRes.json()).filter(isRegisteredCard);
-    const logs = logsRes.ok ? await logsRes.json() : [];
-
-    return NextResponse.json({ cards, logs });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Failed to fetch RFID data" }, { status: 500 });
+    if (!cardsRes.ok || !logsRes.ok) return json({ error: "อ่านทะเบียนบัตรหรือประวัติการสแกนจากฐานข้อมูลไม่สำเร็จ" }, 502);
+    const cards = (await cardsRes.json() as Card[]).filter(isRegisteredCard);
+    const logs = await logsRes.json() as GateLog[];
+    return json({ cards: cards.slice(0, 500), logs, hasMoreCards: cards.length > 500 });
+  } catch {
+    return json({ error: "เชื่อมต่อฐานข้อมูลทะเบียนบัตรไม่สำเร็จ" }, 502);
   }
 }
 
 export async function POST(request: Request) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-  if (!url || !key) {
-    return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
-  }
-
+  const config = connection(request);
+  if (config.error) return config.error;
+  const parsed = cardSchema.safeParse(await readBody(request));
+  if (!parsed.success) return json({ error: "ข้อมูลบัตรไม่ถูกต้อง", issues: parsed.error.flatten() }, 422);
+  const { url, key } = config;
   try {
-    const body = await request.json();
-    const { card_id, name, role, status } = body;
-
-    if (!card_id || !name) {
-      return NextResponse.json({ error: "card_id and name are required" }, { status: 400 });
-    }
-
-    const cleanCardId = String(card_id).trim().toUpperCase();
-
     const res = await fetch(`${url}/rest/v1/rfid_cards`, {
-      method: "POST",
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        Prefer: "resolution=merge-duplicates,return=representation",
-      },
-      body: JSON.stringify({
-        card_id: cleanCardId,
-        name: name.trim(),
-        role: role || "Student",
-        status: status || "allow",
-        updated_at: new Date().toISOString(),
-      }),
+      method: "POST", headers: headers(key, "return=representation"),
+      body: JSON.stringify(parsed.data), cache: "no-store", signal: AbortSignal.timeout(8000),
     });
+    if (res.status === 409) return json({ error: "UID นี้ลงทะเบียนแล้ว ให้เลือกแก้ไขบัตรเดิม" }, 409);
+    if (!res.ok) return json({ error: "ฐานข้อมูลปฏิเสธการเพิ่มบัตร" }, 502);
+    const saved = await res.json() as Card[];
+    if (!saved.length) return json({ error: "ไม่สามารถยืนยันผลการเพิ่มบัตรได้" }, 502);
+    return json({ card: saved[0] }, 201);
+  } catch {
+    return json({ error: "เชื่อมต่อฐานข้อมูลไม่สำเร็จ ยังไม่ยืนยันว่าบันทึกบัตรแล้ว" }, 502);
+  }
+}
 
-    if (!res.ok) {
-      const errText = await res.text();
-      return NextResponse.json({ error: errText }, { status: res.status });
-    }
-
-    const saved = await res.json();
-    return NextResponse.json({ success: true, data: saved });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 });
+export async function PATCH(request: Request) {
+  const config = connection(request);
+  if (config.error) return config.error;
+  const { searchParams } = new URL(request.url);
+  const uid = uidSchema.safeParse(searchParams.get("card_id"));
+  const parsed = editSchema.safeParse(await readBody(request));
+  if (!uid.success || !parsed.success) return json({ error: "ข้อมูลแก้ไขบัตรไม่ถูกต้อง" }, 422);
+  const { url, key } = config;
+  try {
+    const res = await fetch(`${url}/rest/v1/rfid_cards?card_id=eq.${uid.data}&select=card_id,name,role,status,created_at,updated_at`, {
+      method: "PATCH", headers: headers(key, "return=representation"),
+      body: JSON.stringify({ ...parsed.data, updated_at: new Date().toISOString() }),
+      cache: "no-store", signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return json({ error: "ฐานข้อมูลปฏิเสธการแก้ไขบัตร" }, 502);
+    const saved = await res.json() as Card[];
+    if (!saved.length) return json({ error: "ไม่พบ UID นี้ในทะเบียนบัตร" }, 404);
+    return json({ card: saved[0] });
+  } catch {
+    return json({ error: "เชื่อมต่อฐานข้อมูลไม่สำเร็จ ยังไม่ยืนยันว่าบันทึกการแก้ไขแล้ว" }, 502);
   }
 }
 
 export async function DELETE(request: Request) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-  if (!url || !key) {
-    return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
-  }
-
+  const config = connection(request);
+  if (config.error) return config.error;
+  const { searchParams } = new URL(request.url);
+  const uid = uidSchema.safeParse(searchParams.get("card_id"));
+  if (!uid.success) return json({ error: "UID บัตรไม่ถูกต้อง" }, 422);
+  const { url, key } = config;
   try {
-    const { searchParams } = new URL(request.url);
-    const card_id = searchParams.get("card_id");
-
-    if (!card_id) {
-      return NextResponse.json({ error: "card_id query parameter is required" }, { status: 400 });
-    }
-
-    const cleanCardId = String(card_id).trim().toUpperCase();
-
-    const res = await fetch(`${url}/rest/v1/rfid_cards?card_id=eq.${encodeURIComponent(cleanCardId)}`, {
-      method: "DELETE",
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-      },
+    const res = await fetch(`${url}/rest/v1/rfid_cards?card_id=eq.${uid.data}&select=card_id`, {
+      method: "DELETE", headers: headers(key, "return=representation"),
+      cache: "no-store", signal: AbortSignal.timeout(8000),
     });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      return NextResponse.json({ error: errText }, { status: res.status });
-    }
-
-    return NextResponse.json({ success: true, message: `Card ${cleanCardId} deleted successfully` });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 });
+    if (!res.ok) return json({ error: "ฐานข้อมูลปฏิเสธการลบบัตร" }, 502);
+    const deleted = await res.json() as { card_id: string }[];
+    if (!deleted.length) return json({ error: "ไม่พบ UID นี้ในทะเบียนบัตร" }, 404);
+    return json({ deletedCardId: deleted[0].card_id });
+  } catch {
+    return json({ error: "เชื่อมต่อฐานข้อมูลไม่สำเร็จ ยังไม่ยืนยันว่าลบบัตรแล้ว" }, 502);
   }
 }
-

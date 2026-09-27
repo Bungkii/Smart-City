@@ -56,3 +56,10 @@ The user supplied a monitoring-wall reference, then explicitly chose the origina
 
 - `src/app/premium.css` is loaded last and provides the current Apple-inspired finish for the shared shell, overview, subsystem cards, and supporting panels. Preserve the white dashboard, navy navigation, IBM Plex Sans Thai, responsive layouts and visibly empty states.
 - Do not add fabricated numbers, health claims or decorative animation that could be mistaken for live telemetry. Keep focus and keyboard affordances visible.
+
+## RFID registry — 2026-09-27
+
+- The gate detail must expose a real card registry even before gate telemetry arrives. Its card list and scan logs require `RFID_ADMIN_TOKEN`; writes use the server-only `SUPABASE_SERVICE_ROLE_KEY`. Never place this key in client code.
+- Create and edit are separate actions. New cards start banned, UID is immutable during edit, duplicate creates fail, and deletion requires confirmation. Never invent a scanned UID or a holder identity from logs.
+- `supabase/migrations/20260927_rfid_access.sql` restricts publishable-key access to card SELECT and gate-log INSERT for current Board 1 firmware. It must be applied to existing Supabase databases manually; no existing records are deleted. The current firmware still exposes card data through its direct read path, so do not claim the system is fully hardened.
+- Board 1 source fails closed when Wi-Fi is lost; this only affects hardware after reflashing. Do not test by actuating the gate. Registry GET currently loads up to 500 cards and 50 logs; UI search is limited to loaded cards.

@@ -477,7 +477,7 @@ function SystemDetail({
       {id === "streetlight" && (
         <StreetlightVisualizer devices={data.devices} mode={data.mode} />
       )}
-      {id === "gate" && selectedDevice && (
+      {id === "gate" && (
         <GateVisualizer device={selectedDevice} mode={data.mode} />
       )}
       {id === "environment" && selectedDevice && (
