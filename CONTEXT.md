@@ -2,6 +2,12 @@
 
 Updated: 2026-09-27
 
+## Follow-up: Premium UI refinement — 2026-09-27
+
+- User requested a premium UI. Added `src/app/premium.css` after existing styles to create a coherent white/navy command-center finish across the shell, KPI cards, weather strip, subsystem cards and overview panels.
+- Increased text sizes and hierarchy, aligned card spacing and heights, softened borders and shadows, and tuned tablet/mobile layouts. Interaction and real-data logic were not changed; missing readings stay visibly missing.
+- Validation: `node tests/data-integrity.test.cjs`, `npx next typegen`, `npm run typecheck`, and `npm run build` passed. Browser visual inspection and real-hardware testing were not available in this session. The existing Node 20/Supabase and external package-lock warnings remain non-fatal.
+
 ## Follow-up: Headless UI and HeroUI controls — 2026-09-27
 
 - User requested another interface pass using Headless UI and HeroUI throughout the existing dashboard. Preserved the white/navy palette, IBM Plex Sans Thai and real-data-only behavior.

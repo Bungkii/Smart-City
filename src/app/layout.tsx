@@ -7,6 +7,7 @@ import "./operations.css";
 import "./monitor.css";
 import "./navigation.css";
 import "./ui-controls.css";
+import "./premium.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
