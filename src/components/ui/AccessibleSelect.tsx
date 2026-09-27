@@ -1,7 +1,6 @@
 "use client";
 
-import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from "@headlessui/react";
-import { Check, ChevronDown } from "lucide-react";
+import { Label, ListBox, Select } from "@heroui/react";
 
 type Option = { value: string; label: string };
 
@@ -20,24 +19,31 @@ export default function AccessibleSelect({
   disabled?: boolean;
   className?: string;
 }) {
-  const selected = options.find(option => option.value === value);
-
   return (
-    <Listbox value={value} onChange={onChange} disabled={disabled}>
-      <div className={`accessible-select ${className}`}>
-        <ListboxButton className="accessible-select-button" aria-label={label}>
-          <span>{selected?.label ?? "ยังไม่มีรายการ"}</span>
-          <ChevronDown size={16} aria-hidden="true" />
-        </ListboxButton>
-        <ListboxOptions anchor="bottom start" className="accessible-select-options">
+    <Select
+      className={`dashboard-select ${className}`}
+      value={value || null}
+      onChange={key => onChange(key === null ? "" : String(key))}
+      isDisabled={disabled}
+      placeholder="ยังไม่มีรายการ"
+      variant="secondary"
+      fullWidth
+    >
+      <Label className="dashboard-select-label">{label}</Label>
+      <Select.Trigger className="dashboard-select-trigger">
+        <Select.Value />
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover className="dashboard-select-popover" placement="bottom start">
+        <ListBox aria-label={label}>
           {options.map(option => (
-            <ListboxOption key={option.value} value={option.value} className="accessible-select-option">
-              <span>{option.label}</span>
-              <Check size={15} aria-hidden="true" className="accessible-select-check" />
-            </ListboxOption>
+            <ListBox.Item key={option.value} id={option.value} textValue={option.label}>
+              <Label>{option.label}</Label>
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
           ))}
-        </ListboxOptions>
-      </div>
-    </Listbox>
+        </ListBox>
+      </Select.Popover>
+    </Select>
   );
 }

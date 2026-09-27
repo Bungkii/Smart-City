@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Activity, ArrowUpRight, CarFront, Clock3, DoorOpen, Download, Gauge, Lightbulb, Maximize2, Minimize2, Radio, RefreshCw, Server, ShieldCheck, Thermometer, Droplets, Wind, TrafficCone, WifiOff } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Button } from "@heroui/react";
+import { Button, Card } from "@heroui/react";
 import { deviceHealth, systems, systemIds, type EventRow, type SystemId } from "@/lib/model";
 import DeviceMap from "./DeviceMap";
 import AccessibleSelect from "./ui/AccessibleSelect";
@@ -69,8 +69,6 @@ function SystemPanel({ id, devices, index }: { id: SystemId; devices: EventRow[]
       initial="hidden"
       animate="visible"
       variants={cardVariants}
-      whileHover={{ y: -4, scale: 1.01, transition: { duration: 0.2 } }}
-      whileTap={{ scale: 0.99 }}
       style={{ display: "flex", flexDirection: "column" }}
     >
       <Link href={`/systems/${id}`} className={`monitor-system ${state}`}>
@@ -197,53 +195,26 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
       </header>
 
       <div className="monitor-kpis">
-        <motion.div
-          custom={0}
-          initial="hidden"
-          animate="visible"
-          variants={cardVariants}
-          whileHover={{ y: -2, transition: { duration: 0.15 } }}
-        >
+        <Card className="monitor-kpi-card" variant="default">
           <span className="monitor-kpi-icon"><Server size={20} /></span>
           <span>อุปกรณ์ที่รายงานข้อมูล<small>REGISTERED IN TELEMETRY</small></span>
           <strong>{data.devices.length}<small>อุปกรณ์</small></strong>
-        </motion.div>
-        <motion.div
-          className="online"
-          custom={1}
-          initial="hidden"
-          animate="visible"
-          variants={cardVariants}
-          whileHover={{ y: -2, transition: { duration: 0.15 } }}
-        >
+        </Card>
+        <Card className="monitor-kpi-card online" variant="default">
           <span className="monitor-kpi-icon"><Activity size={20} /></span>
           <span>เชื่อมต่ออยู่<small>ONLINE DEVICES</small></span>
           <strong>{online}<small>อุปกรณ์</small></strong>
-        </motion.div>
-        <motion.div
-          className="warning"
-          custom={2}
-          initial="hidden"
-          animate="visible"
-          variants={cardVariants}
-          whileHover={{ y: -2, transition: { duration: 0.15 } }}
-        >
+        </Card>
+        <Card className="monitor-kpi-card warning" variant="default">
           <span className="monitor-kpi-icon"><ShieldCheck size={20} /></span>
           <span>ต้องตรวจสอบ<small>ACTIVE WARNINGS</small></span>
           <strong>{warning}<small>รายการ</small></strong>
-        </motion.div>
-        <motion.div
-          className="offline"
-          custom={3}
-          initial="hidden"
-          animate="visible"
-          variants={cardVariants}
-          whileHover={{ y: -2, transition: { duration: 0.15 } }}
-        >
+        </Card>
+        <Card className="monitor-kpi-card offline" variant="default">
           <span className="monitor-kpi-icon"><WifiOff size={20} /></span>
           <span>ขาดการติดต่อ<small>OFFLINE DEVICES</small></span>
           <strong>{offline}<small>อุปกรณ์</small></strong>
-        </motion.div>
+        </Card>
       </div>
 
       <motion.section 

@@ -2,6 +2,12 @@
 
 Updated: 2026-09-27
 
+## Follow-up: Apple-inspired design and full HeroUI controls — 2026-09-27
+
+- User requested an Apple-inspired design with HeroUI throughout. Reworked `src/app/premium.css` toward quiet white surfaces, soft blue weather emphasis, larger hierarchy, rounded cards and controls, and restrained shadows. The ACT logo, IBM Plex Sans Thai, navy sidebar and real-data-only rules remain.
+- Converted overview KPI cards to HeroUI `Card`, navigation toggles to HeroUI `Button`, all shared dropdowns to HeroUI `Select`, and critical confirmations to HeroUI `AlertDialog`. Existing HeroUI buttons, inputs, chips, alerts and spinners remain. The now-unused `@headlessui/react` package was removed from the manifest and lockfile. Native semantic links/sections, charts and the invisible mobile backdrop are retained.
+- Type generation, TypeScript, production build and data-integrity test passed. Browser visual inspection and real-hardware interaction were unavailable; no hardware command was sent. Build keeps the existing non-fatal Node 20/Supabase and external package-lock warnings.
+
 ## Follow-up: Premium UI refinement — 2026-09-27
 
 - User requested a premium UI. Added `src/app/premium.css` after existing styles to create a coherent white/navy command-center finish across the shell, KPI cards, weather strip, subsystem cards and overview panels.

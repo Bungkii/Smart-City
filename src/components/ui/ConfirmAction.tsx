@@ -1,7 +1,6 @@
 "use client";
 
-import { Dialog, DialogBackdrop, DialogPanel, DialogTitle, Description } from "@headlessui/react";
-import { Button } from "@heroui/react";
+import { AlertDialog, Button } from "@heroui/react";
 
 export default function ConfirmAction({
   open,
@@ -23,20 +22,30 @@ export default function ConfirmAction({
   destructive?: boolean;
 }) {
   return (
-    <Dialog open={open} onClose={() => { if (!busy) onClose(); }} className="confirmation-dialog">
-      <DialogBackdrop className="confirmation-backdrop" />
-      <div className="confirmation-position">
-        <DialogPanel className="confirmation-panel">
-          <DialogTitle className="confirmation-title">{title}</DialogTitle>
-          <Description className="confirmation-description">{description}</Description>
-          <div className="confirmation-actions">
-            <Button variant="outline" size="sm" onPress={onClose} isDisabled={busy} autoFocus>ยกเลิก</Button>
-            <Button variant="primary" size="sm" onPress={onConfirm} isDisabled={busy} className={destructive ? "confirmation-danger" : ""}>
-              {busy ? "กำลังดำเนินการ..." : confirmLabel}
-            </Button>
-          </div>
-        </DialogPanel>
-      </div>
-    </Dialog>
+    <AlertDialog>
+      <AlertDialog.Backdrop
+        isOpen={open}
+        onOpenChange={nextOpen => { if (!nextOpen && !busy) onClose(); }}
+        isDismissable={!busy}
+        isKeyboardDismissDisabled={busy}
+        variant="blur"
+        className="confirmation-backdrop"
+      >
+        <AlertDialog.Container placement="center" size="sm">
+          <AlertDialog.Dialog className="confirmation-panel">
+            <AlertDialog.Header>
+              <AlertDialog.Heading className="confirmation-title">{title}</AlertDialog.Heading>
+            </AlertDialog.Header>
+            <AlertDialog.Body className="confirmation-description">{description}</AlertDialog.Body>
+            <AlertDialog.Footer className="confirmation-actions">
+              <Button variant="outline" size="sm" onPress={onClose} isDisabled={busy} autoFocus>ยกเลิก</Button>
+              <Button variant={destructive ? "danger" : "primary"} size="sm" onPress={onConfirm} isDisabled={busy}>
+                {busy ? "กำลังดำเนินการ..." : confirmLabel}
+              </Button>
+            </AlertDialog.Footer>
+          </AlertDialog.Dialog>
+        </AlertDialog.Container>
+      </AlertDialog.Backdrop>
+    </AlertDialog>
   );
 }

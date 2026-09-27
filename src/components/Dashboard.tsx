@@ -117,7 +117,7 @@ function Shell({
     <div className={`app-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
       {open && <button className="sidebar-backdrop" onClick={closeMobileMenu} aria-label="ปิดเมนูด้านข้าง" />}
       <aside id="main-navigation" aria-label="เมนูหลัก" className={`sidebar ${open ? "open" : ""}`}>
-        <button className="sidebar-mobile-close" onClick={closeMobileMenu} aria-label="ปิดเมนู"><X size={18} /></button>
+        <Button isIconOnly size="sm" variant="ghost" className="sidebar-mobile-close" onPress={closeMobileMenu} aria-label="ปิดเมนู"><X size={18} /></Button>
         <Link className="brand" href="/" onClick={() => setOpen(false)}>
           <motion.span 
             className="brand-mark"
@@ -171,12 +171,12 @@ function Shell({
 
       <main className="main">
         <header className="topbar">
-          <button className="desktop-nav-toggle" onClick={toggleSidebar} aria-label={collapsed ? "เปิดเมนูด้านข้าง" : "หุบเมนูด้านข้าง"} title={collapsed ? "เปิดเมนูด้านข้าง" : "หุบเมนูด้านข้าง"} aria-expanded={!collapsed} aria-controls="main-navigation">
+          <Button isIconOnly size="sm" variant="ghost" className="desktop-nav-toggle" onPress={toggleSidebar} aria-label={collapsed ? "เปิดเมนูด้านข้าง" : "หุบเมนูด้านข้าง"} aria-expanded={!collapsed} aria-controls="main-navigation">
             {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
-          </button>
-          <button ref={mobileToggle} className="mobile-menu" onClick={() => setOpen(!open)} aria-label={open ? "ปิดเมนู" : "เปิดเมนู"} aria-expanded={open} aria-controls="main-navigation">
+          </Button>
+          <Button isIconOnly size="sm" variant="ghost" ref={mobileToggle} className="mobile-menu" onPress={() => setOpen(!open)} aria-label={open ? "ปิดเมนู" : "เปิดเมนู"} aria-expanded={open} aria-controls="main-navigation">
             {open ? <X /> : <Menu />}
-          </button>
+          </Button>
           <Link href="/" className="header-brand" aria-label="ACT 1961 — ภาพรวมเมืองอัจฉริยะ"><img src="/act-logo-1961.png" alt="ACT 1961" width={32} height={32} /></Link>
           <div className="breadcrumb">
             <span className="breadcrumb-brand">ASSUMPTION COLLEGE THONBURI</span>

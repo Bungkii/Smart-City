@@ -48,11 +48,11 @@ The user supplied a monitoring-wall reference, then explicitly chose the origina
 
 ## Interface controls — 2026-09-27
 
-- Keep the current white dashboard, navy navigation and IBM Plex Sans Thai while using HeroUI v3 for visible action/input surfaces and Headless UI for accessible option lists and confirmation dialogs.
-- Shared `src/components/ui/AccessibleSelect.tsx` and `ConfirmAction.tsx` are used for the station, device-command and RFID selectors and for hardware/RFID confirmation. Keep confirmation before real hardware commands and card deletion.
-- The controls are styled in `src/app/ui-controls.css`; do not reintroduce browser `confirm()` prompts or example values to fill empty states.
+- Keep the current white dashboard, navy navigation and IBM Plex Sans Thai while using HeroUI v3 for visible cards, actions, inputs, selectors and critical confirmation dialogs.
+- Shared `src/components/ui/AccessibleSelect.tsx` and `ConfirmAction.tsx` wrap HeroUI Select and AlertDialog for station, device-command and RFID choices and for hardware/RFID confirmation. Keep confirmation before real hardware commands and card deletion.
+- The controls are styled in `src/app/ui-controls.css`; do not reintroduce browser `confirm()` prompts or example values to fill empty states. Semantic sections, links, charts and the mobile backdrop can remain native elements.
 
 ## Premium visual layer — 2026-09-27
 
-- `src/app/premium.css` is loaded last and provides the current restrained premium finish for the shared shell, overview, subsystem cards, and supporting panels. Preserve the white dashboard, navy navigation, readable typography, responsive layouts and visibly empty states.
+- `src/app/premium.css` is loaded last and provides the current Apple-inspired finish for the shared shell, overview, subsystem cards, and supporting panels. Preserve the white dashboard, navy navigation, IBM Plex Sans Thai, responsive layouts and visibly empty states.
 - Do not add fabricated numbers, health claims or decorative animation that could be mistaken for live telemetry. Keep focus and keyboard affordances visible.
