@@ -1,0 +1,21 @@
+.accessible-select { width: 100%; min-width: 0; font-family: 'IBM Plex Sans Thai', sans-serif; }
+.accessible-select-button { width: 100%; min-height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 11px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #183448; text-align: left; font: inherit; font-size: 13px; }
+.accessible-select-button:hover { border-color: #6c9bb8; }
+.accessible-select-button[data-disabled] { opacity: .55; cursor: not-allowed; background: #f5f7f9; }
+.accessible-select-button[data-focus] { outline: 2px solid #277cae; outline-offset: 2px; }
+.accessible-select-options { z-index: 100; max-height: 250px; min-width: var(--button-width); overflow: auto; margin-top: 4px; padding: 5px; border: 1px solid #d5e0e9; border-radius: 8px; background: #fff; box-shadow: 0 14px 35px #0b23381f; font-family: 'IBM Plex Sans Thai', sans-serif; }
+.accessible-select-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 5px; color: #264158; font-size: 12px; cursor: pointer; }
+.accessible-select-option[data-focus] { background: #e9f2f8; }
+.accessible-select-option[data-selected] { color: #086a77; font-weight: 600; }
+.accessible-select-check { visibility: hidden; flex: none; }
+.accessible-select-option[data-selected] .accessible-select-check { visibility: visible; }
+.monitor-station-select { width: min(100%, 190px); }
+.monitor-station-select .accessible-select-button { min-height: 30px; padding: 4px 8px; font-size: 10px; background: #f6f9fc; }
+.confirmation-dialog { position: relative; z-index: 110; font-family: 'IBM Plex Sans Thai', sans-serif; }
+.confirmation-backdrop { position: fixed; inset: 0; background: #0b233899; }
+.confirmation-position { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: 18px; }
+.confirmation-panel { width: min(100%, 430px); padding: 22px; border: 1px solid #dbe5ed; border-radius: 12px; background: #fff; box-shadow: 0 24px 60px #0b23383d; }
+.confirmation-title { margin: 0; color: #183448; font-size: 17px; font-weight: 700; }
+.confirmation-description { margin: 12px 0 22px; color: #5c7081; font-size: 13px; line-height: 1.7; }
+.confirmation-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.confirmation-danger { background: #b42335 !important; color: #fff !important; }

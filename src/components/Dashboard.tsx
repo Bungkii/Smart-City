@@ -13,6 +13,8 @@ import { Button, Chip, Input, Spinner, Alert } from "@heroui/react";
 import { deviceHealth, systems, systemIds, type EventRow, type Health, type SystemId } from "@/lib/model";
 import DeviceMap from "./DeviceMap";
 import OperationsOverview from "./OperationsOverview";
+import AccessibleSelect from "./ui/AccessibleSelect";
+import ConfirmAction from "./ui/ConfirmAction";
 import {
   ParkingVisualizer, TrafficVisualizer, StreetlightVisualizer,
   GateVisualizer, EnvironmentVisualizer
@@ -684,6 +686,7 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
   const [token, setToken] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (options[0]) {
@@ -695,7 +698,7 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
   const selectedOption = options.find(o => o.value === command);
 
   const send = async () => {
-    if (!confirm(`ยืนยันส่งคำสั่ง "${selectedOption?.label || command}" ไปยังอุปกรณ์ "${device.name}" (${device.deviceId})?`)) return;
+    setConfirmOpen(false);
     setLoading(true);
     try {
       const response = await fetch("/api/control", {
@@ -730,26 +733,12 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
           <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
             คำสั่งสำหรับ {device.name}:
           </label>
-          <select 
-            value={command} 
-            onChange={e => setCommand(e.target.value)} 
-            style={{ 
-              width: "100%", 
-              padding: "8px 12px", 
-              borderRadius: "6px", 
-              border: "1px solid #cbd5e1", 
-              fontFamily: "'IBM Plex Sans Thai', sans-serif", 
-              fontSize: "0.85rem",
-              background: "#fff",
-              color: "#0f172a"
-            }}
-          >
-            {options.map(x => (
-              <option key={x.value} value={x.value}>
-                {x.label}
-              </option>
-            ))}
-          </select>
+          <AccessibleSelect
+            label={`คำสั่งสำหรับ ${device.name}`}
+            value={command}
+            onChange={setCommand}
+            options={options.map(({ value, label }) => ({ value, label }))}
+          />
           {selectedOption?.description && (
             <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#64748b" }}>
               {selectedOption.description}
@@ -780,7 +769,7 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
           variant="primary"
           size="sm"
           isDisabled={loading || !token || reason.trim().length < 3}
-          onPress={send}
+          onPress={() => setConfirmOpen(true)}
           className="font-[IBM_Plex_Sans_Thai] font-semibold"
           fullWidth
         >
@@ -800,6 +789,15 @@ function ControlPanel({ device, mode }: { device: EventRow; mode: "live" }) {
           </div>
         )}
       </div>
+      <ConfirmAction
+        open={confirmOpen}
+        title="ยืนยันคำสั่งควบคุมอุปกรณ์"
+        description={`ส่งคำสั่ง “${selectedOption?.label || command}” ไปยัง ${device.name} (${device.deviceId})? คำสั่งนี้มีผลกับฮาร์ดแวร์จริง`}
+        confirmLabel="ส่งคำสั่ง"
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={send}
+        busy={loading}
+      />
     </div>
   );
 }

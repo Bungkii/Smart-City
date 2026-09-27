@@ -8,6 +8,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { Button } from "@heroui/react";
 import { deviceHealth, systems, systemIds, type EventRow, type SystemId } from "@/lib/model";
 import DeviceMap from "./DeviceMap";
+import AccessibleSelect from "./ui/AccessibleSelect";
 
 type Data = { devices: EventRow[]; history: Record<SystemId, EventRow[]>; serverTime: string };
 const icons = { parking: CarFront, traffic: TrafficCone, streetlight: Lightbulb, gate: DoorOpen, environment: Gauge };
@@ -315,9 +316,14 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
           </div>
           <div className="monitor-chart-tools">
             <span>ข้อมูลย้อนหลังที่ได้รับล่าสุด</span>
-            <select aria-label="เลือกสถานีตรวจวัด" value={selectedStation ?? ""} onChange={e => setStation(e.target.value)} disabled={!stations.length}>
-              {stations.length ? stations.map(d => <option key={d.deviceId} value={d.deviceId}>{d.name}</option>) : <option value="">ยังไม่มีสถานี</option>}
-            </select>
+            <AccessibleSelect
+              label="เลือกสถานีตรวจวัด"
+              value={selectedStation ?? ""}
+              onChange={setStation}
+              disabled={!stations.length}
+              options={stations.length ? stations.map(d => ({ value: d.deviceId, label: d.name })) : [{ value: "", label: "ยังไม่มีสถานี" }]}
+              className="monitor-station-select"
+            />
           </div>
           <div className="monitor-chart-area">
             {points.length ? (

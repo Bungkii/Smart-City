@@ -45,3 +45,9 @@ The user supplied a monitoring-wall reference, then explicitly chose the origina
 - Use IBM Plex Sans Thai throughout the application: Thai, Latin text, numerals, graphs, maps, inputs and RFID identifiers. The user explicitly requested this after the initial font explanation. Do not reintroduce Inter or monospace overrides.
 - The shared shell must let users collapse and reopen desktop navigation on every route, including loading/error screens. Remember desktop preference in localStorage and keep mobile drawer behavior independent.
 - Mobile navigation must offer a close button, backdrop dismissal and Escape dismissal. Hidden menus should not remain keyboard-focusable.
+
+## Interface controls — 2026-09-27
+
+- Keep the current white dashboard, navy navigation and IBM Plex Sans Thai while using HeroUI v3 for visible action/input surfaces and Headless UI for accessible option lists and confirmation dialogs.
+- Shared `src/components/ui/AccessibleSelect.tsx` and `ConfirmAction.tsx` are used for the station, device-command and RFID selectors and for hardware/RFID confirmation. Keep confirmation before real hardware commands and card deletion.
+- The controls are styled in `src/app/ui-controls.css`; do not reintroduce browser `confirm()` prompts or example values to fill empty states.

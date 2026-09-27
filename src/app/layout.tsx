@@ -6,6 +6,7 @@ import "./brand.css";
 import "./operations.css";
 import "./monitor.css";
 import "./navigation.css";
+import "./ui-controls.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {

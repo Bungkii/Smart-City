@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { Button, Chip, Input } from "@heroui/react";
 import { type EventRow, type SystemId, deviceHealth } from "@/lib/model";
+import AccessibleSelect from "./ui/AccessibleSelect";
+import ConfirmAction from "./ui/ConfirmAction";
 
 // --- PARKING VISUALIZER ---
 export function ParkingVisualizer({ 
@@ -53,7 +55,7 @@ export function ParkingVisualizer({
       <div className="parking-lot-grid">
         {parkingDevices.map((d, index) => {
           const isOccupied = (d.data as any).occupied;
-          const bayName = (d.data as any).bay || `A-${String(index + 1).padStart(2, "0")}`;
+          const bayName = (d.data as any).bay || d.name || d.deviceId;
           const isSelected = selectedBay === d.deviceId;
 
           return (
@@ -82,7 +84,6 @@ export function ParkingVisualizer({
                     transition={{ duration: 0.3 }}
                   >
                     <CarFront size={30} className="car-icon" />
-                    <span className="car-plate">ACT-{100 + index}</span>
                   </motion.div>
                 ) : (
                   <div className="bay-empty-spot">
@@ -250,8 +251,6 @@ export function StreetlightVisualizer({
   const avgBrightness = slDevices.length 
     ? Math.round(slDevices.reduce((acc, d) => acc + ((d.data as any).brightness || 0), 0) / slDevices.length)
     : 0;
-  const estPowerKw = (onCount * 0.12 * (avgBrightness / 100)).toFixed(2);
-  const estEnergySaved = (slDevices.length * 0.12 * (1 - avgBrightness / 100) * 10).toFixed(1);
 
   return (
     <motion.div 
@@ -268,7 +267,6 @@ export function StreetlightVisualizer({
         <div className="viz-stats-pills">
           <span className="pill green">เปิดใช้งาน: <strong>{onCount} / {slDevices.length}</strong></span>
           <span className="pill blue">ความสว่างเฉลี่ย: <strong>{avgBrightness}%</strong></span>
-          <span className="pill yellow">กำลังไฟ: <strong>{estPowerKw} kW</strong></span>
         </div>
       </div>
 
@@ -304,12 +302,6 @@ export function StreetlightVisualizer({
         })}
       </div>
 
-      <div className="energy-eco-footer">
-        <div className="eco-badge">
-          <Zap size={16} className="eco-icon" />
-          <span>ประหยัดพลังงานสะสมวันนี้: <strong>{estEnergySaved} kWh</strong> (ลด CO₂ ~{(+estEnergySaved * 0.49).toFixed(1)} kg)</span>
-        </div>
-      </div>
     </motion.div>
   );
 }
@@ -338,6 +330,8 @@ export function GateVisualizer({
   const [newStatus, setNewStatus] = useState("allow");
   const [saveMsg, setSaveMsg] = useState("");
   const [readError, setReadError] = useState("");
+  const [pendingDeleteCardId, setPendingDeleteCardId] = useState<string | null>(null);
+  const [deletingCard, setDeletingCard] = useState(false);
 
   const loadRfidData = async () => {
     setLoading(true);
@@ -398,7 +392,7 @@ export function GateVisualizer({
   };
 
   const handleDeleteCard = async (cardId: string) => {
-    if (!confirm(`ต้องการลบบัตร UID: ${cardId} ออกจากฐานข้อมูลหรือไม่?`)) return;
+    setDeletingCard(true);
     try {
       const res = await fetch(`/api/rfid?card_id=${encodeURIComponent(cardId)}`, {
         method: "DELETE",
@@ -413,6 +407,9 @@ export function GateVisualizer({
       }
     } catch {
       setSaveMsg("✕ เกิดข้อผิดพลาดในการเชื่อมต่อ");
+    } finally {
+      setDeletingCard(false);
+      setPendingDeleteCardId(null);
     }
   };
 
@@ -600,7 +597,7 @@ export function GateVisualizer({
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.82rem", color: "#0f766e" }}>
                   <Radio size={15} color="#0d9488" />
                   <span>
-                    UID ล่าสุดที่ตรวจพบ: <strong style={{ fontFamily: "monospace", fontSize: "0.9rem", color: "#0b2338" }}>{latestScannedUid}</strong>
+                    UID ล่าสุดที่ตรวจพบ: <strong style={{ fontSize: "0.9rem", color: "#0b2338" }}>{latestScannedUid}</strong>
                     {isUidRegistered(latestScannedUid) ? " (ลงทะเบียนแล้ว)" : " (ยังไม่ได้ลงทะเบียน)"}
                   </span>
                 </div>
@@ -619,7 +616,7 @@ export function GateVisualizer({
             <form onSubmit={handleSaveCard} style={{ display: "grid", gridTemplateColumns: "1.3fr 1.8fr 1fr 1fr auto", gap: "8px", background: "#f8fafc", padding: "12px", borderRadius: "8px", marginBottom: "1rem", alignItems: "center", border: "1px solid #e2e8f0" }}>
               <div>
                 <Input
-                  placeholder="UID บัตร (เช่น 4A6F12C3)"
+                  placeholder="UID บัตร"
                   value={newCardId}
                   onChange={(e) => setNewCardId((e.target as HTMLInputElement).value)}
                   required
@@ -635,25 +632,27 @@ export function GateVisualizer({
                   className="font-[IBM_Plex_Sans_Thai]"
                 />
               </div>
-              <select
+              <AccessibleSelect
+                label="บทบาทผู้ถือบัตร"
                 value={newRole}
-                onChange={(e) => setNewRole(e.target.value)}
-                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif", background: "#fff" }}
-              >
-                <option value="Student">Student (นักเรียน)</option>
-                <option value="Teacher">Teacher (ครู)</option>
-                <option value="Staff">Staff (บุคลากร)</option>
-                <option value="VIP">VIP (ผู้บริหาร)</option>
-                <option value="Guest">Guest (บุคคลภายนอก)</option>
-              </select>
-              <select
+                onChange={setNewRole}
+                options={[
+                  { value: "Student", label: "Student (นักเรียน)" },
+                  { value: "Teacher", label: "Teacher (ครู)" },
+                  { value: "Staff", label: "Staff (บุคลากร)" },
+                  { value: "VIP", label: "VIP (ผู้บริหาร)" },
+                  { value: "Guest", label: "Guest (บุคคลภายนอก)" },
+                ]}
+              />
+              <AccessibleSelect
+                label="สถานะบัตร"
                 value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-                style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.82rem", fontFamily: "'IBM Plex Sans Thai', sans-serif", background: "#fff" }}
-              >
-                <option value="allow">Allow (อนุญาต)</option>
-                <option value="banned">Banned (ระงับ)</option>
-              </select>
+                onChange={setNewStatus}
+                options={[
+                  { value: "allow", label: "Allow (อนุญาต)" },
+                  { value: "banned", label: "Banned (ระงับ)" },
+                ]}
+              />
               <Button
                 type="submit"
                 variant="primary"
@@ -689,7 +688,7 @@ export function GateVisualizer({
                 <tbody>
                   {cards.map((c, i) => (
                     <tr key={c.card_id || i} style={{ borderBottom: "1px solid #f0f4f6" }}>
-                      <td style={{ padding: "8px 12px", fontWeight: 700, color: "#0b2338", fontFamily: "monospace" }}>{c.card_id}</td>
+                      <td style={{ padding: "8px 12px", fontWeight: 700, color: "#0b2338" }}>{c.card_id}</td>
                       <td style={{ padding: "8px 12px", color: "#1e293b", fontWeight: 500 }}>{c.name}</td>
                       <td style={{ padding: "8px 12px" }}>
                         <Chip size="sm" variant="soft" color="accent" className="font-[IBM_Plex_Sans_Thai] font-semibold text-xs">
@@ -734,7 +733,7 @@ export function GateVisualizer({
                             size="sm"
                             variant="ghost"
                             className="h-7 px-2 text-xs font-[IBM_Plex_Sans_Thai] text-red-500 hover:text-red-700"
-                            onPress={() => handleDeleteCard(c.card_id)}
+                            onPress={() => setPendingDeleteCardId(c.card_id)}
                             aria-label="ลบบัตรนี้"
                           >
                             <Trash2 size={13} />
@@ -806,7 +805,7 @@ export function GateVisualizer({
                           <td style={{ padding: "8px 12px", color: "#64748b" }}>
                             {lg.scanned_at ? new Date(lg.scanned_at).toLocaleTimeString("th-TH") : "-"}
                           </td>
-                          <td style={{ padding: "8px 12px", fontWeight: 700, fontFamily: "monospace" }}>{lg.card_id}</td>
+                          <td style={{ padding: "8px 12px", fontWeight: 700 }}>{lg.card_id}</td>
                           <td style={{ padding: "8px 12px" }}>{lg.name || "บุคคลภายนอก"} ({lg.role || "Guest"})</td>
                           <td style={{ padding: "8px 12px" }}>
                             <Chip size="sm" variant="soft" color="default" className="font-[IBM_Plex_Sans_Thai] font-bold text-xs">
@@ -860,6 +859,18 @@ export function GateVisualizer({
           </motion.div>
         )}
       </AnimatePresence>
+      <ConfirmAction
+        open={pendingDeleteCardId !== null}
+        title="ยืนยันการลบบัตร"
+        description={`ลบบัตร UID: ${pendingDeleteCardId ?? ""} ออกจากฐานข้อมูล? การลบมีผลกับสิทธิ์เข้าออกจริง`}
+        confirmLabel="ลบบัตร"
+        onClose={() => setPendingDeleteCardId(null)}
+        onConfirm={() => {
+          if (pendingDeleteCardId) void handleDeleteCard(pendingDeleteCardId);
+        }}
+        busy={deletingCard}
+        destructive
+      />
     </motion.div>
   );
 }

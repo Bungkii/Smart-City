@@ -1,6 +1,15 @@
 # Project context
 
-Updated: 2026-09-26
+Updated: 2026-09-27
+
+## Follow-up: Headless UI and HeroUI controls — 2026-09-27
+
+- User requested another interface pass using Headless UI and HeroUI throughout the existing dashboard. Preserved the white/navy palette, IBM Plex Sans Thai and real-data-only behavior.
+- Added a shared Headless UI Listbox for the environment station, device command, RFID role and RFID status. All use the same styled dropdown and keyboard navigation.
+- Replaced native browser confirmation prompts for live device commands and RFID deletion with a Headless UI dialog and HeroUI actions. The command confirmation identifies the target device and warns that it affects real hardware; RFID confirmation identifies the card UID.
+- Styles are in `src/app/ui-controls.css`; HeroUI remains the button/input/chip layer already used across the dashboard. No provider is required for installed HeroUI v3.
+- Removed invented parking bay labels/license plates and assumed streetlight power/energy savings from the detail visualizers, preserving the real-data-only rule. Removed remaining monospace RFID UID overrides.
+- Type generation, TypeScript check, data-integrity test and final production build passed. Browser visual inspection was unavailable in this session; no hardware control command was sent. An existing Google Fonts import-order warning was fixed by moving the IBM Plex Sans Thai import before Tailwind/HeroUI imports. The build still reports Node 20/Supabase and external package-lock warnings, without failing.
 
 ## Current user intent
 
