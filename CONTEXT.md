@@ -185,3 +185,12 @@ Build a credible dashboard using real device data only. The user supplied an ind
   - `npm run typecheck` ✓ PASS
   - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
 
+## Follow-up: Remove Eyebrow Header Tag — 2026-09-29
+
+- User request: Removed the `ASSUMPTION COLLEGE THONBURI · SMART CAMPUS` eyebrow tag from the top of `OperationsOverview.tsx`.
+- **Validation**:
+  - `node tests/data-integrity.test.cjs` ✓ PASS
+  - `npm run typecheck` ✓ PASS
+  - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
+
+

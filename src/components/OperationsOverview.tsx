@@ -173,7 +173,6 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
     >
       <header className="monitor-heading">
         <div>
-          <div className="monitor-eyebrow"><span /> ASSUMPTION COLLEGE THONBURI · SMART CAMPUS</div>
           <h1>ภาพรวมเมืองอัจฉริยะ</h1>
           <p>ติดตามสภาพอากาศและสถานะการทำงานของเมืองในหน้าเดียว</p>
         </div>
