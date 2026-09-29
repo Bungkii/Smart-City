@@ -205,3 +205,18 @@ Build a credible dashboard using real device data only. The user supplied an ind
   - `npm run typecheck` ✓ PASS
   - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
 
+## Follow-up: Developer Footer & ACT STEM Logo Update — 2026-09-29
+
+- User requests:
+  - Add footer credit: `© 2026 Developed by : Pannapat Somsri`.
+  - Replace `act-logo` branding with the new ACT STEM Center logo (`public/act-stem-logo.png`).
+- **Implementation**:
+  - `src/components/OperationsOverview.tsx`: Updated overview footer credit.
+  - `src/components/Dashboard.tsx` & `src/app/navigation.css`: Added developer footer credit at the bottom of the navigation sidebar; updated branding logo to `act-stem-logo.png`.
+  - `src/app/layout.tsx`: Updated icon metadata to `act-stem-logo.png`.
+- **Validation**:
+  - `node tests/data-integrity.test.cjs` ✓ PASS
+  - `npm run typecheck` ✓ PASS
+  - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
+
+

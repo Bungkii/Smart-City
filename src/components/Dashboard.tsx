@@ -138,7 +138,7 @@ function Shell({
             whileHover={{ scale: 1.08, rotate: 3, transition: { duration: 0.2 } }}
             whileTap={{ scale: 0.95 }}
           >
-            <img src="/act-logo-1961.png" alt="Assumption College Thonburi — ACT 1961" width={56} height={56} />
+            <img src="/act-stem-logo.png" alt="Assumption College Thonburi — ACT STEM" width={56} height={56} />
           </motion.span>
           <span className="brand-text">
             <strong>Assumption College Thonburi</strong>
@@ -180,6 +180,10 @@ function Shell({
               animation: connection === "ready" ? "pulse-green 2s infinite" : "none"
             }} />
           </div>
+
+          <div className="sidebar-credit">
+            <span>© 2026 Developed by : Pannapat Somsri</span>
+          </div>
         </div>
       </aside>
 
@@ -191,7 +195,7 @@ function Shell({
           <Button isIconOnly size="sm" variant="ghost" ref={mobileToggle} className="mobile-menu" onPress={() => setOpen(!open)} aria-label={open ? "ปิดเมนู" : "เปิดเมนู"} aria-expanded={open} aria-controls="main-navigation">
             {open ? <X /> : <Menu />}
           </Button>
-          <Link href="/" className="header-brand" aria-label="ACT 1961 — ภาพรวมเมืองอัจฉริยะ"><img src="/act-logo-1961.png" alt="ACT 1961" width={32} height={32} /></Link>
+          <Link href="/" className="header-brand" aria-label="ACT STEM — ภาพรวมเมืองอัจฉริยะ"><img src="/act-stem-logo.png" alt="ACT STEM" width={32} height={32} /></Link>
           <div className="breadcrumb">
             <span className="breadcrumb-brand">ASSUMPTION COLLEGE THONBURI</span>
             <span>/</span>

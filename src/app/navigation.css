@@ -35,3 +35,13 @@
   .topbar .breadcrumb { margin-left: 0; }
   .mobile-menu { flex: none; }
 }
+
+.sidebar-credit {
+  margin-top: 14px;
+  padding: 10px 4px 0;
+  border-top: 1px solid #1f364d;
+  font-size: 10px;
+  color: #688299;
+  text-align: center;
+  letter-spacing: 0.2px;
+}

@@ -362,7 +362,7 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
       <footer className="monitor-footer">
         <span><ShieldCheck size={13} /> DEVICE TELEMETRY ONLY</span>
         <span>ข้อมูลอุปกรณ์ล่าสุด: {stamp(latest)}</span>
-        <span>ASSUMPTION COLLEGE THONBURI</span>
+        <span>© 2026 Developed by : Pannapat Somsri</span>
       </footer>
     </motion.div>
   );

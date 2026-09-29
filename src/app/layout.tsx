@@ -15,7 +15,7 @@ import { Providers } from "./providers";
 export const metadata: Metadata = {
   title: "Assumption College Thonburi | Smart City Dashboard",
   description: "แดชบอร์ด Smart City โรงเรียนอัสสัมชัญธนบุรี",
-  icons: { icon: "/act-logo-1961.png", apple: "/act-logo-1961.png" }
+  icons: { icon: "/act-stem-logo.png", apple: "/act-stem-logo.png" }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
