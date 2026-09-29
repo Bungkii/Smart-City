@@ -9,6 +9,7 @@ import "./navigation.css";
 import "./ui-controls.css";
 import "./premium.css";
 import "./rfid.css";
+import "./spotlight.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {

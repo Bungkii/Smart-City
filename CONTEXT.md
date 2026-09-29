@@ -193,4 +193,15 @@ Build a credible dashboard using real device data only. The user supplied an ind
   - `npm run typecheck` ✓ PASS
   - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
 
+## Follow-up: Command Palette & Global Hotkey (⌘K / Ctrl+K) — 2026-09-29
+
+- User request: Added Quick Search / Command Palette modal with global hotkey support.
+- **Implementation**:
+  - `src/components/CommandPalette.tsx`: modal search with real-time filtering across Command Center, 5 subsystems, and settings, supporting keyboard navigation (`↑`/`↓`/`↵`/`Esc`).
+  - `src/app/spotlight.css`: clean frosted modal styling and responsive shortcut badges.
+  - `src/components/Dashboard.tsx`: registered global `mod+K` (`Ctrl+K` / `⌘K`) listener and added topbar quick search button.
+- **Validation**:
+  - `node tests/data-integrity.test.cjs` ✓ PASS
+  - `npm run typecheck` ✓ PASS
+  - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
 

@@ -19,6 +19,7 @@ import {
   ParkingVisualizer, TrafficVisualizer, StreetlightVisualizer,
   GateVisualizer, EnvironmentVisualizer
 } from "./SystemVisualizers";
+import { CommandPalette } from "./CommandPalette";
 
 type Snapshot = {
   mode: "live";
@@ -107,6 +108,19 @@ function Shell({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, closeMobileMenu]);
 
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSpotlightOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const toggleSidebar = () => {
     const next = !collapsed;
     setCollapsed(next);
@@ -185,6 +199,16 @@ function Shell({
           </div>
 
           <div className="top-actions">
+            <button
+              type="button"
+              className="spotlight-trigger-btn"
+              onClick={() => setSpotlightOpen(true)}
+              aria-label="ค้นหาด่วน (Ctrl+K หรือ Cmd+K)"
+            >
+              <Search size={14} />
+              <span>ค้นหาด่วน</span>
+              <kbd className="spotlight-trigger-kbd">⌘K</kbd>
+            </button>
             <ConnectionChip connection={connection} />
             <span className="top-updated"><Clock3 size={15} /> {shortTime(updated)}</span>
             <Link href="/settings" aria-label="ตั้งค่า"><Settings2 size={18} /></Link>
@@ -193,6 +217,8 @@ function Shell({
 
         {children}
       </main>
+
+      <CommandPalette isOpen={spotlightOpen} onClose={() => setSpotlightOpen(false)} />
     </div>
   );
 }
