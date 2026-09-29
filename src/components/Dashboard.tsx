@@ -247,7 +247,7 @@ export default function Dashboard({ systemId, settings = false }: { systemId?: S
 
   useEffect(() => {
     load();
-    const timer = setInterval(load, 5000);
+    const timer = setInterval(load, 1000);
     return () => clearInterval(timer);
   }, [load]);
 

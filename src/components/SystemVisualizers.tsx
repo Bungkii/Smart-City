@@ -370,6 +370,14 @@ export function GateVisualizer({
   };
   const [hasMoreCards, setHasMoreCards] = useState(false);
 
+  useEffect(() => {
+    if (!authorized || !adminToken.trim()) return;
+    const interval = setInterval(() => {
+      loadRfidData(adminToken);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [authorized, adminToken]);
+
   const lockRegistry = () => {
     setAdminToken("");
     setAuthorized(false);

@@ -205,18 +205,17 @@ Build a credible dashboard using real device data only. The user supplied an ind
   - `npm run typecheck` ✓ PASS
   - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
 
-## Follow-up: Developer Footer & ACT STEM Logo Update — 2026-09-29
+## Follow-up: 1-Second Continuous Telemetry & RFID Live Polling — 2026-09-29
 
-- User requests:
-  - Add footer credit: `© 2026 Developed by : Pannapat Somsri`.
-  - Replace `act-logo` branding with the new ACT STEM Center logo (`public/act-stem-logo.png`).
+- User request: Update dashboard polling interval to continuous 1-second real-time refresh and ensure live card scan logs refresh automatically.
 - **Implementation**:
-  - `src/components/OperationsOverview.tsx`: Updated overview footer credit.
-  - `src/components/Dashboard.tsx` & `src/app/navigation.css`: Added developer footer credit at the bottom of the navigation sidebar; updated branding logo to `act-stem-logo.png`.
-  - `src/app/layout.tsx`: Updated icon metadata to `act-stem-logo.png`.
+  - `src/components/Dashboard.tsx`: Set telemetry polling interval to 1000ms (`setInterval(load, 1000)`).
+  - `src/components/OperationsOverview.tsx`: Updated indicator label to "ตรวจสอบข้อมูลทุก 1 วินาที (Real-time)".
+  - `src/components/SystemVisualizers.tsx`: Added 1-second auto-refresh for authorized RFID Registry & Gate Logs.
 - **Validation**:
   - `node tests/data-integrity.test.cjs` ✓ PASS
   - `npm run typecheck` ✓ PASS
   - `npm run build` (12/12 routes compiled with Next.js Turbopack) ✓ PASS
+
 
 

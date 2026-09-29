@@ -179,7 +179,7 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
         <div className="monitor-toolbar">
           <div className="monitor-clock">
             <Clock3 size={14} />
-            <span>{stamp(data.serverTime)}<small>ตรวจสอบข้อมูลทุก 5 วินาที</small></span>
+            <span>{stamp(data.serverTime)}<small>ตรวจสอบข้อมูลทุก 1 วินาที (Real-time)</small></span>
           </div>
           <Button isIconOnly size="sm" variant="outline" isDisabled={refreshing} onPress={refresh} aria-label="รีเฟรชข้อมูล">
             <RefreshCw size={15} className={refreshing ? "spin" : ""} />
