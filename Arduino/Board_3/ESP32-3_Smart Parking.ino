@@ -7,9 +7,11 @@
 #include "SmartCitySecrets.h"
 
 // ==============================================================================
-// 1. NTP TIME CONFIGURATION
+// 1. NTP TIME CONFIGURATION (กรมอุทกศาสตร์ กองทัพเรือ)
 // ==============================================================================
-const char* ntpServer     = "pool.ntp.org";
+const char* ntpServer1    = "time.navy.mi.th";
+const char* ntpServer2    = "time2.navy.mi.th";
+const char* ntpServer3    = "pool.ntp.org";
 const long  gmtOffset_sec = 7 * 3600;  // GMT+7 (Bangkok)
 const int   daylightOffset_sec = 0;
 
@@ -155,8 +157,8 @@ void setup() {
   if (!wm.autoConnect("ACT-Smart-Parking-Setup")) {
     Serial.println("[Wi-Fi] Failed to connect, running offline mode...");
   } else {
-    Serial.println("[Wi-Fi] Connected! Syncing NTP time...");
-    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    Serial.println("[Wi-Fi] Connected! Syncing NTP time from time.navy.mi.th...");
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2, ntpServer3);
   }
 
   showOLEDMessage("CONNECTED!", "READY TO DETECT");
