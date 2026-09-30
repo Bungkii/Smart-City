@@ -148,7 +148,11 @@ void sendStreetlightTelemetry(bool isOn, int brightnessPercent, String modeType,
   http.endRequest();
 
   int statusCode = http.responseStatusCode();
-  Serial.printf("[UNO R4 SUPABASE] Status: %d | Brightness: %d%%\n", statusCode, brightnessPercent);
+  Serial.print("[UNO R4 SUPABASE] Status: ");
+  Serial.print(statusCode);
+  Serial.print(" | Brightness: ");
+  Serial.print(brightnessPercent);
+  Serial.println("%");
 #endif
 }
 

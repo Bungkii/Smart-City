@@ -179,7 +179,10 @@ void sendTrafficTelemetry(String activeDirection, String nSignal, String eSignal
   http.endRequest();
 
   int statusCode = http.responseStatusCode();
-  Serial.printf("[UNO R4 SUPABASE] Code: %d | Active: %s\n", statusCode, activeDirection.c_str());
+  Serial.print("[UNO R4 SUPABASE] Code: ");
+  Serial.print(statusCode);
+  Serial.print(" | Active: ");
+  Serial.println(activeDirection);
 #endif
 }
 
