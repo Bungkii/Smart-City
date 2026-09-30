@@ -1,5 +1,8 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -7,8 +10,12 @@
 #include "SmartCitySecrets.h"
 
 // ==============================================================================
-// 1. NTP TIME CONFIGURATION (กรมอุทกศาสตร์ กองทัพเรือ)
+// 1. SUPABASE CLOUD & NTP CONFIGURATION
 // ==============================================================================
+const String CLOUD_MODE   = "supabase"; 
+const String SUPABASE_URL = SMARTCITY_SUPABASE_URL;
+const String SUPABASE_KEY = SMARTCITY_SUPABASE_KEY;
+
 const char* ntpServer1    = "time.navy.mi.th";
 const char* ntpServer2    = "time2.navy.mi.th";
 const char* ntpServer3    = "pool.ntp.org";
@@ -47,18 +54,68 @@ unsigned long exitsSinceBoot   = 0;
 
 unsigned long lastSenseTime = 0;
 unsigned long lastClockTime = 0;
+unsigned long lastCloudTime = 0;
 unsigned long lockInTime    = 0;
 unsigned long lockOutTime   = 0;
 bool inSensorActive  = false;
 bool outSensorActive = false;
 
-const unsigned long SENSOR_INTERVAL = 40;   // ตรวจสอบเซนเซอร์ทุกๆ 40ms
-const unsigned long COOLDOWN        = 800;  // หน่วงเวลากันนับซ้ำ 0.8 วินาที
-const unsigned long CLOCK_INTERVAL  = 1000; // อัปเดตนาฬิกาทุก 1 วินาที
+const unsigned long SENSOR_INTERVAL = 40;    // ตรวจสอบเซนเซอร์ทุกๆ 40ms
+const unsigned long COOLDOWN        = 800;   // หน่วงเวลากันนับซ้ำ 0.8 วินาที
+const unsigned long CLOCK_INTERVAL  = 1000;  // อัปเดตนาฬิกาทุก 1 วินาที
+const unsigned long CLOUD_INTERVAL  = 15000; // ส่ง Cloud ทุก 15 วินาทีเป็นอย่างน้อย
 
 // ==============================================================================
-// 4. HELPER FUNCTIONS
+// 4. HELPER FUNCTIONS & TELEMETRY
 // ==============================================================================
+int getAvailableSlots() {
+  long netParked = (long)entriesSinceBoot - (long)exitsSinceBoot;
+  if (netParked < 0) netParked = 0;
+  if (netParked > TOTAL_SLOTS) netParked = TOTAL_SLOTS;
+  return TOTAL_SLOTS - netParked;
+}
+
+int getOccupiedSlots() {
+  return TOTAL_SLOTS - getAvailableSlots();
+}
+
+void sendParkingTelemetry(String noteMsg) {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure();
+  secureClient.setTimeout(4000);
+
+  HTTPClient http;
+  http.begin(secureClient, SUPABASE_URL + "/events");
+  http.addHeader("apikey", SUPABASE_KEY);
+  http.addHeader("Authorization", "Bearer " + SUPABASE_KEY);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Prefer", "return=minimal");
+
+  DynamicJsonDocument doc(512);
+  doc["source"]      = "live";
+  doc["system"]      = "parking";
+  doc["device_id"]   = "PK-1";
+  doc["name"]        = "ระบบที่จอดรถอัจฉริยะ PK-1";
+  doc["location"]    = "ตำแหน่งยังไม่ยืนยัน";
+  doc["health"]      = "normal";
+  doc["note"]        = noteMsg;
+
+  JsonObject data = doc.createNestedObject("data_json");
+  data["occupied"]   = getOccupiedSlots();
+  data["available"]  = getAvailableSlots();
+  data["total"]      = TOTAL_SLOTS;
+  data["entries"]    = entriesSinceBoot;
+  data["exits"]      = exitsSinceBoot;
+  data["status"]     = getAvailableSlots() > 0 ? "available" : "full";
+
+  String jsonBody;
+  serializeJson(doc, jsonBody);
+  int code = http.POST(jsonBody);
+  Serial.printf("[SUPABASE PARKING] Code: %d | Available: %d/%d\n", code, getAvailableSlots(), TOTAL_SLOTS);
+  http.end();
+}
 float getDistance(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -164,6 +221,7 @@ void setup() {
   showOLEDMessage("CONNECTED!", "READY TO DETECT");
   delay(1000);
   updateOLEDDisplay();
+  sendParkingTelemetry("ระบบที่จอดรถออนไลน์พร้อมทำงาน");
 
   Serial.println("[PARKING SYSTEM] Ready.");
 }
@@ -186,6 +244,7 @@ void loop() {
       lockInTime = now;
       Serial.printf("[PARKING SENSOR] Entry trigger: %lu | Available: %d/8\n", entriesSinceBoot, getAvailableSlots());
       updateOLEDDisplay();
+      sendParkingTelemetry("รถเข้าที่จอด");
     }
     inSensorActive = inNow;
 
@@ -197,6 +256,7 @@ void loop() {
       lockOutTime = now;
       Serial.printf("[PARKING SENSOR] Exit trigger: %lu | Available: %d/8\n", exitsSinceBoot, getAvailableSlots());
       updateOLEDDisplay();
+      sendParkingTelemetry("รถออกจากที่จอด");
     }
     outSensorActive = outNow;
   }
@@ -206,5 +266,12 @@ void loop() {
     lastClockTime = now;
     updateOLEDDisplay();
   }
+
+  // ส่งข้อมูล Heartbeat ขึ้น Cloud ทุกๆ 15 วินาที
+  if (now - lastCloudTime >= CLOUD_INTERVAL) {
+    lastCloudTime = now;
+    sendParkingTelemetry("อัปเดตสถานะปกติ");
+  }
 }
+
 
