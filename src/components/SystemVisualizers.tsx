@@ -143,7 +143,7 @@ export function TrafficVisualizer({
       <div className="viz-header">
         <div>
           <span className="viz-tag"><TrafficCone size={14} /> สัญญาณไฟจราจร</span>
-          <h3>สถานะสัญญาณไฟแยกอัสสัมชัญ</h3>
+          <h3>สถานะสัญญาณไฟจราจร 4 ทิศทาง</h3>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <span style={{
