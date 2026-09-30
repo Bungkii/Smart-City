@@ -3,6 +3,15 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <time.h>
+#include "SmartCitySecrets.h"
+
+// ==============================================================================
+// 1. NTP TIME CONFIGURATION
+// ==============================================================================
+const char* ntpServer     = "pool.ntp.org";
+const long  gmtOffset_sec = 7 * 3600;  // GMT+7 (Bangkok)
+const int   daylightOffset_sec = 0;
 
 // ==============================================================================
 // 2. OLED DISPLAY CONFIGURATION
@@ -29,18 +38,21 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define ECHO_OUT  23
 
 const float DETECT_DIST_CM = 6.0; // ระยะตรวจจับ 6 cm
+const int TOTAL_SLOTS      = 8;   // จำนวนช่องจอดทั้งหมด
 
 unsigned long entriesSinceBoot = 0;
-unsigned long exitsSinceBoot = 0;
+unsigned long exitsSinceBoot   = 0;
 
 unsigned long lastSenseTime = 0;
+unsigned long lastClockTime = 0;
 unsigned long lockInTime    = 0;
 unsigned long lockOutTime   = 0;
-bool inSensorActive = false;
+bool inSensorActive  = false;
 bool outSensorActive = false;
 
-const unsigned long SENSOR_INTERVAL = 40;  // ตรวจสอบเซนเซอร์ทุกๆ 40ms
-const unsigned long COOLDOWN        = 800; // หน่วงเวลากันนับซ้ำ 0.8 วินาที
+const unsigned long SENSOR_INTERVAL = 40;   // ตรวจสอบเซนเซอร์ทุกๆ 40ms
+const unsigned long COOLDOWN        = 800;  // หน่วงเวลากันนับซ้ำ 0.8 วินาที
+const unsigned long CLOCK_INTERVAL  = 1000; // อัปเดตนาฬิกาทุก 1 วินาที
 
 // ==============================================================================
 // 4. HELPER FUNCTIONS
@@ -68,29 +80,58 @@ void showOLEDMessage(String line1, String line2) {
   display.display();
 }
 
+int getAvailableSlots() {
+  long netParked = (long)entriesSinceBoot - (long)exitsSinceBoot;
+  if (netParked < 0) netParked = 0;
+  if (netParked > TOTAL_SLOTS) netParked = TOTAL_SLOTS;
+  return TOTAL_SLOTS - netParked;
+}
+
 void updateOLEDDisplay() {
   display.clearDisplay();
-  display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(18, 5);
-  display.println(F("ACT SMART PARKING"));
 
-  display.drawLine(0, 16, 128, 16, SSD1306_WHITE);
+  // เส้นขอบบน
+  display.drawLine(0, 4, 128, 4, SSD1306_WHITE);
 
-  display.setCursor(8, 24);
-  display.print(F("IN since boot:  "));
-  display.println(entriesSinceBoot);
-  display.setCursor(8, 40);
-  display.print(F("OUT since boot: "));
-  display.println(exitsSinceBoot);
-  display.setCursor(8, 56);
-  display.print(F("Occupancy: unknown"));
+  // ส่วนแสดง Available 8/8
+  int available = getAvailableSlots();
+  display.setTextSize(2);
+  display.setCursor(0, 14);
+  String availStr = "Avail " + String(available) + "/" + String(TOTAL_SLOTS);
+  int xPos = (128 - (availStr.length() * 12)) / 2;
+  if (xPos < 0) xPos = 0;
+  display.setCursor(xPos, 14);
+  display.print(availStr);
+
+  // เส้นขอบล่าง
+  display.drawLine(0, 36, 128, 36, SSD1306_WHITE);
+
+  // ส่วนแสดงเวลาและวันที่ (HH:MM:SS DATE)
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    char timeStr[24];
+    strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
+    
+    char dateStr[24];
+    strftime(dateStr, sizeof(dateStr), "%d/%m/%Y", &timeinfo);
+
+    display.setTextSize(1);
+    display.setCursor(16, 42);
+    display.print(timeStr);
+    display.print(" ");
+    display.print(dateStr);
+  } else {
+    display.setTextSize(1);
+    display.setCursor(20, 45);
+    display.print(F("--:--:-- --/--/--"));
+  }
 
   display.display();
 }
 
 // ==============================================================================
-// 6. SETUP
+// 5. SETUP
 // ==============================================================================
 void setup() {
   Serial.begin(115200);
@@ -102,7 +143,7 @@ void setup() {
     for (;;);
   }
 
-  showOLEDMessage("CONNECTING WIFI...", "AP: 192.168.4.1");
+  showOLEDMessage("CONNECTING WIFI...", "AP: ACT-Parking");
 
   pinMode(TRIG_IN, OUTPUT);
   pinMode(ECHO_IN, INPUT);
@@ -110,24 +151,28 @@ void setup() {
   pinMode(ECHO_OUT, INPUT);
 
   WiFiManager wm;
-  if (!wm.autoConnect("SmartCity-Parking-AP")) {
-    ESP.restart();
+  wm.setConfigPortalTimeout(180);
+  if (!wm.autoConnect("ACT-Smart-Parking-Setup")) {
+    Serial.println("[Wi-Fi] Failed to connect, running offline mode...");
+  } else {
+    Serial.println("[Wi-Fi] Connected! Syncing NTP time...");
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   }
-
 
   showOLEDMessage("CONNECTED!", "READY TO DETECT");
   delay(1000);
   updateOLEDDisplay();
 
-  Serial.println("[PARKING SYSTEM] Entry/exit counters ready; occupancy telemetry disabled until verified sensing is installed.");
+  Serial.println("[PARKING SYSTEM] Ready.");
 }
 
 // ==============================================================================
-// 7. MAIN LOOP
+// 6. MAIN LOOP
 // ==============================================================================
 void loop() {
   unsigned long now = millis();
 
+  // ตรวจจับเซนเซอร์
   if (now - lastSenseTime >= SENSOR_INTERVAL) {
     lastSenseTime = now;
 
@@ -137,7 +182,7 @@ void loop() {
     if (inNow && !inSensorActive && (now - lockInTime >= COOLDOWN)) {
       entriesSinceBoot++;
       lockInTime = now;
-      Serial.printf("[PARKING SENSOR] Entry trigger since boot: %lu\n", entriesSinceBoot);
+      Serial.printf("[PARKING SENSOR] Entry trigger: %lu | Available: %d/8\n", entriesSinceBoot, getAvailableSlots());
       updateOLEDDisplay();
     }
     inSensorActive = inNow;
@@ -148,9 +193,16 @@ void loop() {
     if (outNow && !outSensorActive && (now - lockOutTime >= COOLDOWN)) {
       exitsSinceBoot++;
       lockOutTime = now;
-      Serial.printf("[PARKING SENSOR] Exit trigger since boot: %lu\n", exitsSinceBoot);
+      Serial.printf("[PARKING SENSOR] Exit trigger: %lu | Available: %d/8\n", exitsSinceBoot, getAvailableSlots());
       updateOLEDDisplay();
     }
     outSensorActive = outNow;
   }
+
+  // อัปเดตเวลาบนจอ OLED ทุกๆ 1 วินาที
+  if (now - lastClockTime >= CLOCK_INTERVAL) {
+    lastClockTime = now;
+    updateOLEDDisplay();
+  }
 }
+
