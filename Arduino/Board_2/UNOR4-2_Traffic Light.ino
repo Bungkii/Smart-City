@@ -144,6 +144,7 @@ void sendTrafficTelemetry(String activeDirection, String nSignal, String eSignal
 #elif defined(ARDUINO_UNOR4_WIFI)
   WiFiSSLClient sslClient;
   HttpClient http = HttpClient(sslClient, SMARTCITY_SUPABASE_HOST, 443);
+  http.setHttpResponseTimeout(4000);
 
   DynamicJsonDocument doc(512);
   doc["source"]      = "live";
@@ -179,6 +180,9 @@ void sendTrafficTelemetry(String activeDirection, String nSignal, String eSignal
   http.endRequest();
 
   int statusCode = http.responseStatusCode();
+  http.stop();
+  sslClient.stop();
+
   Serial.print("[UNO R4 SUPABASE] Code: ");
   Serial.print(statusCode);
   Serial.print(" | Active: ");
@@ -255,6 +259,15 @@ void loop() {
       Serial.println("\n⚠️ [Wi-Fi RESET] Button Held 3s -> Clearing Stored Wi-Fi & Restarting...");
       wm.resetSettings();
       ESP.restart();
+    }
+  }
+#elif defined(ARDUINO_UNOR4_WIFI)
+  if (WiFi.status() != WL_CONNECTED) {
+    static unsigned long lastReconnect = 0;
+    if (currentMillis - lastReconnect >= 10000) {
+      lastReconnect = currentMillis;
+      Serial.println("[Wi-Fi] Reconnecting...");
+      WiFi.begin(FALLBACK_SSID, FALLBACK_PASS);
     }
   }
 #endif
