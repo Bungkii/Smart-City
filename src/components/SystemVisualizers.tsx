@@ -23,9 +23,26 @@ export function ParkingVisualizer({
 }) {
   const [selectedBay, setSelectedBay] = useState<string | null>(null);
   const parkingDevices = devices.filter(d => d.system === "parking");
-  const occupiedCount = parkingDevices.filter(d => (d.data as any).occupied).length;
-  const vacantCount = parkingDevices.length - occupiedCount;
-  const occupancyPercent = parkingDevices.length ? Math.round((occupiedCount / parkingDevices.length) * 100) : 0;
+  const latestParking = parkingDevices.slice().sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt))[0];
+  const isAggregate = latestParking && typeof (latestParking.data as any).total === "number";
+
+  const totalSlots = isAggregate ? ((latestParking.data as any).total as number) : parkingDevices.length;
+  const occupiedCount = isAggregate ? ((latestParking.data as any).occupied as number) : parkingDevices.filter(d => (d.data as any).occupied).length;
+  const vacantCount = isAggregate ? ((latestParking.data as any).available as number) : (parkingDevices.length - occupiedCount);
+  const occupancyPercent = totalSlots ? Math.round((occupiedCount / totalSlots) * 100) : 0;
+
+  // สร้างรายการช่องจอด 8 ช่อง (ถ้าเป็นโหมดรวมจากบอร์ด 3) หรือตาม device แยกช่อง
+  const slotList = isAggregate ? Array.from({ length: totalSlots }, (_, i) => ({
+    id: `SLOT-${i + 1}`,
+    name: `ช่องจอด #${i + 1}`,
+    occupied: i < occupiedCount,
+    sourceDevice: latestParking
+  })) : parkingDevices.map(d => ({
+    id: d.deviceId,
+    name: (d.data as any).bay || d.name || d.deviceId,
+    occupied: Boolean((d.data as any).occupied),
+    sourceDevice: d
+  }));
 
   return (
     <motion.div 
@@ -37,7 +54,7 @@ export function ParkingVisualizer({
       <div className="viz-header">
         <div>
           <span className="viz-tag"><CarFront size={14} /> ผังช่องจอดรถ</span>
-          <h3>สถานะช่องจอดรถแบบ Real-time</h3>
+          <h3>สถานะช่องจอดรถแบบ Real-time (ความจุ {totalSlots} ช่อง)</h3>
         </div>
         <div className="viz-stats-pills">
           <span className="pill green" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
@@ -53,16 +70,15 @@ export function ParkingVisualizer({
       </div>
 
       <div className="parking-lot-grid">
-        {parkingDevices.map((d, index) => {
-          const isOccupied = (d.data as any).occupied;
-          const bayName = (d.data as any).bay || d.name || d.deviceId;
-          const isSelected = selectedBay === d.deviceId;
+        {slotList.map((slot, index) => {
+          const isOccupied = slot.occupied;
+          const isSelected = selectedBay === slot.id;
 
           return (
             <motion.div 
-              key={d.deviceId}
+              key={slot.id}
               className={`bay-slot ${isOccupied ? "occupied" : "vacant"} ${isSelected ? "selected" : ""}`}
-              onClick={() => setSelectedBay(d.deviceId)}
+              onClick={() => setSelectedBay(slot.id)}
               whileHover={{ y: -3, scale: 1.02, transition: { duration: 0.18 } }}
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, scale: 0.94 }}
@@ -70,7 +86,7 @@ export function ParkingVisualizer({
               transition={{ duration: 0.25, delay: index * 0.04 }}
             >
               <div className="bay-roof">
-                <span className="bay-id">{bayName}</span>
+                <span className="bay-id">{slot.name}</span>
                 <span className={`bay-status-dot ${isOccupied ? "red" : "green"}`} style={{
                   boxShadow: isOccupied ? "0 0 6px rgba(239,68,68,0.6)" : "0 0 6px rgba(16,185,129,0.6)"
                 }} />
@@ -92,7 +108,7 @@ export function ParkingVisualizer({
                 )}
               </div>
               <div className="bay-footer">
-                <small>{d.name}</small>
+                <small>{isOccupied ? "มีรถจอด" : "พร้อมใช้งาน"}</small>
               </div>
             </motion.div>
           );

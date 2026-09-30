@@ -59,7 +59,11 @@ function SystemPanel({ id, devices, index }: { id: SystemId; devices: EventRow[]
   const latest = fresh.slice().sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt))[0];
   const values = latest?.data as Record<string, unknown> | undefined;
   const Icon = icons[id];
-  const free = fresh.filter(d => d.system === "parking" && !d.data.occupied).length;
+  const isParkingAggregate = latest?.system === "parking" && typeof (latest.data as any).total === "number";
+  const parkingTotal = isParkingAggregate ? ((latest?.data as any).total as number) : list.length;
+  const parkingAvailable = isParkingAggregate ? ((latest?.data as any).available as number) : fresh.filter(d => d.system === "parking" && !d.data.occupied).length;
+  const parkingOccupied = isParkingAggregate ? ((latest?.data as any).occupied as number) : (fresh.length ? fresh.length - parkingAvailable : "—");
+  const free = parkingAvailable;
   const lightsOn = fresh.filter(d => d.system === "streetlight" && d.data.on).length;
   const lastTime = list.map(d => d.receivedAt).sort().at(-1);
 
@@ -82,10 +86,10 @@ function SystemPanel({ id, devices, index }: { id: SystemId; devices: EventRow[]
         </div>
         {id === "parking" ? (
           <>
-            <Ring value={free} total={fresh.length} label="ช่องจอดว่าง" />
+            <Ring value={free} total={parkingTotal} label="ช่องจอดว่าง" />
             <div className="monitor-pair">
-              <span>มีรถจอด <b>{fresh.length ? fresh.length - free : "—"}</b></span>
-              <span>ทั้งหมด <b>{list.length || "—"}</b></span>
+              <span>มีรถจอด <b>{parkingOccupied}</b></span>
+              <span>ทั้งหมด <b>{parkingTotal || "—"}</b></span>
             </div>
           </>
         ) : id === "streetlight" ? (
