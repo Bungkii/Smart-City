@@ -145,9 +145,10 @@ void sendStreetlightTelemetry(bool isOn, int brightnessPercent, String modeType,
   http.sendHeader("Content-Length", jsonBody.length());
   http.beginBody();
   http.print(jsonBody);
-  http.endRequest();
-
   int statusCode = http.responseStatusCode();
+  http.stop();
+  sslClient.stop();
+
   Serial.print("[UNO R4 SUPABASE] Status: ");
   Serial.print(statusCode);
   Serial.print(" | Brightness: ");
@@ -214,6 +215,16 @@ void setup() {
 // ==============================================================================
 void loop() {
   unsigned long currentMillis = millis();
+
+  // Auto Reconnect Wi-Fi
+  if (WiFi.status() != WL_CONNECTED) {
+    static unsigned long lastReconnect = 0;
+    if (currentMillis - lastReconnect >= 10000) {
+      lastReconnect = currentMillis;
+      Serial.println("[Wi-Fi] Reconnecting...");
+      WiFi.begin(FALLBACK_SSID, FALLBACK_PASS);
+    }
+  }
 
   // ตรวจสอบการกดปุ่ม Reset Wi-Fi ระหว่างทำงาน (กดค้าง 3 วินาทีเพื่อลบ Wi-Fi)
 #if defined(ESP32)
