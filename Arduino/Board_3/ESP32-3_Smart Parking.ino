@@ -139,13 +139,6 @@ void showOLEDMessage(String line1, String line2) {
   display.display();
 }
 
-int getAvailableSlots() {
-  long netParked = (long)entriesSinceBoot - (long)exitsSinceBoot;
-  if (netParked < 0) netParked = 0;
-  if (netParked > TOTAL_SLOTS) netParked = TOTAL_SLOTS;
-  return TOTAL_SLOTS - netParked;
-}
-
 void updateOLEDDisplay() {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
