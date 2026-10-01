@@ -7,9 +7,10 @@ Updated: 2026-10-01
 - Added Board 6 (`ESP32-6_RFID Exit Gate.ino`) for GT-2 RFID Gate Out with outbound scan logging.
 - Upgraded Board 2 (TR-1) and Board 5 (SL-1) with auto-reconnection and explicit SSL socket termination (`http.stop()`, `sslClient.stop()`) on Arduino UNO R4 to prevent offline dropouts.
 - Upgraded Board 3 (PK-1) with OLED display layout showing "Avail X/8", Royal Thai Navy NTP time sync (`time.navy.mi.th`), and live aggregate occupancy telemetry to Supabase.
-- Upgraded Board 4 (EN-1) with auto-reconnect and NTP time synchronization.
+- Upgraded Board 4 (EN-1) with auto-reconnect, NTP time synchronization, and verified DHT temperature and humidity sensing.
+- Enhanced Dashboard and OperationsOverview to display real DHT readings prominently (highlighting temperature and humidity when PM2.5 sensor is omitted) and support historical temperature trend charting.
+- Documented Board 4, 5, and 6 pinouts in `Arduino/README.md` and `Arduino/WIRE.md`.
 - All 6 boards configured with Wi-Fi network `Secondary_STEMBELL` in local `SmartCitySecrets.h`.
-- Documented Board 5 and 6 pinouts in `Arduino/README.md` and `Arduino/WIRE.md`, recommending ESP32 over ESP8266 due to GPIO availability and TLS memory stability. Updated `ESP32-5_Adaptive Street Light.ino` to cleanly map ESP32 GPIOs (LDR: 34, PIR: 27, PWM: 18) while maintaining UNO R4 compatibility.
 - Web dashboard verified live at `https://smartcity.bungkii.app/`, showing real-time incoming events from deployed hardware (TR-1, PK-1, GT-1, GT-2).
 - Unit tests (`data-integrity.test.cjs`), typecheck, and Next.js production build passing cleanly.
 

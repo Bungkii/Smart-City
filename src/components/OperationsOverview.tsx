@@ -128,8 +128,22 @@ function SystemPanel({ id, devices, index }: { id: SystemId; devices: EventRow[]
         ) : (
           <>
             <div className="monitor-air">
-              <strong>{number(values?.pm25)}</strong>
-              <span>PM2.5 <small>µg/m³</small></span>
+              {typeof values?.pm25 === "number" ? (
+                <>
+                  <strong>{number(values?.pm25)}</strong>
+                  <span>PM2.5 <small>µg/m³</small></span>
+                </>
+              ) : typeof values?.temperature === "number" ? (
+                <>
+                  <strong style={{ fontSize: "32px", color: "#e11d48" }}>{number(values?.temperature)}°C</strong>
+                  <span style={{ color: "#0284c7" }}>ความชื้น {number(values?.humidity)}%</span>
+                </>
+              ) : (
+                <>
+                  <strong>—</strong>
+                  <span>รอข้อมูลเซนเซอร์</span>
+                </>
+              )}
             </div>
             <div className="monitor-pair">
               <span>อุณหภูมิ <b>{number(values?.temperature)} <small>°C</small></b></span>
@@ -157,7 +171,13 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
   const online = data.devices.filter(d => deviceHealth(d) !== "offline").length;
   const warning = data.devices.filter(d => deviceHealth(d) === "warning").length;
   const offline = data.devices.length - online;
-  const points = useMemo(() => (data.history.environment ?? []).filter(e => e.deviceId === selectedStation && e.system === "environment" && typeof e.data.pm25 === "number").slice().reverse().map(e => ({ time: clock(e.recordedAt), value: e.system === "environment" ? e.data.pm25 : undefined })), [data.history, selectedStation]);
+  const envHistory = useMemo(() => (data.history.environment ?? []).filter(e => e.deviceId === selectedStation && e.system === "environment"), [data.history, selectedStation]);
+  const hasPm25 = envHistory.some(e => typeof (e.data as any).pm25 === "number");
+  const chartMetric = hasPm25 ? "pm25" : "temperature";
+  const points = useMemo(() => envHistory.slice().reverse().map(e => ({
+    time: clock(e.recordedAt),
+    value: typeof (e.data as any)[chartMetric] === "number" ? (e.data as any)[chartMetric] : undefined
+  })).filter(p => typeof p.value === "number"), [envHistory, chartMetric]);
   const recent = useMemo(() => Object.values(data.history).flat().sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt)).slice(0, 6), [data.history]);
   const latest = data.devices.map(d => d.receivedAt).sort().at(-1);
 
@@ -285,8 +305,8 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
       >
         <section className="monitor-panel monitor-chart">
           <div className="monitor-panel-heading">
-            <div><small>ENVIRONMENT HISTORY</small><h2>แนวโน้มคุณภาพอากาศ</h2></div>
-            <span>PM2.5 · µg/m³</span>
+            <div><small>ENVIRONMENT HISTORY</small><h2>{chartMetric === "pm25" ? "แนวโน้มคุณภาพอากาศ" : "แนวโน้มอุณหภูมิ"}</h2></div>
+            <span>{chartMetric === "pm25" ? "PM2.5 · µg/m³" : "อุณหภูมิ · °C"}</span>
           </div>
           <div className="monitor-chart-tools">
             <span>ข้อมูลย้อนหลังที่ได้รับล่าสุด</span>
@@ -313,7 +333,7 @@ export default function OperationsOverview({ data, refresh, refreshing }: { data
                   <XAxis dataKey="time" tick={{ fill: "#6b8094", fontSize: 10 }} minTickGap={35} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: "#8c9fb5", fontSize: 10 }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ background: "#fff", border: "1px solid #dbe4ed", color: "#253c52", fontSize: 12 }} />
-                  <Area type="linear" dataKey="value" name="PM2.5" stroke="#3dc8f5" strokeWidth={2} fill="url(#monitor-air-fill)" isAnimationActive={false} dot={points.length === 1} />
+                  <Area type="linear" dataKey="value" name={chartMetric === "pm25" ? "PM2.5" : "อุณหภูมิ (°C)"} stroke="#3dc8f5" strokeWidth={2} fill="url(#monitor-air-fill)" isAnimationActive={false} dot={points.length === 1} />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (

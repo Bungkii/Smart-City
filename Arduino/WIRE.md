@@ -74,6 +74,28 @@
 
 ---
 
+## 📍 Board 4: Smart Environment Station (ESP32 — EN-1)
+
+สถานีตรวจวัดคุณภาพอากาศและสภาพแวดล้อม (ส่งค่าอุณหภูมิและความชื้นจาก DHT11 และเตือนควันจาก MQ-2 ไปยัง Dashboard และ Supabase)
+
+### 1. DHT11 / DHT22 (เซ็นเซอร์วัดอุณหภูมิและความชื้น)
+* **VCC (+) / Pin 1:** ต่อไฟเลี้ยง **3.3V** หรือ **5V**
+* **DATA / Pin 2:** ต่อเข้า **GPIO 4** บน ESP32 (มี R Pull-up 4.7kΩ - 10kΩ เข้า VCC หากใช้โมดูลเปลือย)
+* **GND (-) / Pin 4:** ต่อเข้า **Common GND Rail**
+
+### 2. MQ-2 Gas / Smoke Sensor (ตรวจจับควันและก๊าซรั่ว)
+* **VCC:** ต่อไฟเลี้ยง **External 5V Rail** (ฮีตเตอร์ของ MQ-2 ต้องการไฟ 5V)
+* **GND:** ต่อเข้า **Common GND Rail**
+* **AOUT (Analog Out):** ต่อเข้า **GPIO 34** บน ESP32 (ADC1)
+
+### 3. จอแสดงผล OLED 0.96" I2C (SSD1306 128x64)
+* **VCC:** ต่อไฟเลี้ยง **3.3V** หรือ **5V**
+* **GND:** ต่อเข้า **Common GND Rail**
+* **SDA:** ต่อเข้า **GPIO 21** บน ESP32
+* **SCL:** ต่อเข้า **GPIO 22** บน ESP32
+
+---
+
 ## 📍 Board 5: Adaptive Street Light (ESP32 หรือ UNO R4 WiFi)
 
 แนะนำให้ใช้ **ESP32** สำหรับประมวลผลและการเชื่อมต่อ TLS ไปยัง Supabase ที่เสถียร (ไม่แนะนำ ESP8266)

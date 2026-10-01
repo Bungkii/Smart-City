@@ -19,9 +19,15 @@
 | 5 ไฟถนน (SL-1) | ส่งสถานะ LED/PWM ตาม LDR/PIR | เคลียร์ SSL socket ป้องกัน offline และมี auto-reconnect |
 | 6 ประตู RFID ขาออก (GT-2) | ตรวจสิทธิ์จาก `rfid_cards`, เขียน `gate_logs` (OUT) และสถานะประตู | แยกเป็น device_id GT-2 ชัดเจน |
 
-## ผังพินและชิปแนะนำ (Board 5 & Board 6)
+## ผังพินและชิปแนะนำ (Board 4, Board 5 & Board 6)
 
-แนะนำให้ใช้ **ESP32** สำหรับทั้งบอร์ด 5 และบอร์ด 6 (ไม่แนะนำ ESP8266 เนื่องจากขา GPIO ไม่เพียงพอ และหน่วยความจำจำกัดเมื่อเชื่อมต่อ HTTPS/TLS กับ Supabase REST API)
+แนะนำให้ใช้ **ESP32** สำหรับบอร์ด 4, 5 และ 6 (ไม่แนะนำ ESP8266 เนื่องจากขา GPIO ไม่เพียงพอ และหน่วยความจำจำกัดเมื่อเชื่อมต่อ HTTPS/TLS กับ Supabase REST API)
+
+### Board 4: Smart Environment Station (ESP32 - EN-1)
+* **DHT11 / DHT22 (เซ็นเซอร์วัดอุณหภูมิและความชื้น):** **GPIO 4** (Pin DATA พร้อม R Pull-up 4.7k-10k)
+* **MQ-2 Gas Sensor (เซ็นเซอร์ควัน/ก๊าซ):** **GPIO 34** (ADC1 Analog In ขา AOUT, ไฟเลี้ยง VCC 5V)
+* **OLED 0.96" SSD1306 (จอแสดงผล I2C):** **SDA: GPIO 21**, **SCL: GPIO 22**
+* **BOOT Button (ปุ่ม Reset Wi-Fi):** **GPIO 0** (กดค้างตอนบูตเพื่อเปิด AP Portal)
 
 ### Board 5: Adaptive Street Light (ESP32 / UNO R4)
 * **LDR (อ่านค่าแสง Analog):** 

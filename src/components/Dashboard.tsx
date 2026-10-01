@@ -356,21 +356,29 @@ function PageHeading({
 function TrendChart({ events, system }: { events: EventRow[]; system: SystemId }) {
   const points = useMemo(() =>
     events
-      .filter(e => system === "environment" ? e.deviceId === events[0]?.deviceId : e.deviceId === events[0]?.deviceId)
+      .filter(e => e.deviceId === events[0]?.deviceId)
       .slice()
       .reverse()
-      .map(e => ({
-        time: shortTime(e.recordedAt),
-        value: system === "environment"
-          ? (e.data as any).pm25
-          : system === "parking"
-            ? (e.data as any).occupied ? 1 : 0
-            : system === "traffic"
-              ? (e.data as any).waitSeconds
-              : system === "streetlight"
-                ? (e.data as any).brightness
-                : (e.data as any).open ? 1 : 0
-      })),
+      .map(e => {
+        let val: number | undefined = undefined;
+        if (system === "environment") {
+          const d: any = e.data;
+          val = typeof d.pm25 === "number" ? d.pm25 : typeof d.temperature === "number" ? d.temperature : undefined;
+        } else if (system === "parking") {
+          val = (e.data as any).occupied ? 1 : 0;
+        } else if (system === "traffic") {
+          val = (e.data as any).waitSeconds;
+        } else if (system === "streetlight") {
+          val = (e.data as any).brightness;
+        } else {
+          val = (e.data as any).open ? 1 : 0;
+        }
+        return {
+          time: shortTime(e.recordedAt),
+          value: val
+        };
+      })
+      .filter(p => typeof p.value === "number"),
     [events, system]
   );
 
@@ -637,7 +645,15 @@ function SystemDetail({
           <div className="panel-head">
             <div>
               <span className="section-kicker">HISTORICAL TREND</span>
-              <h2>{id === "environment" ? "กราฟ PM2.5 ย้อนหลัง" : id === "traffic" ? "ระยะเวลารอสัญญานไฟ" : id === "streetlight" ? "ระดับความสว่าง" : "แนวโน้มสถานะ"}</h2>
+              <h2>
+                {id === "environment" 
+                  ? (events.some(e => typeof (e.data as any).pm25 === "number") ? "กราฟ PM2.5 ย้อนหลัง" : "กราฟอุณหภูมิย้อนหลัง")
+                  : id === "traffic" 
+                    ? "ระยะเวลารอสัญญานไฟ" 
+                    : id === "streetlight" 
+                      ? "ระดับความสว่าง" 
+                      : "แนวโน้มสถานะ"}
+              </h2>
             </div>
             <span className="panel-tag">Telemetry History</span>
           </div>
