@@ -71,3 +71,47 @@
 * ขา **Emitter (E)** ของ 2N2222 -> Common GND Rail
 * ขา **Collector (C)** ของ 2N2222 -> ขั้วลบ (Cathode) ของหลอด LED ขาว (3-6 ดวง ขนานกัน)
 * ขั้วบวก (Anode) ของ LED ขาวแต่ละดวง -> ผ่านตัวต้านทาน 220Ω -> External 5V Rail
+
+---
+
+## 📍 Board 5: Adaptive Street Light (ESP32 หรือ UNO R4 WiFi)
+
+แนะนำให้ใช้ **ESP32** สำหรับประมวลผลและการเชื่อมต่อ TLS ไปยัง Supabase ที่เสถียร (ไม่แนะนำ ESP8266)
+
+### 1. วงจรแบ่งแรงดัน LDR (Light Dependent Resistor)
+* **ESP32:** ขาสัญญาณ LDR -> **GPIO 34** (ADC1)
+* **UNO R4:** ขาสัญญาณ LDR -> **A0**
+
+### 2. PIR Motion Sensor
+* **ESP32:** ขาสัญญาณ OUT -> **GPIO 27**
+* **UNO R4:** ขาสัญญาณ OUT -> **D2**
+
+### 3. LED ขับไฟถนน (PWM หรี่/สว่าง)
+* **ESP32:** สัญญาณ PWM -> **GPIO 18** (ผ่านวงจรขับ LED / Transistor)
+* **UNO R4:** สัญญาณ PWM -> **D3** (PWM)
+
+---
+
+## 📍 Board 6: RFID Exit Gate ขาออก (ESP32 — GT-2)
+
+แนะนำให้ใช้ **ESP32** (ไม่แนะนำ ESP8266 เนื่องจากมีพิน SPI และ I2C พร้อมกันไม่พอ)
+
+### 1. RFID RC522 (ฮาร์ดแวร์ SPI)
+* **3.3V**  -> Pin **3.3V** บน ESP32 *(ห้ามต่อ 5V เด็ดขาด)*
+* **GND**   -> Common GND Rail
+* **RST**   -> Pin **GPIO 4**
+* **SDA (SS)** -> Pin **GPIO 5**
+* **SCK**   -> Pin **GPIO 18**
+* **MISO**  -> Pin **GPIO 19**
+* **MOSI**  -> Pin **GPIO 21**
+
+### 2. จอแสดงผล LCD 16x2 I2C
+* **VCC** -> External 5V Rail
+* **GND** -> Common GND Rail
+* **SDA** -> Pin **GPIO 23**
+* **SCL** -> Pin **GPIO 22**
+
+### 3. สัญญาณเตือนและเปิดไม้กั้นขาออก
+* **Active Buzzer (+)** -> Pin **GPIO 25**
+* **สัญญาณเปิดไม้กั้นขาออก (LED / Relay)** -> Pin **GPIO 14**
+

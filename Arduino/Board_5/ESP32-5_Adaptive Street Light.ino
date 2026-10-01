@@ -36,10 +36,17 @@ const char* FALLBACK_PASS = SMARTCITY_WIFI_PASSWORD;
 // ==============================================================================
 // 2. PIN DEFINITIONS (UNO R4 / ESP32)
 // ==============================================================================
-#define LDR_PIN         A0   // อ่านค่าแสง (Analog In)
-#define PIR_PIN         2    // จับการเคลื่อนไหว (Digital In)
-#define LED_PWM_PIN     3    // ขาควบคุม PWM สั่งหรี่/สว่าง (PWM Pin)
-#define RESET_WIFI_PIN  0    // ปุ่ม BOOT (GPIO 0 สำหรับ Reset Wi-Fi)
+#if defined(ESP32)
+  #define LDR_PIN         34   // อ่านค่าแสง (ADC1 GPIO 34 Analog In)
+  #define PIR_PIN         27   // จับการเคลื่อนไหว (GPIO 27 Digital In)
+  #define LED_PWM_PIN     18   // ขาควบคุม PWM สั่งหรี่/สว่าง (GPIO 18)
+  #define RESET_WIFI_PIN  0    // ปุ่ม BOOT (GPIO 0 สำหรับ Reset Wi-Fi)
+#else
+  #define LDR_PIN         A0   // อ่านค่าแสง (Analog In บน UNO R4)
+  #define PIR_PIN         2    // จับการเคลื่อนไหว (Digital In บน UNO R4)
+  #define LED_PWM_PIN     3    // ขาควบคุม PWM สั่งหรี่/สว่าง (PWM Pin บน UNO R4)
+  #define RESET_WIFI_PIN  0    // ปุ่ม Reset Wi-Fi
+#endif
 
 // ==============================================================================
 // 3. THRESHOLDS & CONFIGURATION

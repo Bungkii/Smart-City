@@ -72,4 +72,5 @@ The user supplied a monitoring-wall reference, then explicitly chose the origina
 - Board 2 (TR-1) and Board 5 (SL-1) implement automatic reconnection and SSL socket cleanup (`http.stop()`, `sslClient.stop()`) on Arduino UNO R4 to prevent offline drops.
 - Board 3 (PK-1) displays live available slots out of 8 on its OLED alongside Royal Thai Navy NTP time (`time.navy.mi.th`) and reports real aggregate occupancy telemetry to Supabase.
 - Board 4 (EN-1) sends verified DHT readings and gas alerts; PM2.5 remains empty until a real PM sensor is installed.
+- Board 5 (SL-1) and Board 6 (GT-2) use ESP32 pin definitions (GPIO 34 LDR, GPIO 27 PIR, GPIO 18 PWM for Board 5; GPIO 5 SS, GPIO 4 RST, GPIO 18/19/21 SPI, GPIO 22/23 I2C, GPIO 25 Buzzer, GPIO 14 Gate for Board 6); ESP8266 is explicitly deprecated due to GPIO and TLS constraints.
 - `SmartCitySecrets.h` files are local and ignored; copy each board's example and fill deployment values before compiling. Never commit Wi-Fi passwords, ingest tokens or service-role keys. Existing exposed values in Git history require rotation.

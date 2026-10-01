@@ -19,6 +19,40 @@
 | 5 ไฟถนน (SL-1) | ส่งสถานะ LED/PWM ตาม LDR/PIR | เคลียร์ SSL socket ป้องกัน offline และมี auto-reconnect |
 | 6 ประตู RFID ขาออก (GT-2) | ตรวจสิทธิ์จาก `rfid_cards`, เขียน `gate_logs` (OUT) และสถานะประตู | แยกเป็น device_id GT-2 ชัดเจน |
 
+## ผังพินและชิปแนะนำ (Board 5 & Board 6)
+
+แนะนำให้ใช้ **ESP32** สำหรับทั้งบอร์ด 5 และบอร์ด 6 (ไม่แนะนำ ESP8266 เนื่องจากขา GPIO ไม่เพียงพอ และหน่วยความจำจำกัดเมื่อเชื่อมต่อ HTTPS/TLS กับ Supabase REST API)
+
+### Board 5: Adaptive Street Light (ESP32 / UNO R4)
+* **LDR (อ่านค่าแสง Analog):** 
+  * ESP32: **GPIO 34** (ADC1)
+  * UNO R4: **A0**
+* **PIR Sensor (จับการเคลื่อนไหว Digital In):** 
+  * ESP32: **GPIO 27**
+  * UNO R4: **D2**
+* **LED PWM (ขับไฟถนนหรี่/สว่าง):** 
+  * ESP32: **GPIO 18**
+  * UNO R4: **D3**
+* **GND / VCC:** Common GND ร่วมกับ External 5V / 3.3V
+
+### Board 6: RFID Exit Gate ขาออก (ESP32 - GT-2)
+* **RFID RC522 (ฮาร์ดแวร์ SPI):**
+  * 3.3V -> **3.3V** *(ห้ามต่อ 5V เด็ดขาด)*
+  * GND -> **Common GND**
+  * RST -> **GPIO 4**
+  * SDA (SS) -> **GPIO 5**
+  * SCK -> **GPIO 18**
+  * MISO -> **GPIO 19**
+  * MOSI -> **GPIO 21**
+* **จอ LCD 16x2 I2C:**
+  * VCC -> **5V**
+  * GND -> **Common GND**
+  * SDA -> **GPIO 23**
+  * SCL -> **GPIO 22**
+* **สัญญาณแจ้งเตือน & ประตู:**
+  * Active Buzzer (+) -> **GPIO 25**
+  * สัญญาณเปิดไม้กั้นขาออก (LED / Relay) -> **GPIO 14**
+
 ข้อมูล `events.recorded_at` และ `gate_logs.scanned_at` ของทาง Supabase ใช้เวลาจากฐานข้อมูล หากส่งผ่าน Dashboard ingest โดยตรง บอร์ด ESP32 จะส่งได้เมื่อซิงก์ UTC แล้วเท่านั้น ไม่ใส่วันเวลาปลอม พิกัดที่เคยเขียนไว้ใน source ถูกนำออก และชื่อสถานที่ใน telemetry ระบุว่า “ตำแหน่งยังไม่ยืนยัน”; ให้เพิ่มเฉพาะหลังสำรวจตำแหน่งจริง
 
 บอร์ดไม่บันทึก SSID/รหัส Wi-Fi ลงตาราง `settings` อีกแล้ว ข้อมูลเดิมในฐานข้อมูลไม่ได้ถูกลบหรือแก้ไข ต้องจัดการข้อมูลเก่าตามนโยบายของผู้ดูแลแยกต่างหาก
