@@ -1,6 +1,16 @@
 # Project context
 
-Updated: 2026-09-27
+Updated: 2026-10-01
+
+## Follow-up: 6-board firmware upgrade & cloud verification — 2026-10-01
+
+- Added Board 6 (`ESP32-6_RFID Exit Gate.ino`) for GT-2 RFID Gate Out with outbound scan logging.
+- Upgraded Board 2 (TR-1) and Board 5 (SL-1) with auto-reconnection and explicit SSL socket termination (`http.stop()`, `sslClient.stop()`) on Arduino UNO R4 to prevent offline dropouts.
+- Upgraded Board 3 (PK-1) with OLED display layout showing "Avail X/8", Royal Thai Navy NTP time sync (`time.navy.mi.th`), and live aggregate occupancy telemetry to Supabase.
+- Upgraded Board 4 (EN-1) with auto-reconnect and NTP time synchronization.
+- All 6 boards configured with Wi-Fi network `Secondary_STEMBELL` in local `SmartCitySecrets.h`.
+- Web dashboard verified live at `https://smartcity.bungkii.app/`, showing real-time incoming events from deployed hardware (TR-1, PK-1, GT-1, GT-2).
+- Unit tests (`data-integrity.test.cjs`), typecheck, and Next.js production build passing cleanly.
 
 ## Follow-up: five-board firmware integrity pass — 2026-09-27
 

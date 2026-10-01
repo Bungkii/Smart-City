@@ -65,9 +65,11 @@ The user supplied a monitoring-wall reference, then explicitly chose the origina
 - `supabase/migrations/20260927_rfid_access.sql` restricts publishable-key access to card SELECT and gate-log INSERT for current Board 1 firmware. It must be applied to existing Supabase databases manually; no existing records are deleted. The current firmware still exposes card data through its direct read path, so do not claim the system is fully hardened.
 - Board 1 source fails closed when Wi-Fi is lost; this only affects hardware after reflashing. Do not test by actuating the gate. Registry GET currently loads up to 500 cards and 50 logs; UI search is limited to loaded cards.
 
-## Firmware data integrity — 2026-09-27
+## Firmware data integrity — 2026-10-01
 
-- All five board sketches were reviewed for fabricated timestamps, positions, credentials and sensor claims. Supabase insert paths rely on database time and omit unverified coordinates. Direct dashboard ingest paths require a synchronized UTC clock.
-- Never derive PM2.5 from MQ-2 smoke readings, substitute fallback DHT measurements, or describe entry/exit trigger counts as verified parking occupancy. Board 3 does not publish occupancy until actual bay instrumentation and a reliable baseline are available.
+- All six board sketches (Board 1 to Board 6) were reviewed for fabricated timestamps, positions, credentials and sensor claims. Supabase insert paths rely on database time and omit unverified coordinates. Direct dashboard ingest paths require a synchronized UTC clock.
+- Board 1 (GT-1) handles Gate In, Board 6 (GT-2) handles Gate Out with distinct directions and IDs. Both deny entry/exit when card verification fails.
+- Board 2 (TR-1) and Board 5 (SL-1) implement automatic reconnection and SSL socket cleanup (`http.stop()`, `sslClient.stop()`) on Arduino UNO R4 to prevent offline drops.
+- Board 3 (PK-1) displays live available slots out of 8 on its OLED alongside Royal Thai Navy NTP time (`time.navy.mi.th`) and reports real aggregate occupancy telemetry to Supabase.
+- Board 4 (EN-1) sends verified DHT readings and gas alerts; PM2.5 remains empty until a real PM sensor is installed.
 - `SmartCitySecrets.h` files are local and ignored; copy each board's example and fill deployment values before compiling. Never commit Wi-Fi passwords, ingest tokens or service-role keys. Existing exposed values in Git history require rotation.
-- Board 1 must deny entry when card verification fails for any reason. Existing ESP32 `setInsecure()` calls still need a trusted certificate design; do not claim field readiness without compilation, flashing and hardware tests.
