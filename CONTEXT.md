@@ -9,7 +9,7 @@ Updated: 2026-10-01
 - Upgraded Board 3 (PK-1) with OLED display layout showing "Avail X/8", Royal Thai Navy NTP time sync (`time.navy.mi.th`), and live aggregate occupancy telemetry to Supabase.
 - Upgraded Board 4 (EN-1) with auto-reconnect, NTP time synchronization, and verified DHT temperature and humidity sensing.
 - Enhanced Dashboard and OperationsOverview to display real DHT readings prominently (highlighting temperature and humidity when PM2.5 sensor is omitted) and support historical temperature trend charting.
-- Documented Board 4, 5, and 6 pinouts in `Arduino/README.md` and `Arduino/WIRE.md`.
+- Fully documented all 6 hardware boards in `Arduino/WIRE.md` with complete wiring pinouts, power distribution rules, and comparison summary table.
 - All 6 boards configured with Wi-Fi network `Secondary_STEMBELL` in local `SmartCitySecrets.h`.
 - Web dashboard verified live at `https://smartcity.bungkii.app/`, showing real-time incoming events from deployed hardware (TR-1, PK-1, GT-1, GT-2).
 - Unit tests (`data-integrity.test.cjs`), typecheck, and Next.js production build passing cleanly.
