@@ -27,44 +27,73 @@ const char* FALLBACK_PASS = SMARTCITY_WIFI_PASSWORD;
 // ==============================================================================
 // 2. PIN DEFINITIONS (4-WAY INTERSECTION)
 // ==============================================================================
-#define TRIG_PIN  2   
-#define ECHO_N    3   
-#define ECHO_S    A4  
+#if defined(ESP32)
+  #define TRIG_PIN  5   
+  #define ECHO_N    18   
+  #define ECHO_S    19  
 
-#define PIR_E     A3  
-#define PIR_W     13  
+  #define PIR_E     4  
+  #define PIR_W     16  
 
-#define N_RED 4  
-#define N_YEL 5  
-#define N_GRN 6
+  #define N_RED     13  
+  #define N_YEL     12  
+  #define N_GRN     14
 
-#define E_RED 7  
-#define E_YEL 8  
-#define E_GRN 9
+  #define E_RED     27  
+  #define E_YEL     26  
+  #define E_GRN     25
 
-#define S_RED 10 
-#define S_YEL 11 
-#define S_GRN 12
+  #define S_RED     33 
+  #define S_YEL     32 
+  #define S_GRN     35
 
-#define W_RED A0 
-#define W_YEL A1 
-#define W_GRN A2
+  #define W_RED     15 
+  #define W_YEL     2 
+  #define W_GRN     0
 
-#define RESET_WIFI_PIN 0 // ปุ่ม BOOT (GPIO 0) สำหรับล้าง Wi-Fi
+  #define RESET_WIFI_PIN 0 // ปุ่ม BOOT (GPIO 0)
+#else
+  // สำหรับ Arduino UNO R4 WiFi หรือ Arduino UNO
+  #define TRIG_PIN  2   
+  #define ECHO_N    3   
+  #define ECHO_S    A4  
+
+  #define PIR_E     A3  
+  #define PIR_W     13  
+
+  #define N_RED     4  
+  #define N_YEL     5  
+  #define N_GRN     6
+
+  #define E_RED     7  
+  #define E_YEL     8  
+  #define E_GRN     9
+
+  #define S_RED     10 
+  #define S_YEL     11 
+  #define S_GRN     12
+
+  #define W_RED     A0 
+  #define W_YEL     A1 
+  #define W_GRN     A2
+
+  #define RESET_WIFI_PIN 0
+#endif
 
 // ==============================================================================
-// 3. TIMING & STATE MACHINE
+// 3. TIMING & STATE MACHINE (SAFETY & ANTI-COLLISION)
 // ==============================================================================
-const float DETECT_DIST_CM      = 8.0;   
-const unsigned long NORMAL_GREEN_TIME   = 4000; 
-const unsigned long EXTENDED_GREEN_TIME = 8000; 
-const unsigned long YELLOW_TIME         = 1500; 
+const float DETECT_DIST_CM            = 8.0;   
+const unsigned long NORMAL_GREEN_TIME = 4000;  // ไฟเขียวปกติ 4 วินาที
+const unsigned long EXTENDED_GREEN_TIME = 8000; // ไฟเขียวยืดเวลา 8 วินาที
+const unsigned long YELLOW_TIME       = 1500;  // ไฟเหลือง 1.5 วินาที
+const unsigned long ALL_RED_TIME      = 1200;  // ไฟแดงทุกด้านเคลียร์แยก 1.2 วินาที
 
 enum TrafficState {
-  STATE_N_GREEN, STATE_N_YELLOW,
-  STATE_E_GREEN, STATE_E_YELLOW,
-  STATE_S_GREEN, STATE_S_YELLOW,
-  STATE_W_GREEN, STATE_W_YELLOW
+  STATE_N_GREEN, STATE_N_YELLOW, STATE_N_ALL_RED,
+  STATE_E_GREEN, STATE_E_YELLOW, STATE_E_ALL_RED,
+  STATE_S_GREEN, STATE_S_YELLOW, STATE_S_ALL_RED,
+  STATE_W_GREEN, STATE_W_YELLOW, STATE_W_ALL_RED
 };
 
 TrafficState currentState = STATE_N_GREEN;
@@ -85,19 +114,31 @@ float getDistance(int echoPin) {
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
 
-  long duration = pulseIn(echoPin, HIGH, 6000);
-  if (duration == 0) return 999.0;
-  return (float)duration * 0.0343 / 2.0;
+  long duration = pulseIn(echoPin, HIGH, 15000);
+  if (duration <= 0) return 999.0;
+  float dist = (float)duration * 0.0343 / 2.0;
+  if (dist < 1.0) return 999.0;
+  return dist;
 }
 
-void setAllLights(bool nG, bool nY, bool nR,
-                 bool eG, bool eY, bool eR,
-                 bool sG, bool sY, bool sR,
-                 bool wG, bool wY, bool wR) {
-  digitalWrite(N_GRN, nG); digitalWrite(N_YEL, nY); digitalWrite(N_RED, nR);
-  digitalWrite(E_GRN, eG); digitalWrite(E_YEL, eY); digitalWrite(E_RED, eR);
-  digitalWrite(S_GRN, sG); digitalWrite(S_YEL, sY); digitalWrite(S_RED, sR);
-  digitalWrite(W_GRN, wG); digitalWrite(W_YEL, wY); digitalWrite(W_RED, wR);
+// ระบุสถานะไฟแต่ละทิศทาง
+enum SignalColor { SIGNAL_RED, SIGNAL_YELLOW, SIGNAL_GREEN };
+
+void setSignal(int rPin, int yPin, int gPin, SignalColor col) {
+  digitalWrite(rPin, col == SIGNAL_RED    ? HIGH : LOW);
+  digitalWrite(yPin, col == SIGNAL_YELLOW ? HIGH : LOW);
+  digitalWrite(gPin, col == SIGNAL_GREEN  ? HIGH : LOW);
+}
+
+void set4WaySignals(SignalColor nCol, SignalColor eCol, SignalColor sCol, SignalColor wCol) {
+  setSignal(N_RED, N_YEL, N_GRN, nCol);
+  setSignal(E_RED, E_YEL, E_GRN, eCol);
+  setSignal(S_RED, S_YEL, S_GRN, sCol);
+  setSignal(W_RED, W_YEL, W_GRN, wCol);
+}
+
+void setAllRed() {
+  set4WaySignals(SIGNAL_RED, SIGNAL_RED, SIGNAL_RED, SIGNAL_RED);
 }
 
 void sendTrafficTelemetry(String activeDirection, String nSignal, String eSignal, String sSignal, String wSignal, int waitSec, String modeType, String noteMsg) {
@@ -210,7 +251,7 @@ void setup() {
     pinMode(p, OUTPUT);
   }
 
-  setAllLights(HIGH, LOW, LOW,   LOW, LOW, HIGH,   LOW, LOW, HIGH,   LOW, LOW, HIGH);
+  set4WaySignals(SIGNAL_GREEN, SIGNAL_RED, SIGNAL_RED, SIGNAL_RED);
   lastStateTime = millis();
 
   // ตรวจสอบการกดปุ่ม Reset Wi-Fi ตอนเปิดเครื่อง
@@ -273,7 +314,9 @@ void loop() {
 #endif
 
   switch (currentState) {
-    // 1. ฝั่งเหนือ (N)
+    // --------------------------------------------------------------------------
+    // 1. ฝั่งเหนือ (NORTH)
+    // --------------------------------------------------------------------------
     case STATE_N_GREEN:
       if (getDistance(ECHO_N) <= DETECT_DIST_CM && currentGreenDuration != EXTENDED_GREEN_TIME) {
         currentGreenDuration = EXTENDED_GREEN_TIME;
@@ -282,7 +325,7 @@ void loop() {
       }
       if (currentMillis - lastStateTime >= currentGreenDuration) {
         currentState = STATE_N_YELLOW;
-        setAllLights(LOW, HIGH, LOW,  LOW, LOW, HIGH,  LOW, LOW, HIGH,  LOW, LOW, HIGH);
+        set4WaySignals(SIGNAL_YELLOW, SIGNAL_RED, SIGNAL_RED, SIGNAL_RED);
         lastStateTime = currentMillis;
         sendTrafficTelemetry("North (เหนือ)", "yellow", "red", "red", "red", 2, "adaptive", "ฝั่งเหนือ เปลี่ยนเป็นไฟเหลือง");
       }
@@ -290,15 +333,26 @@ void loop() {
 
     case STATE_N_YELLOW:
       if (currentMillis - lastStateTime >= YELLOW_TIME) {
+        currentState = STATE_N_ALL_RED;
+        setAllRed(); // แดงทุกด้าน 1.2 วินาที เคลียร์แยก
+        lastStateTime = currentMillis;
+        sendTrafficTelemetry("All Red (ปลอดภัย)", "red", "red", "red", "red", 1, "safety", "หยุดรถทุกทิศทาง เคลียร์ทางแยก");
+      }
+      break;
+
+    case STATE_N_ALL_RED:
+      if (currentMillis - lastStateTime >= ALL_RED_TIME) {
         currentState = STATE_E_GREEN;
         currentGreenDuration = NORMAL_GREEN_TIME;
-        setAllLights(LOW, LOW, HIGH,  HIGH, LOW, LOW,  LOW, LOW, HIGH,  LOW, LOW, HIGH);
+        set4WaySignals(SIGNAL_RED, SIGNAL_GREEN, SIGNAL_RED, SIGNAL_RED);
         lastStateTime = currentMillis;
         sendTrafficTelemetry("East (ตะวันออก)", "red", "green", "red", "red", 4, "adaptive", "สลับไฟเขียวให้ฝั่งตะวันออก");
       }
       break;
 
-    // 2. ฝั่งตะวันออก (E)
+    // --------------------------------------------------------------------------
+    // 2. ฝั่งตะวันออก (EAST)
+    // --------------------------------------------------------------------------
     case STATE_E_GREEN:
       if (digitalRead(PIR_E) == HIGH && currentGreenDuration != EXTENDED_GREEN_TIME) {
         currentGreenDuration = EXTENDED_GREEN_TIME;
@@ -307,7 +361,7 @@ void loop() {
       }
       if (currentMillis - lastStateTime >= currentGreenDuration) {
         currentState = STATE_E_YELLOW;
-        setAllLights(LOW, LOW, HIGH,  LOW, HIGH, LOW,  LOW, LOW, HIGH,  LOW, LOW, HIGH);
+        set4WaySignals(SIGNAL_RED, SIGNAL_YELLOW, SIGNAL_RED, SIGNAL_RED);
         lastStateTime = currentMillis;
         sendTrafficTelemetry("East (ตะวันออก)", "red", "yellow", "red", "red", 2, "adaptive", "ฝั่งตะวันออก เปลี่ยนเป็นไฟเหลือง");
       }
@@ -315,15 +369,26 @@ void loop() {
 
     case STATE_E_YELLOW:
       if (currentMillis - lastStateTime >= YELLOW_TIME) {
+        currentState = STATE_E_ALL_RED;
+        setAllRed(); // แดงทุกด้าน 1.2 วินาที เคลียร์แยก
+        lastStateTime = currentMillis;
+        sendTrafficTelemetry("All Red (ปลอดภัย)", "red", "red", "red", "red", 1, "safety", "หยุดรถทุกทิศทาง เคลียร์ทางแยก");
+      }
+      break;
+
+    case STATE_E_ALL_RED:
+      if (currentMillis - lastStateTime >= ALL_RED_TIME) {
         currentState = STATE_S_GREEN;
         currentGreenDuration = NORMAL_GREEN_TIME;
-        setAllLights(LOW, LOW, HIGH,  LOW, LOW, HIGH,  HIGH, LOW, LOW,  LOW, LOW, HIGH);
+        set4WaySignals(SIGNAL_RED, SIGNAL_RED, SIGNAL_GREEN, SIGNAL_RED);
         lastStateTime = currentMillis;
         sendTrafficTelemetry("South (ใต้)", "red", "red", "green", "red", 4, "adaptive", "สลับไฟเขียวให้ฝั่งใต้");
       }
       break;
 
-    // 3. ฝั่งใต้ (S)
+    // --------------------------------------------------------------------------
+    // 3. ฝั่งใต้ (SOUTH)
+    // --------------------------------------------------------------------------
     case STATE_S_GREEN:
       if (getDistance(ECHO_S) <= DETECT_DIST_CM && currentGreenDuration != EXTENDED_GREEN_TIME) {
         currentGreenDuration = EXTENDED_GREEN_TIME;
@@ -332,7 +397,7 @@ void loop() {
       }
       if (currentMillis - lastStateTime >= currentGreenDuration) {
         currentState = STATE_S_YELLOW;
-        setAllLights(LOW, LOW, HIGH,  LOW, LOW, HIGH,  LOW, HIGH, LOW,  LOW, LOW, HIGH);
+        set4WaySignals(SIGNAL_RED, SIGNAL_RED, SIGNAL_YELLOW, SIGNAL_RED);
         lastStateTime = currentMillis;
         sendTrafficTelemetry("South (ใต้)", "red", "red", "yellow", "red", 2, "adaptive", "ฝั่งใต้ เปลี่ยนเป็นไฟเหลือง");
       }
@@ -340,15 +405,26 @@ void loop() {
 
     case STATE_S_YELLOW:
       if (currentMillis - lastStateTime >= YELLOW_TIME) {
+        currentState = STATE_S_ALL_RED;
+        setAllRed(); // แดงทุกด้าน 1.2 วินาที เคลียร์แยก
+        lastStateTime = currentMillis;
+        sendTrafficTelemetry("All Red (ปลอดภัย)", "red", "red", "red", "red", 1, "safety", "หยุดรถทุกทิศทาง เคลียร์ทางแยก");
+      }
+      break;
+
+    case STATE_S_ALL_RED:
+      if (currentMillis - lastStateTime >= ALL_RED_TIME) {
         currentState = STATE_W_GREEN;
         currentGreenDuration = NORMAL_GREEN_TIME;
-        setAllLights(LOW, LOW, HIGH,  LOW, LOW, HIGH,  LOW, LOW, HIGH,  HIGH, LOW, LOW);
+        set4WaySignals(SIGNAL_RED, SIGNAL_RED, SIGNAL_RED, SIGNAL_GREEN);
         lastStateTime = currentMillis;
         sendTrafficTelemetry("West (ตะวันตก)", "red", "red", "red", "green", 4, "adaptive", "สลับไฟเขียวให้ฝั่งตะวันตก");
       }
       break;
 
-    // 4. ฝั่งตะวันตก (W)
+    // --------------------------------------------------------------------------
+    // 4. ฝั่งตะวันตก (WEST)
+    // --------------------------------------------------------------------------
     case STATE_W_GREEN:
       if (digitalRead(PIR_W) == HIGH && currentGreenDuration != EXTENDED_GREEN_TIME) {
         currentGreenDuration = EXTENDED_GREEN_TIME;
@@ -357,7 +433,7 @@ void loop() {
       }
       if (currentMillis - lastStateTime >= currentGreenDuration) {
         currentState = STATE_W_YELLOW;
-        setAllLights(LOW, LOW, HIGH,  LOW, LOW, HIGH,  LOW, LOW, HIGH,  LOW, HIGH, LOW);
+        set4WaySignals(SIGNAL_RED, SIGNAL_RED, SIGNAL_RED, SIGNAL_YELLOW);
         lastStateTime = currentMillis;
         sendTrafficTelemetry("West (ตะวันตก)", "red", "red", "red", "yellow", 2, "adaptive", "ฝั่งตะวันตก เปลี่ยนเป็นไฟเหลือง");
       }
@@ -365,9 +441,18 @@ void loop() {
 
     case STATE_W_YELLOW:
       if (currentMillis - lastStateTime >= YELLOW_TIME) {
+        currentState = STATE_W_ALL_RED;
+        setAllRed(); // แดงทุกด้าน 1.2 วินาที เคลียร์แยก
+        lastStateTime = currentMillis;
+        sendTrafficTelemetry("All Red (ปลอดภัย)", "red", "red", "red", "red", 1, "safety", "หยุดรถทุกทิศทาง เคลียร์ทางแยก");
+      }
+      break;
+
+    case STATE_W_ALL_RED:
+      if (currentMillis - lastStateTime >= ALL_RED_TIME) {
         currentState = STATE_N_GREEN;
         currentGreenDuration = NORMAL_GREEN_TIME;
-        setAllLights(HIGH, LOW, LOW,  LOW, LOW, HIGH,  LOW, LOW, HIGH,  LOW, LOW, HIGH);
+        set4WaySignals(SIGNAL_GREEN, SIGNAL_RED, SIGNAL_RED, SIGNAL_RED);
         lastStateTime = currentMillis;
         sendTrafficTelemetry("North (เหนือ)", "green", "red", "red", "red", 4, "adaptive", "วนกลับมาสลับไฟเขียวให้ฝั่งเหนือ");
       }
