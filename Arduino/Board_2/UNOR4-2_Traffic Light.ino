@@ -81,19 +81,24 @@ const char* FALLBACK_PASS = SMARTCITY_WIFI_PASSWORD;
 #endif
 
 // ==============================================================================
-// 3. TIMING & STATE MACHINE (SAFETY & ANTI-COLLISION)
+// 3. CONSTANTS & TIMING (SAFETY & ANTI-COLLISION)
 // ==============================================================================
+#define SIGNAL_RED    0
+#define SIGNAL_YELLOW 1
+#define SIGNAL_GREEN  2
+
 const float DETECT_DIST_CM            = 8.0;   
-const unsigned long NORMAL_GREEN_TIME = 4000;  // ไฟเขียวปกติ 4 วินาที
-const unsigned long EXTENDED_GREEN_TIME = 8000; // ไฟเขียวยืดเวลา 8 วินาที
-const unsigned long YELLOW_TIME       = 1500;  // ไฟเหลือง 1.5 วินาที
-const unsigned long ALL_RED_TIME      = 1200;  // ไฟแดงทุกด้านเคลียร์แยก 1.2 วินาที
+const unsigned long NORMAL_GREEN_TIME = 4000;  // เวลาไฟเขียวปกติ 4 วินาที
+const unsigned long EXTENDED_GREEN_TIME = 8000; // เวลาไฟเขียวขยาย (เมื่อมีรถต่อคิว) 8 วินาที
+const unsigned long YELLOW_TIME       = 1500;  // เวลาไฟเหลืองเตือนก่อนแดง 1.5 วินาที
+const unsigned long ALL_RED_TIME      = 1200;  // ช่วงเคลียร์แยกไฟแดงทุกทิศทาง 1.2 วินาที (ป้องกันรถชน)
+const unsigned long PREPARE_FLASH_TIME= 1000;  // ช่วงไฟเหลืองกระพริบเตือน "เตรียมตัวไป" 1.0 วินาที
 
 enum TrafficState {
-  STATE_N_GREEN, STATE_N_YELLOW, STATE_N_ALL_RED,
-  STATE_E_GREEN, STATE_E_YELLOW, STATE_E_ALL_RED,
-  STATE_S_GREEN, STATE_S_YELLOW, STATE_S_ALL_RED,
-  STATE_W_GREEN, STATE_W_YELLOW, STATE_W_ALL_RED
+  STATE_N_GREEN, STATE_N_YELLOW, STATE_N_ALL_RED, STATE_PREPARE_E,
+  STATE_E_GREEN, STATE_E_YELLOW, STATE_E_ALL_RED, STATE_PREPARE_S,
+  STATE_S_GREEN, STATE_S_YELLOW, STATE_S_ALL_RED, STATE_PREPARE_W,
+  STATE_W_GREEN, STATE_W_YELLOW, STATE_W_ALL_RED, STATE_PREPARE_N
 };
 
 TrafficState currentState = STATE_N_GREEN;
@@ -117,28 +122,41 @@ float getDistance(int echoPin) {
   long duration = pulseIn(echoPin, HIGH, 15000);
   if (duration <= 0) return 999.0;
   float dist = (float)duration * 0.0343 / 2.0;
-  if (dist < 1.0) return 999.0;
+  if (dist < 1.0) return 999.0; // กรองค่าหลุด 0cm
   return dist;
 }
 
-// ระบุสถานะไฟแต่ละทิศทาง
-enum SignalColor { SIGNAL_RED, SIGNAL_YELLOW, SIGNAL_GREEN };
-
-void setSignal(int rPin, int yPin, int gPin, SignalColor col) {
-  digitalWrite(rPin, col == SIGNAL_RED    ? HIGH : LOW);
-  digitalWrite(yPin, col == SIGNAL_YELLOW ? HIGH : LOW);
-  digitalWrite(gPin, col == SIGNAL_GREEN  ? HIGH : LOW);
+// ฟังก์ชันควบคุมไฟแต่ละทิศทางอย่างชัดเจน (100% ปลอดภัย ไม่สลับตำแหน่งสี)
+void setSignal(int rPin, int yPin, int gPin, uint8_t col) {
+  digitalWrite(rPin, (col == SIGNAL_RED)    ? HIGH : LOW);
+  digitalWrite(yPin, (col == SIGNAL_YELLOW) ? HIGH : LOW);
+  digitalWrite(gPin, (col == SIGNAL_GREEN)  ? HIGH : LOW);
 }
 
-void set4WaySignals(SignalColor nCol, SignalColor eCol, SignalColor sCol, SignalColor wCol) {
+// ควบคุมไฟทั้ง 4 ทิศทางพร้อมกัน
+void set4WaySignals(uint8_t nCol, uint8_t eCol, uint8_t sCol, uint8_t wCol) {
   setSignal(N_RED, N_YEL, N_GRN, nCol);
   setSignal(E_RED, E_YEL, E_GRN, eCol);
   setSignal(S_RED, S_YEL, S_GRN, sCol);
   setSignal(W_RED, W_YEL, W_GRN, wCol);
 }
 
+// สั่งไฟแดงหยุดทุกทิศทางเพื่อเคลียร์แยก (All-Red Clearance)
 void setAllRed() {
   set4WaySignals(SIGNAL_RED, SIGNAL_RED, SIGNAL_RED, SIGNAL_RED);
+}
+
+// สั่งไฟเหลืองกระพริบเตือนทิศทางที่กำลังจะได้ไป (ทิศทางอื่นยังคงติดไฟแดง 100%)
+void setPrepareFlashing(int targetDirection) { // 0: N, 1: E, 2: S, 3: W
+  bool flashOn = (millis() / 200) % 2 == 0; // กระพริบสลับทุกๆ 200ms
+  uint8_t targetSignal = flashOn ? SIGNAL_YELLOW : SIGNAL_RED;
+
+  set4WaySignals(
+    (targetDirection == 0) ? targetSignal : SIGNAL_RED,
+    (targetDirection == 1) ? targetSignal : SIGNAL_RED,
+    (targetDirection == 2) ? targetSignal : SIGNAL_RED,
+    (targetDirection == 3) ? targetSignal : SIGNAL_RED
+  );
 }
 
 void sendTrafficTelemetry(String activeDirection, String nSignal, String eSignal, String sSignal, String wSignal, int waitSec, String modeType, String noteMsg) {
@@ -327,7 +345,7 @@ void loop() {
         currentState = STATE_N_YELLOW;
         set4WaySignals(SIGNAL_YELLOW, SIGNAL_RED, SIGNAL_RED, SIGNAL_RED);
         lastStateTime = currentMillis;
-        sendTrafficTelemetry("North (เหนือ)", "yellow", "red", "red", "red", 2, "adaptive", "ฝั่งเหนือ เปลี่ยนเป็นไฟเหลือง");
+        sendTrafficTelemetry("North (เหนือ)", "yellow", "red", "red", "red", 2, "adaptive", "ฝั่งเหนือ เปลี่ยนเป็นไฟเหลืองเตือนหยุด");
       }
       break;
 
@@ -342,6 +360,15 @@ void loop() {
 
     case STATE_N_ALL_RED:
       if (currentMillis - lastStateTime >= ALL_RED_TIME) {
+        currentState = STATE_PREPARE_E;
+        lastStateTime = currentMillis;
+        sendTrafficTelemetry("East (ตะวันออก)", "red", "yellow", "red", "red", 1, "prepare", "ฝั่งตะวันออก ไฟเหลืองกระพริบเตรียมตัวไป");
+      }
+      break;
+
+    case STATE_PREPARE_E:
+      setPrepareFlashing(1); // ฝั่งตะวันออก (1) ไฟเหลืองกระพริบเตือนเตรียมไป
+      if (currentMillis - lastStateTime >= PREPARE_FLASH_TIME) {
         currentState = STATE_E_GREEN;
         currentGreenDuration = NORMAL_GREEN_TIME;
         set4WaySignals(SIGNAL_RED, SIGNAL_GREEN, SIGNAL_RED, SIGNAL_RED);
@@ -363,7 +390,7 @@ void loop() {
         currentState = STATE_E_YELLOW;
         set4WaySignals(SIGNAL_RED, SIGNAL_YELLOW, SIGNAL_RED, SIGNAL_RED);
         lastStateTime = currentMillis;
-        sendTrafficTelemetry("East (ตะวันออก)", "red", "yellow", "red", "red", 2, "adaptive", "ฝั่งตะวันออก เปลี่ยนเป็นไฟเหลือง");
+        sendTrafficTelemetry("East (ตะวันออก)", "red", "yellow", "red", "red", 2, "adaptive", "ฝั่งตะวันออก เปลี่ยนเป็นไฟเหลืองเตือนหยุด");
       }
       break;
 
@@ -378,6 +405,15 @@ void loop() {
 
     case STATE_E_ALL_RED:
       if (currentMillis - lastStateTime >= ALL_RED_TIME) {
+        currentState = STATE_PREPARE_S;
+        lastStateTime = currentMillis;
+        sendTrafficTelemetry("South (ใต้)", "red", "red", "yellow", "red", 1, "prepare", "ฝั่งใต้ ไฟเหลืองกระพริบเตรียมตัวไป");
+      }
+      break;
+
+    case STATE_PREPARE_S:
+      setPrepareFlashing(2); // ฝั่งใต้ (2) ไฟเหลืองกระพริบเตือนเตรียมไป
+      if (currentMillis - lastStateTime >= PREPARE_FLASH_TIME) {
         currentState = STATE_S_GREEN;
         currentGreenDuration = NORMAL_GREEN_TIME;
         set4WaySignals(SIGNAL_RED, SIGNAL_RED, SIGNAL_GREEN, SIGNAL_RED);
@@ -399,7 +435,7 @@ void loop() {
         currentState = STATE_S_YELLOW;
         set4WaySignals(SIGNAL_RED, SIGNAL_RED, SIGNAL_YELLOW, SIGNAL_RED);
         lastStateTime = currentMillis;
-        sendTrafficTelemetry("South (ใต้)", "red", "red", "yellow", "red", 2, "adaptive", "ฝั่งใต้ เปลี่ยนเป็นไฟเหลือง");
+        sendTrafficTelemetry("South (ใต้)", "red", "red", "yellow", "red", 2, "adaptive", "ฝั่งใต้ เปลี่ยนเป็นไฟเหลืองเตือนหยุด");
       }
       break;
 
@@ -414,6 +450,15 @@ void loop() {
 
     case STATE_S_ALL_RED:
       if (currentMillis - lastStateTime >= ALL_RED_TIME) {
+        currentState = STATE_PREPARE_W;
+        lastStateTime = currentMillis;
+        sendTrafficTelemetry("West (ตะวันตก)", "red", "red", "red", "yellow", 1, "prepare", "ฝั่งตะวันตก ไฟเหลืองกระพริบเตรียมตัวไป");
+      }
+      break;
+
+    case STATE_PREPARE_W:
+      setPrepareFlashing(3); // ฝั่งตะวันตก (3) ไฟเหลืองกระพริบเตือนเตรียมไป
+      if (currentMillis - lastStateTime >= PREPARE_FLASH_TIME) {
         currentState = STATE_W_GREEN;
         currentGreenDuration = NORMAL_GREEN_TIME;
         set4WaySignals(SIGNAL_RED, SIGNAL_RED, SIGNAL_RED, SIGNAL_GREEN);
@@ -435,7 +480,7 @@ void loop() {
         currentState = STATE_W_YELLOW;
         set4WaySignals(SIGNAL_RED, SIGNAL_RED, SIGNAL_RED, SIGNAL_YELLOW);
         lastStateTime = currentMillis;
-        sendTrafficTelemetry("West (ตะวันตก)", "red", "red", "red", "yellow", 2, "adaptive", "ฝั่งตะวันตก เปลี่ยนเป็นไฟเหลือง");
+        sendTrafficTelemetry("West (ตะวันตก)", "red", "red", "red", "yellow", 2, "adaptive", "ฝั่งตะวันตก เปลี่ยนเป็นไฟเหลืองเตือนหยุด");
       }
       break;
 
@@ -450,6 +495,15 @@ void loop() {
 
     case STATE_W_ALL_RED:
       if (currentMillis - lastStateTime >= ALL_RED_TIME) {
+        currentState = STATE_PREPARE_N;
+        lastStateTime = currentMillis;
+        sendTrafficTelemetry("North (เหนือ)", "yellow", "red", "red", "red", 1, "prepare", "ฝั่งเหนือ ไฟเหลืองกระพริบเตรียมตัวไป");
+      }
+      break;
+
+    case STATE_PREPARE_N:
+      setPrepareFlashing(0); // ฝั่งเหนือ (0) ไฟเหลืองกระพริบเตือนเตรียมไป
+      if (currentMillis - lastStateTime >= PREPARE_FLASH_TIME) {
         currentState = STATE_N_GREEN;
         currentGreenDuration = NORMAL_GREEN_TIME;
         set4WaySignals(SIGNAL_GREEN, SIGNAL_RED, SIGNAL_RED, SIGNAL_RED);
